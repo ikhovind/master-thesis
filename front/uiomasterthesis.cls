@@ -3,7 +3,7 @@
 %% Identification:
 
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]  % Any version, really!
-\ProvidesClass{uiomasterthesis}
+\ProvidesClass{./front/uiomasterthesis}
   [2024/02/16 v1.16 UiO document class for a master's thesis]
 
 %% Required packages:

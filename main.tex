@@ -1,5 +1,5 @@
 \makeatletter
-   \def\input@path{{./uiomasterfp}}
+   \def\input@path{{./front}}
 \makeatother
 \documentclass[UKenglish]{uiomasterthesis}  %% ... or norsk or nynorsk or USenglish
 \usepackage[utf8]{inputenc}                 %% ... or latin1
@@ -8,47 +8,55 @@
 \usepackage[backend=biber,style=numeric-comp]{biblatex}
 \usepackage[hidelinks, hypertexnames=false]{hyperref}
 
-\title{The title of my thesis}        %% ... or whatever
-\subtitle{Any short subtitle}         %% ... if any
-\author{My Name}                      %% ... or whoever 
+\usepackage{fancyhdr}
+\usepackage{xurl}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage[parfill]{parskip} % New line between paragraphs, no indentation
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{todonotes}
+
+\usepackage{import}     % Enable importing of sections
+
+
+\title{A Taps Implementation for Linux}        %% ... or whatever
+\subtitle{A library to remove the compile-time binding to transport layer protocols}         %% ... if any
+\author{Ingebrigt Hovind}                      %% ... or whoever 
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhead[L]{A Taps Implementation for Linux} % left header
+\fancyhead[R]{Ingebrigt Hovind} % right header
+\renewcommand{\headrulewidth}{0pt} % remove the horizontal line
+
 
 \addbibresource{mybib.bib}            %% ... or whatever
 
 \begin{document}
-\uiomasterfp[dept={Department of Physics},  %% ... or your department
-  program={Physics},                        %% ... or your study program
-  supervisor={The Name},                    %% ... or blank
-  % or supervisors={A Name\and B Name},     %% if more than one
+\uiomasterfp[
+  supervisor={Michael Welzl},                    %% ... or blank
   long]                                     %% ... or short
 
 \frontmatter{}
-\begin{abstract}
-  Here come 3--6 sentences describing your thesis.
-\end{abstract}
 
-\begin{xabstract}[Sammendrag]               %% ... or Abstract or ...
-  Here comes the abstract in a different language.
-\end{xabstract}
+%%%     Preface     %%%
+\import{./sections/}{Abstract}
 
 \tableofcontents{}                          %%
 \listoffigures{}                            %% (omit if none)
 \listoftables{}                             %% (omit if none)
 
-\begin{preface}
-  Here comes your preface, including acknowledgments and thanks.
-\end{preface}
+\import{./sections/}{Preface}
 
 \mainmatter{}
-\part{Introduction}                   %% ... Innledning or Innleiing
-\chapter{Background}                  %% ... or Bakgrunn
-\section{Xxx's work}                  %% ... or whatever
 
-\part{The project}                    %% ... or ??
-\chapter{Planning the project}        %% ... or ??
+\import{./sections/}{Introduction}
 
-\part{Conclusion}                     %% ... or ??
-\chapter{Results}                     %% ... or ??
+\import{./sections/}{Project}
 
+\import{./sections/}{Conclusion}
 \backmatter{}
-\printbibliography{}
+% \printbibliography{}
 \end{document}
