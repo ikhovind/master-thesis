@@ -21,6 +21,7 @@ jobs:
       - name: Run a multi-line script
         run: |
           sudo apt install texlive-latex-recommended
+          sudo apt install texlive-latex-extra
           pdflatex main.tex
       - uses: actions/upload-artifact@v4
         with:
