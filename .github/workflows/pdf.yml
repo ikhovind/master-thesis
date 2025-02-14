@@ -20,7 +20,8 @@ jobs:
 
       - name: Run a multi-line script
         run: |
-          sudo apt install texlive-full,
+          sudo apt-get update,
+          sudo apt-get install texlive-xetex,
           pdflatex main.tex
       - uses: actions/upload-artifact@v4
         with:
