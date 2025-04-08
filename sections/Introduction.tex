@@ -16,6 +16,31 @@ early appearance for inter-process communication in the Berkeley
 Software Distribution version 4.2
 in 1983, sockets have grown to become the dominant way low-level
 network programming is done today. [citation]
+As mentioned previously, the original Berkeley sockets were designed
+for inter-process communication. As a continuation of this, the
+implementation of network sockets can be either connection
+oriented or stream-oriented, a setting which is decided at compile
+time. This has propagated into network sockets, for which the type of
+underlying connection, either TCP or UDP, has to be decided at
+compile time. 
+
+This compile-time binding may not seem like a large problem,
+as it reflects the fact that a connection cannot swap protocols
+midway through. And the type of protocol is usually deeply bound
+to the application, and large redesigns likely have to take place if
+an application were to change from using a connection-oriented
+to a stream-oriented connection. However, different parts of
+the application may have different requirements, for example
+a connection to a video-streaming website itself may be 
+connection-oriented, while the video-stream itself will likely
+be stream-oriented.
+
+One of the key features of TAPS is to give the developer access to more
+advanced features of protocols such as QUIC or SCTP, while still being
+able to fall back to TCP if necessary. This will allow TAPS to act in
+a message-oriented way, while still being able to use a connection-oriented
+protocol such as TCP.
+
 
 Things we need to mention:
 \begin{itemize}
@@ -49,6 +74,13 @@ Things we need to mention:
                     \item utilizing QUIC
                 \end{itemize}
             \item Disadvantages of TAPS
+            \item Specific TAPS features
+        \end{itemize}
+    \item Why does this thesis exist
+        \begin{itemize}
+            \item Existing implementations
+            \item Problems with existing implementations
+            \item Advantages of this implementation
         \end{itemize}
 \end{itemize}
 
