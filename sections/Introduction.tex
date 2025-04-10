@@ -41,6 +41,26 @@ able to fall back to TCP if necessary. This will allow TAPS to act in
 a message-oriented way, while still being able to use a connection-oriented
 protocol such as TCP.
 
+Transport properties in taps pre-connection I think is advanced:
+\begin{itemize}
+    \item Configure Per-Message Reliability
+    \item Use 0-RTT Session Establishment with a Safely Replayable Message
+    \item Multistream Connections in Group
+    \item Full Checksum Coverage on Sending
+    \item Full Checksum Coverage on Receiving
+    \item Provisioning Domain Instance or Type
+    \item Use Temporary Local Address
+    \item Direction of communication
+    \item Notification of ICMP soft error message arrival
+\end{itemize}
+
+Managing connections I think is advanced
+\begin{itemize}
+    \item Connection Group Transmission Scheduler
+    \item Capacity Profile
+    \item Isolate Session
+\end{itemize}
+
 
 Things we need to mention:
 \begin{itemize}
