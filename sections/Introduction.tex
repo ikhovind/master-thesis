@@ -41,6 +41,15 @@ able to fall back to TCP if necessary. This will allow TAPS to act in
 a message-oriented way, while still being able to use a connection-oriented
 protocol such as TCP.
 
+One of the key selling points for TAPS is the ability to use different
+network protocols with the same API. This will for example ease the
+development of applications that for example use QUIC. QUIC is not
+yet widely used, and few applications can be built
+exclusively on top of QUIC, as it requires support from both the client
+and the server. QUIC is a transport protocol that is built on top of
+UDP, and is designed to be a replacement for TCP. QUIC uses
+multiplexed connections to allow cont next time :D
+
 Transport properties in taps pre-connection I think is advanced:
 \begin{itemize}
     \item Configure Per-Message Reliability
