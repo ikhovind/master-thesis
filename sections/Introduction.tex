@@ -48,7 +48,18 @@ yet widely used, and few applications can be built
 exclusively on top of QUIC, as it requires support from both the client
 and the server. QUIC is a transport protocol that is built on top of
 UDP, and is designed to be a replacement for TCP. QUIC uses
-multiplexed connections to allow cont next time :D
+multiplexed connections to for more efficient use of the network.
+Multiplexed connections are also used in http/2, but there it
+suffers from head-of-line blocking, which is caused by TCP's 
+requirement for all packets to be delivered in order. This problem
+is exacerbated when using multiple streams of data over a single
+TCP connection, as a single lost packet will block all other
+streams.
+
+With QUIC, the multiplexed connections can still be sent
+over a single connection, but the streams are independent of each other.
+This is made possible because QUIC is built on top of UDP; which
+does not guarantee packet ordering for separate streams.
 
 Transport properties in taps pre-connection I think is advanced:
 \begin{itemize}
