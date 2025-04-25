@@ -43,7 +43,25 @@ protocol such as TCP.
 
 One of the key selling points for TAPS is the ability to use different
 network protocols with the same API. This will for example ease the
-development of applications that for example use QUIC. QUIC is not
+development of applications that for example use QUIC. 
+QUIC is a internet protocol developed by Google, released to
+the public in 2013, described in RFC 9000 
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
+The key advantages of QUIC over TCP is that it is designed to be
+more efficient thatn TCP, and be able to handle more streams of
+data in a better way due to the lack of head-of-line blocking.
+QUIC is implemented in user space on top of UDP, but acts as a
+transport-level protocol. It is designed on top of UDP, in order
+to avoid issues with middleware dropping packets which are not
+TCP or UDP.
+
+As mentioned previously, one of the key selling points of
+TCP is the ubiquity of sockets, which are implemented in kernel space.
+There is no equivalent API for QUIC, and with a relatively advanced
+implementation, users have to settle for one of the existing
+libraries. 
+
+QUIC is not
 yet widely used, and few applications can be built
 exclusively on top of QUIC, as it requires support from both the client
 and the server. QUIC is a transport protocol that is built on top of
@@ -60,6 +78,39 @@ With QUIC, the multiplexed connections can still be sent
 over a single connection, but the streams are independent of each other.
 This is made possible because QUIC is built on top of UDP; which
 does not guarantee packet ordering for separate streams.
+
+
+TAPS exposes several configurations which can be used to specify
+a preference of requirement, which then sets a preference or a
+requirement for which underlying transport protocol to use.
+These configurations come in the form of transport properties.
+These properties are broken down into three categories:
+Selection properites, Connection properties, and message
+properties. Selection properties are requirements for the
+underlying transport protocol, which TAPS uses to select
+which protocol to use for the connection. Connection properties
+are properties which are set on a per-connection basis, for
+example the timeout for aborting a connection or the connection
+priority. Message properties are properties which are set
+on a per-message basis, for example the priority or the lifetime
+of the given message. A full list of properites can be found
+in the Architecture and Requirements for Transport Services RFC
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+Selection properties can, as mentioned above, be specified
+to varying degrees of strictness. With five different values
+\texttt{Require}, \texttt{Prefer}, \texttt{No Preference}, \texttt{Avoid},
+and \texttt{Prohibit}. Here, \texttt{Require} means that establishing
+the connection will fail if the property cannot be satisfied with the
+available transport protocols. \texttt{Prefer} means that the connection
+can fall back to a protocol not supporting the property, if no protocol
+satisfying the property is available. \texttt{Avoid} and \texttt{Prohibit}
+function in the same way as \texttt{Require} and \texttt{Prefer},
+but selecting for protocols which do not have the selected property.
+A simple example of a selection property is selecting for reliable
+data transfer. If this was set as required, TAPS would be forced
+to use for example TCP or QUIC as the underlying protocol. If UDP
+was the only available protocol, establishing the connection would fail.
 
 Transport properties in taps pre-connection I think is advanced:
 \begin{itemize}
@@ -82,14 +133,14 @@ Managing connections I think is advanced
 \end{itemize}
 
 
-Things we need to mention:
+\sout{Things we need to mention:}
 \begin{itemize}
-    \item Sockets are dominant
+    \item \sout{Sockets are dominant}
     \item Why are they dominant?
     \item Advantages of sockets
     \item Disadvantages of sockets
         \begin{itemize}
-            \item Compile-time binding to transport layer protocols
+            \item \sout{Compile-time binding to transport layer protocols}
             \item Lack of flexibility
         \end{itemize}
     \item What is QUIC?
@@ -108,9 +159,9 @@ Things we need to mention:
                 \end{itemize}
             \item Advantages of TAPS
                 \begin{itemize}
-                    \item Flexibility
-                    \item Transport protocol agnostic
-                    \item switching between transport protocols
+                    \item \sout{Flexibility}
+                    \item \sout{Transport protocol agnostic}
+                    \item \sout{switching between transport protocols}
                     \item utilizing QUIC
                 \end{itemize}
             \item Disadvantages of TAPS

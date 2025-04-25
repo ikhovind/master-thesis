@@ -5,7 +5,7 @@
 \usepackage[utf8]{inputenc}                 %% ... or latin1
 \usepackage[T1]{url}\urlstyle{sf}
 \usepackage{babel, csquotes, graphicx, textcomp, uiomasterfp, varioref}
-\usepackage[backend=biber,style=numeric-comp]{biblatex}
+\usepackage[backend=biber,style=numeric-comp,url=false]{biblatex}
 \usepackage[hidelinks, hypertexnames=false]{hyperref}
 
 \usepackage{fancyhdr}
@@ -17,6 +17,7 @@
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{todonotes}
+\usepackage{ulem}
 
 \usepackage{import}     % Enable importing of sections
 
@@ -66,5 +67,11 @@
 \import{./sections/}{Conclusion}
 
 \backmatter{}
+\setcounter{biburlnumpenalty}{9000}
+% If you want to break on URL lower case letters
+\setcounter{biburllcpenalty}{9000}
+% If you want to break on URL UPPER CASE letters
+\setcounter{biburlucpenalty}{9000}
+\hfuzz=14pt
 \printbibliography{}
 \end{document}
