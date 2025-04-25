@@ -1,25 +1,33 @@
 \makeatletter
    \def\input@path{{./front}}
 \makeatother
+
 \documentclass[UKenglish]{uiomasterthesis}  %% ... or norsk or nynorsk or USenglish
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}                 %% ... or latin1
 \usepackage[T1]{url}\urlstyle{sf}
 \usepackage{babel, csquotes, graphicx, textcomp, uiomasterfp, varioref}
 \usepackage[backend=biber,style=numeric-comp,url=false]{biblatex}
 \usepackage[hidelinks, hypertexnames=false]{hyperref}
 
+\usepackage{silence}
 \usepackage{fancyhdr}
+\usepackage{marginnote}
 \usepackage{xurl}
+\WarningFilter{latex}{Marginpar on page 5 moved}
 \usepackage{tikz}
 \usepackage{amsmath}
 \usepackage[parfill]{parskip} % New line between paragraphs, no indentation
-\usepackage{geometry}
 \usepackage{float}
 \usepackage{hyperref}
-\usepackage{todonotes}
+\usepackage[colorinlistoftodos, textwidth=\marginparwidth]{todonotes}
+% To make todonotes not go beyond the page
+\setlength{\marginparwidth}{3cm}
 \usepackage{ulem}
 
 \usepackage{import}     % Enable importing of sections
+
+\PassOptionsToPackage{showframe}{geometry}
 
 \addbibresource{./references/masterthesis.bib}
 
@@ -73,5 +81,6 @@
 % If you want to break on URL UPPER CASE letters
 \setcounter{biburlucpenalty}{9000}
 \hfuzz=14pt
+\raggedright
 \printbibliography{}
 \end{document}

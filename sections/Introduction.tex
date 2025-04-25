@@ -111,6 +111,80 @@ A simple example of a selection property is selecting for reliable
 data transfer. If this was set as required, TAPS would be forced
 to use for example TCP or QUIC as the underlying protocol. If UDP
 was the only available protocol, establishing the connection would fail.
+If the user selected \texttt{prefer}, then UDP could be selected if
+nothing else was available, even though it does not fulfill the property.
+
+There are also more advanced selection properties available. Out
+of these, the least intuitive are \texttt{Multistream Connections in Group},
+\texttt{Full Checksum Coverage on Sending} and \texttt{Full Checksum Coverage on Receiving},
+\texttt{Provisioning Domain Instance or Type}, \texttt{Use Temporary Local Address}, and
+\texttt{Notification of ICMP soft error message arrival}.
+
+The \texttt{Multistream Connections in Group} selection property allows
+the user \todo{TODO - select term for "user" of TAPS api (developer of networking application)}
+to select whether the application would prefer multiple Connections within a Connection Group 
+to be provided by streams of a single underlying transport connection where possible
+\cite{paulyArchitectureRequirementsTransport2025}. Multistreaming in this context is
+the act of providing multiple streams of data over a single underlying connection. This is
+advantageous as it allows for more efficient use of the network, since the connection
+will better saturate the available bandwidth. This avoids long convergence times
+for the connection and allows fresh connection to utilize the large congestion window
+already achieved, without having to wait for slow start to ramp up. This is especially
+useful for applications with many small streams of data, such as web browsers.
+
+The \texttt{Full Checksum Coverage on Sending} and \texttt{Full Checksum Coverage on Re\-ceiving}
+selection properties
+specify the application's need for protection against corruption for all data transmitted or
+received on a given connection. This is used to specify how many bytes of the message
+which needs to be protected by a checksum. This checksum is used to protect the data
+from corruption caused by lower-layer protocols. The setting \texttt{Full coverage} means
+that the entire message is protected, while \texttt{0} specifies no checksum is required.
+If any other value than \texttt{Full coverage} is specified, the connection may still
+fall back to \texttt{Full coverage}.
+
+The \texttt{Provisioning Domain Instance or Type} selection property 
+allows the applicatio \todo{common application term}n to
+control path selection by selecting for specific Provisioning Domain or
+categories of domains \cite{paulyArchitectureRequirementsTransport2025}.
+Provisioning Domains define consistent sets of network properties that 
+might be more specific than network interfaces 
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Use Temporary Local Address} selection property
+allows the application \todo{common application term} to
+specify whether or not to use temporary addresses which are a
+feature in IPv6, used for greater privacy 
+\cite{gontTemporaryAddressExtensions2021},\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Notification of ICMP soft error message arrival}
+selection property lets an application \todo{common application term} specify whether or
+not it should be notified when an ICMP error, which does not
+force termination of the connection, arrives 
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+In addition to specifying which underlying protocol should
+be used through selection properties, the application \todo{common application term}
+using TAPS can manage the connections themselves through transport
+properties. These can be specific for a given transport protocol
+such as the selection properties, or generic and be available for
+all transport protocols. \todo[]{Should this be separated from all the above
+parts? are they all part of the same 'category'}
+
+The \texttt{Connection Group Transmission Scheduler} transport
+property decides which scheduler is used within a given connection
+group, to divide the available capacity between the connections.
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Capacity Profile} transport property is used
+to select a capacity profile, which will be a tradeoff between 
+delay, delay variation, and efficient use of the available capacity 
+based on the capacity profile specified
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Isolate Session} transport property set in order
+to have new connections use as little cacheed information as possible
+from previous connections not in the same connection group
+\cite{paulyArchitectureRequirementsTransport2025}.
 
 Transport properties in taps pre-connection I think is advanced:
 \begin{itemize}
