@@ -24,6 +24,39 @@ time. This has propagated into network sockets, for which the type of
 underlying connection, either TCP or UDP, has to be decided at
 compile time. 
 
+Being stream-oriented or message-oriented has to do with
+how the transferred data is represented. In a stream oriented
+protocol such as TCP, the data is represented as a stream of bytes.
+From the application's point of view, the data arrives continuously
+and not in discrete chunks. This means that the appliaction cannot
+easily differentiate between different messages. As everything is
+ran over IP, which is a message-oriented protocol, TCP, which
+is a transport layer protocol, has to be able to handle receiving
+discrete messages and gluing them together into a stream of bytes.
+This also includes handling messages arriving out of order, which
+has to be handled before they can be presented as a stream in order.
+This is called in-order delivery and is a key feature guaranteed
+to the client by TCP.
+
+With message-oriented protocols, such as UDP, the data is represented
+as discrete messages. This means that the application can
+easily differentiate between them. Because the data is represented
+in discrete messages, this allows the protocol to not have do deliver
+the messages in order. Firstly, this allows the application to
+access the data quicker, as it does not have to wait for any
+delayed packets to arrive, before the other data can he handed over.
+This becomes very important when multiplexing multiple streams of data
+over a single connection. This is done in order to more efficiently utilize
+bandwith, but faces problems if data from one stream is delayed if
+we are using a protocol which guarantees in-order delivery. Even if
+only one application's data is delayed, the second application's data
+will have to wait, as they are together treated as a single stream
+and have to be delivered in order. This is called head-of-line blocking.
+When using a message-oriented protocol, which makes it possible,
+but not mandatory, to not guarantee in-order delivery, one application
+does not have to wait for the other application's data.
+
+
 This compile-time binding may not seem like a large problem,
 as it reflects the fact that a connection cannot swap protocols
 midway through. And the type of protocol is usually deeply bound
@@ -61,8 +94,7 @@ There is no equivalent API for QUIC, and with a relatively advanced
 implementation, users have to settle for one of the existing
 libraries. 
 
-QUIC is not
-yet widely used, and few applications can be built
+Currently, few applications can be built
 exclusively on top of QUIC, as it requires support from both the client
 and the server. QUIC is a transport protocol that is built on top of
 UDP, and is designed to be a replacement for TCP. QUIC uses
@@ -78,7 +110,6 @@ With QUIC, the multiplexed connections can still be sent
 over a single connection, but the streams are independent of each other.
 This is made possible because QUIC is built on top of UDP; which
 does not guarantee packet ordering for separate streams.
-
 
 TAPS exposes several configurations which can be used to specify
 a preference of requirement, which then sets a preference or a
@@ -186,29 +217,23 @@ to have new connections use as little cacheed information as possible
 from previous connections not in the same connection group
 \cite{paulyArchitectureRequirementsTransport2025}.
 
-Transport properties in taps pre-connection I think is advanced:
-\begin{itemize}
-    \item Configure Per-Message Reliability
-    \item Use 0-RTT Session Establishment with a Safely Replayable Message
-    \item Multistream Connections in Group
-    \item Full Checksum Coverage on Sending
-    \item Full Checksum Coverage on Receiving
-    \item Provisioning Domain Instance or Type
-    \item Use Temporary Local Address
-    \item Direction of communication
-    \item Notification of ICMP soft error message arrival
-\end{itemize}
-
-Managing connections I think is advanced
-\begin{itemize}
-    \item Connection Group Transmission Scheduler
-    \item Capacity Profile
-    \item Isolate Session
-\end{itemize}
-
 There are already several working TAPS implementations, but they are lacking
-in different ways. Write about \texttt{Python alternative} \texttt{Old bloated
-C alternative} etc.
+in different ways. Two prominent implementations are \texttt{dynamic-taps}
+implemented in C 
+and \texttt{python-asyncio-taps} implemented in Python 
+\cite{dukeDynamictaps2025}\todo{Is this actually the one Michael was talking about, what is NEAT?}
+\cite{frankePythonasynciotaps2025}. This thesis
+aims to be an improvement over these implementations. By being a C implementation
+it will be suitable for lower level applications. It aims to improve on the
+existing C implementation by being more modular and easier to use. Currently,
+\texttt{dynamic-taps} is a monolitic implementation \todo{is this actually true}
+and has not been updated since 2021. This thesis will provide an alternative
+written after the final TAPS RFC has been published. It will also be more
+modular and well tested, making it easier to use an to integrate into an
+existing library or application.
+
+\textbf{Write about \texttt{Python alternative} \texttt{Old bloated
+C alternative} etc.}
     
 
 \sout{Things we need to mention:}
