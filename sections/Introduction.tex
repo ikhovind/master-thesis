@@ -1,108 +1,113 @@
 \part{Introduction}
 \chapter{Background}
 Anyone programming any kind of networking application in a UNIX
-environment are bound to come across sockets as the dominant API.
-Sockets have been around, in more or less their current form, since
-the 1980s \cite[p.~xx]{stevensUNIXNetworkProgramming2013}. The
-initial mention of sockets in relation to ARPANET comes from 
-RFC 33, published in 1970 \cite{crockerNewHostHostProtocol1970}.
+environment are bound to come across sockets as the dominant
+API. Sockets have been around, in more or less their current
+form, since the 1980s
+\cite[p.~xx]{stevensUNIXNetworkProgramming2013}. The initial
+mention of sockets in relation to ARPANET comes from RFC 33,
+published in 1970 \cite{crockerNewHostHostProtocol1970}.
 
-Network sockets have grown alongside with the growth of UNIX. 
-Network sockets have grown out of the Berkeley sockets
-which first appeared in version 4.2 of the Berkeley Software
+Network sockets have grown alongside with the growth of UNIX.
+Network sockets have grown out of the Berkeley sockets which
+first appeared in version 4.2 of the Berkeley Software
 Distribution, originally used for inter-process communication.
-With their
-early appearance for inter-process communication in the Berkeley 
-Software Distribution version 4.2
-in 1983, sockets have grown to become the dominant way low-level
-network programming is done today. [citation]
-As mentioned previously, the original Berkeley sockets were designed
-for inter-process communication. As a continuation of this, the
-implementation of network sockets can be either connection
-oriented or stream-oriented, a setting which is decided at compile
-time. This has propagated into network sockets, for which the type of
+With their early appearance for inter-process communication in
+the Berkeley Software Distribution version 4.2 in 1983, sockets
+have grown to become the dominant way low-level network
+programming is done today. [citation] As mentioned previously,
+the original Berkeley sockets were designed for inter-process
+communication. As a continuation of this, the implementation of
+network sockets can be either connection oriented or
+stream-oriented, a setting which is decided at compile time.
+This has propagated into network sockets, for which the type of
 underlying connection, either TCP or UDP, has to be decided at
-compile time. 
+compile time.
 
-Being stream-oriented or message-oriented has to do with
-how the transferred data is represented. In a stream oriented
-protocol such as TCP, the data is represented as a stream of bytes.
-From the application's point of view, the data arrives continuously
-and not in discrete chunks. This means that the appliaction cannot
-easily differentiate between different messages. As everything is
-ran over IP, which is a message-oriented protocol, TCP, which
-is a transport layer protocol, has to be able to handle receiving
-discrete messages and gluing them together into a stream of bytes.
-This also includes handling messages arriving out of order, which
-has to be handled before they can be presented as a stream in order.
-This is called in-order delivery and is a key feature guaranteed
-to the client by TCP.
+Being stream-oriented or message-oriented has to do with how the
+transferred data is represented. In a stream oriented protocol
+such as TCP, the data is represented as a stream of bytes. From
+the application's point of view, the data arrives continuously
+and not in discrete chunks. This means that the appliaction
+cannot easily differentiate between different messages. As
+everything is ran over IP, which is a message-oriented protocol,
+TCP, which is a transport layer protocol, has to be able to
+handle receiving discrete messages and gluing them together into
+a stream of bytes. This also includes handling messages arriving
+out of order, which has to be handled before they can be
+presented as a stream in order. This is called in-order delivery
+and is a key feature guaranteed to the client by TCP.
 
-With message-oriented protocols, such as UDP, the data is represented
-as discrete messages. This means that the application can
-easily differentiate between them. Because the data is represented
-in discrete messages, this allows the protocol to not have do deliver
-the messages in order. Firstly, this allows the application to
-access the data quicker, as it does not have to wait for any
-delayed packets to arrive, before the other data can he handed over.
-This becomes very important when multiplexing multiple streams of data
-over a single connection. This is done in order to more efficiently utilize
-bandwith, but faces problems if data from one stream is delayed if
-we are using a protocol which guarantees in-order delivery. Even if
-only one application's data is delayed, the second application's data
-will have to wait, as they are together treated as a single stream
-and have to be delivered in order. This is called head-of-line blocking.
-When using a message-oriented protocol, which makes it possible,
-but not mandatory, to not guarantee in-order delivery, one application
+With message-oriented protocols, such as UDP, the data is
+represented as discrete messages. This means that the
+application can easily differentiate between them. Because the
+data is represented in discrete messages, this allows the
+protocol to not have do deliver the messages in order. Firstly,
+this allows the application to access the data quicker, as it
+does not have to wait for any delayed packets to arrive, before
+the other data can he handed over. This becomes very important
+when multiplexing multiple streams of data over a single
+connection. This is done in order to more efficiently utilize
+bandwith, but faces problems if data from one stream is delayed
+if we are using a protocol which guarantees in-order delivery.
+Even if only one application's data is delayed, the second
+application's data will have to wait, as they are together
+treated as a single stream and have to be delivered in order.
+This is called head-of-line blocking. When using a
+message-oriented protocol, which makes it possible, but not
+mandatory, to not guarantee in-order delivery, one application
 does not have to wait for the other application's data.
 
-
-This compile-time binding may not seem like a large problem,
-as it reflects the fact that a connection cannot swap protocols
+This compile-time binding may not seem like a large problem, as
+it reflects the fact that a connection cannot swap protocols
 midway through. And the type of protocol is usually deeply bound
-to the application, and large redesigns likely have to take place if
-an application were to change from using a connection-oriented
-to a stream-oriented connection. However, different parts of
-the application may have different requirements, for example
-a connection to a video-streaming website itself may be 
-connection-oriented, while the video-stream itself will likely
-be stream-oriented.
+to the application, and large redesigns likely have to take
+place if an application were to change from using a
+connection-oriented to a stream-oriented connection. However,
+different parts of the application may have different
+requirements, for example a connection to a video-streaming
+website itself may be connection-oriented, while the
+video-stream itself will likely be stream-oriented.
 
-One of the key features of TAPS is to give the developer access to more
-advanced features of protocols such as QUIC or SCTP, while still being
-able to fall back to TCP if necessary. This will allow TAPS to act in
-a message-oriented way, while still being able to use a connection-oriented
-protocol such as TCP.
+One of the key features of TAPS is to give the developer access
+to more advanced features of protocols such as QUIC or SCTP,
+while still being able to fall back to TCP if necessary. This
+will allow TAPS to act in a message-oriented way, while still
+being able to use a connection-oriented protocol such as TCP.
 
-QUIC is a internet protocol developed by Google, released to
-the public in 2013, described in RFC 9000 
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
-QUIC is a transport layer protocol, which is designed to be a replacement
-for TCP. QUIC is a connection-oriented protocol which is built on
-top of UDP. QUIC enables 0-RTT connection establishment and
-integrates encryption as a mandatory feature of the protocol.
+QUIC is a internet protocol developed by Google, released to the
+public in 2013, described in RFC 9000
+\cite{iyengarQUICUDPBasedMultiplexed2021}. QUIC is a transport
+layer protocol, which is designed to be a replacement for TCP.
+QUIC is a connection-oriented protocol which is built on top of
+UDP. QUIC enables 0-RTT connection establishment and integrates
+encryption as a mandatory feature of the protocol.
 
-The abstraction presented to an application for communication via
-QUIC is called a stream. A stream can be either unidirectional or
-biderectional. Streams can be created and closed by either endpoint,
-and multple streams can exist over a single QUIC connection. This
-is an example of the concept of multiplexed connections.
-Individual pieces of data sent over a stream are encapsulated
-as stream frames. By using the stream ID and the byte offset of the
-stream frame, the receiving endpoint reassembles the data into
-the correct order. All implementaitons must support in-order delivery of 
-data, they may choose to allow out-of-order delivery of data as well,
-but this is not a requirement of the protocol
-This only happens on a per-stream basis, so
-when multiplexing multiple streams over a single connection, the
-streams are independent of each other and we avoid head-of-line blocking.
+The abstraction presented to an application for communication
+via QUIC is called a stream. A stream can be either
+unidirectional or biderectional. Streams can be created and
+closed by either endpoint, and multple streams can exist over a
+single QUIC connection. This is an example of the concept of
+multiplexed connections. Individual pieces of data sent over a
+stream are encapsulated as stream frames. The stream frame boundaries
+are not expected to be preserved, and are therefore not visible
+to the application. \todo{Is this true?}
 
+By using the stream ID and the byte offset of the stream frame,
+the receiving endpoint reassembles the data into the correct
+order. All implementations must support in-order delivery of
+data, they may choose to allow out-of-order delivery of data as
+well, but this is not a requirement of the protocol This only
+happens on a per-stream basis, so when multiplexing multiple
+streams over a single connection, the streams are independent of
+each other and we avoid head-of-line blocking.
 
-A given stream frame has the following format, as describted in RFC 9000:
+A given stream frame has the following format, as describted in
+RFC 9000:
 
 \begin{figure}[H]
-    \centering
-    \begin{lstlisting}
+	\centering
+	\begin{lstlisting}
         STREAM Frame {
           Type (i) = 0x08..0x0f,
           Stream ID (i),
@@ -111,47 +116,136 @@ A given stream frame has the following format, as describted in RFC 9000:
           Stream Data (..),
         }
     \end{lstlisting}
-    \caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
-    \label{fig:stream_frame_format}
+	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
+	\label{fig:stream_frame_format}
 \end{figure}
 
-The reason for QUIC being built on top of UDP is to avoid
-issues stemming from network ossification. A lot of middleboxes
-and other networking infrastructure is optimized for TCP and UDP,
-and may in some cases refuse to forward packets where the transport
-layer protocol is not TCP or UDP. Avoiding similar issues in the future
-is one of the reasons for why QUIC integrates TLS 1.3 as a mandatory
-part of the protocol. By obscuring as much as possible of the packet
-from middleboxes, they cannot grow to depend on the contents of the packet.
-This will avoid future problems with middleboxes expecting a certain format
-like we see with them expecting either TCP or UDP.
+A given stream can exist in several different states.
+These states differ whether the stream is sending or receiving
+data. For a stream sending data, the states are:
+\texttt{Ready}, \texttt{Send}, \texttt{Data Sent}, \texttt{Reset Sent},
+\texttt{Data Recvd}, and \texttt{Reset Recvd}.
+A receiving streams states maps the perceived states of the
+sending stream. This means that there are some states
+which are not represented in the receiving stream, as they
+cannot be inferred from the data received. The states of a
+receiving stream are: 
+\texttt{Recv}, \texttt{Size Known}, \texttt{Data Recvd}, \texttt{Reset Recvd},
+\texttt{Data Read}, and \texttt{Reset Read}.
+A bidirectional stream consists of both sending and receiving parts,
+and can therefore exist in states belonging to both sending and
+receiving streams as described previously.
+
+\begin{figure}[H]
+    \centering
+    \begin{lstlisting}
+       o
+       | Create Stream (Sending)
+       | Peer Creates Bidirectional Stream
+       v
+   +-------+
+   | Ready | Send RESET_STREAM
+   |       |-----------------------.
+   +-------+                       |
+       |                           |
+       | Send STREAM /             |
+       |      STREAM_DATA_BLOCKED  |
+       v                           |
+   +-------+                       |
+   | Send  | Send RESET_STREAM     |
+   |       |---------------------->|
+   +-------+                       |
+       |                           |
+       | Send STREAM + FIN         |
+       v                           v
+   +-------+                   +-------+
+   | Data  | Send RESET_STREAM | Reset |
+   | Sent  |------------------>| Sent  |
+   +-------+                   +-------+
+       |                           |
+       | Recv All ACKs             | Recv ACK
+       v                           v
+   +-------+                   +-------+
+   | Data  |                   | Reset |
+   | Recvd |                   | Recvd |
+   +-------+                   +-------+
+    \end{lstlisting}
+    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021}}
+    \label{fig:stream_states}
+\end{figure}
+
+Another important abstraction presented by QUIC is the connection.
+A QUIC connection is a shared state between a client and a server 
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
+A connection is established through a handshake, with support
+for 0-RTT handshakes as mentioned previously. The connection
+is identified by a connection ID, which is selected by each
+endpoint's peer. Packets sent to this peer are identified as
+belonging to a given connection, by a destination connection ID
+field. Connection IDs make addressing in QUIC independent of addressing in lower layer
+protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
+has a unique connection ID, making sure that external observers cannot
+identify that the two endpoints are communicating with each
+other by looking at the connection ID.
+
+Using a connection ID allows the connectoin to survive a change
+in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
+This functionality is enabled by default, but can be disbled by
+one of the peers. When an address is changed, each endpoint has to
+independently verify that they can communicate using the new address.
+Path validation happens using a special type of stream frame
+known as \texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE}
+frames. The \texttt{PATH\_CHALLENGE} frame contains unpredictable
+data which must be mirrored back in the \texttt{PATH\_RESPONSE} frame.
+If the endpoint validation fails, which happens if no matching response
+is received within a given time period, the endpoints can continue
+communicating using other known addresses. If there are no valid
+addresses, the affected endpoint can signal this to the other
+peer by using a \texttt{NO\_VIABLE\_PATH} error.
+
+Much like TCP, QUIC also implements congestion control, there are
+however some key differences between the algorithms. TODO continue
+here \cite{iyengarQUICLossDetection2021}.
+
+The reason for QUIC being built on top of UDP is to avoid issues
+stemming from network ossification. A lot of middleboxes and
+other networking infrastructure is optimized for TCP and UDP,
+and may in some cases refuse to forward packets where the
+transport layer protocol is not TCP or UDP. Avoiding similar
+issues in the future is one of the reasons for why QUIC
+integrates TLS 1.3 as a mandatory part of the protocol. By
+obscuring as much as possible of the packet from middleboxes,
+they cannot grow to depend on the contents of the packet. This
+will avoid future problems with middleboxes expecting a certain
+format like we see with them expecting either TCP or UDP.
 
 The key advantages of QUIC over TCP is that it is designed to be
 more efficient thatn TCP, and be able to handle more streams of
 data in a better way due to the lack of head-of-line blocking.
 
-As mentioned previously, one of the key selling points of
-TCP is the ubiquity of sockets, which are implemented in kernel space.
-There is no equivalent API for QUIC, and with a relatively advanced
-implementation, users have to settle for one of the existing
-libraries. 
+As mentioned previously, one of the key selling points of TCP is
+the ubiquity of sockets, which are implemented in kernel space.
+There is no equivalent API for QUIC, and with a relatively
+advanced implementation, users have to settle for one of the
+existing libraries.
 
-Currently, few applications can be built
-exclusively on top of QUIC, as it requires support from both the client
-and the server. QUIC is a transport protocol that is built on top of
+Currently, few applications can be built exclusively on top of
+QUIC, as it requires support from both the client and the
+server. QUIC is a transport protocol that is built on top of
 UDP, and is designed to be a replacement for TCP. QUIC uses
-multiplexed connections to for more efficient use of the network.
-Multiplexed connections are also used in http/2, but there it
-suffers from head-of-line blocking, which is caused by TCP's 
-requirement for all packets to be delivered in order. This problem
-is exacerbated when using multiple streams of data over a single
-TCP connection, as a single lost packet will block all other
-streams.
+multiplexed connections to for more efficient use of the
+network. Multiplexed connections are also used in http/2, but
+there it suffers from head-of-line blocking, which is caused by
+TCP's requirement for all packets to be delivered in order. This
+problem is exacerbated when using multiple streams of data over
+a single TCP connection, as a single lost packet will block all
+other streams.
 
-With QUIC, the multiplexed connections can still be sent
-over a single connection, but the streams are independent of each other.
-This is made possible because QUIC is built on top of UDP; which
-does not guarantee packet ordering for separate streams.
+With QUIC, the multiplexed connections can still be sent over a
+single connection, but the streams are independent of each
+other. This is made possible because QUIC is built on top of
+UDP; which does not guarantee packet ordering for separate
+streams.
 
 TAPS exposes several configurations which can be used to specify
 a preference of requirement, which then sets a preference or a
@@ -160,167 +254,179 @@ These configurations come in the form of transport properties.
 These properties are broken down into three categories:
 Selection properites, Connection properties, and message
 properties. Selection properties are requirements for the
-underlying transport protocol, which TAPS uses to select
-which protocol to use for the connection. Connection properties
-are properties which are set on a per-connection basis, for
-example the timeout for aborting a connection or the connection
-priority. Message properties are properties which are set
-on a per-message basis, for example the priority or the lifetime
-of the given message. A full list of properites can be found
-in the Architecture and Requirements for Transport Services RFC
+underlying transport protocol, which TAPS uses to select which
+protocol to use for the connection. Connection properties are
+properties which are set on a per-connection basis, for example
+the timeout for aborting a connection or the connection
+priority. Message properties are properties which are set on a
+per-message basis, for example the priority or the lifetime of
+the given message. A full list of properites can be found in the
+Architecture and Requirements for Transport Services RFC
 \cite{paulyArchitectureRequirementsTransport2025}.
 
-Selection properties can, as mentioned above, be specified
-to varying degrees of strictness. With five different values
-\texttt{Require}, \texttt{Prefer}, \texttt{No Preference}, \texttt{Avoid},
-and \texttt{Prohibit}. Here, \texttt{Require} means that establishing
-the connection will fail if the property cannot be satisfied with the
-available transport protocols. \texttt{Prefer} means that the connection
-can fall back to a protocol not supporting the property, if no protocol
-satisfying the property is available. \texttt{Avoid} and \texttt{Prohibit}
-function in the same way as \texttt{Require} and \texttt{Prefer},
-but selecting for protocols which do not have the selected property.
-A simple example of a selection property is selecting for reliable
-data transfer. If this was set as required, TAPS would be forced
-to use for example TCP or QUIC as the underlying protocol. If UDP
-was the only available protocol, establishing the connection would fail.
-If the user selected \texttt{prefer}, then UDP could be selected if
-nothing else was available, even though it does not fulfill the property.
+Selection properties can, as mentioned above, be specified to
+varying degrees of strictness. With five different values
+\texttt{Require}, \texttt{Prefer}, \texttt{No Preference},
+\texttt{Avoid}, and \texttt{Prohibit}. Here, \texttt{Require}
+means that establishing the connection will fail if the property
+cannot be satisfied with the available transport protocols.
+\texttt{Prefer} means that the connection can fall back to a
+protocol not supporting the property, if no protocol satisfying
+the property is available. \texttt{Avoid} and \texttt{Prohibit}
+function in the same way as \texttt{Require} and
+\texttt{Prefer}, but selecting for protocols which do not have
+the selected property. A simple example of a selection property
+is selecting for reliable data transfer. If this was set as
+required, TAPS would be forced to use for example TCP or QUIC as
+the underlying protocol. If UDP was the only available protocol,
+establishing the connection would fail. If the user selected
+\texttt{prefer}, then UDP could be selected if nothing else was
+available, even though it does not fulfill the property.
 
 There are also more advanced selection properties available. Out
-of these, the least intuitive are \texttt{Multistream Connections in Group},
-\texttt{Full Checksum Coverage on Sending} and \texttt{Full Checksum Coverage on Receiving},
-\texttt{Provisioning Domain Instance or Type}, \texttt{Use Temporary Local Address}, and
-\texttt{Notification of ICMP soft error message arrival}.
+of these, the least intuitive are \texttt{Multistream
+	Connections in Group}, \texttt{Full Checksum Coverage on
+	Sending} and \texttt{Full Checksum Coverage on Receiving},
+\texttt{Provisioning Domain Instance or Type}, \texttt{Use
+	Temporary Local Address}, and \texttt{Notification of ICMP soft
+	error message arrival}.
 
-The \texttt{Multistream Connections in Group} selection property allows
-the user \todo{TODO - select term for "user" of TAPS api (developer of networking application)}
-to select whether the application would prefer multiple Connections within a Connection Group 
-to be provided by streams of a single underlying transport connection where possible
-\cite{paulyArchitectureRequirementsTransport2025}. Multistreaming in this context is
-the act of providing multiple streams of data over a single underlying connection. This is
-advantageous as it allows for more efficient use of the network, since the connection
-will better saturate the available bandwidth. This avoids long convergence times
-for the connection and allows fresh connection to utilize the large congestion window
-already achieved, without having to wait for slow start to ramp up. This is especially
-useful for applications with many small streams of data, such as web browsers.
+The \texttt{Multistream Connections in Group} selection property
+allows the user \todo{TODO - select term for "user" of TAPS api
+	(developer of networking application)} to select whether the
+application would prefer multiple Connections within a
+Connection Group to be provided by streams of a single
+underlying transport connection where possible
+\cite{paulyArchitectureRequirementsTransport2025}.
+Multistreaming in this context is the act of providing multiple
+streams of data over a single underlying connection. This is
+advantageous as it allows for more efficient use of the network,
+since the connection will better saturate the available
+bandwidth. This avoids long convergence times for the connection
+and allows fresh connection to utilize the large congestion
+window already achieved, without having to wait for slow start
+to ramp up. This is especially useful for applications with many
+small streams of data, such as web browsers.
 
-The \texttt{Full Checksum Coverage on Sending} and \texttt{Full Checksum Coverage on Re\-ceiving}
-selection properties
-specify the application's need for protection against corruption for all data transmitted or
-received on a given connection. This is used to specify how many bytes of the message
-which needs to be protected by a checksum. This checksum is used to protect the data
-from corruption caused by lower-layer protocols. The setting \texttt{Full coverage} means
-that the entire message is protected, while \texttt{0} specifies no checksum is required.
-If any other value than \texttt{Full coverage} is specified, the connection may still
-fall back to \texttt{Full coverage}.
+The \texttt{Full Checksum Coverage on Sending} and \texttt{Full
+	Checksum Coverage on Re\-ceiving} selection properties specify
+the application's need for protection against corruption for all
+data transmitted or received on a given connection. This is used
+to specify how many bytes of the message which needs to be
+protected by a checksum. This checksum is used to protect the
+data from corruption caused by lower-layer protocols. The
+setting \texttt{Full coverage} means that the entire message is
+protected, while \texttt{0} specifies no checksum is required.
+If any other value than \texttt{Full coverage} is specified, the
+connection may still fall back to \texttt{Full coverage}.
 
-The \texttt{Provisioning Domain Instance or Type} selection property 
-allows the applicatio \todo{common application term}n to
-control path selection by selecting for specific Provisioning Domain or
-categories of domains \cite{paulyArchitectureRequirementsTransport2025}.
-Provisioning Domains define consistent sets of network properties that 
-might be more specific than network interfaces 
+The \texttt{Provisioning Domain Instance or Type} selection
+property allows the applicatio \todo{common application term}n
+to control path selection by selecting for specific Provisioning
+Domain or categories of domains
+\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
+Domains define consistent sets of network properties that might
+be more specific than network interfaces
 \cite{paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Use Temporary Local Address} selection property
-allows the application \todo{common application term} to
-specify whether or not to use temporary addresses which are a
-feature in IPv6, used for greater privacy 
+allows the application \todo{common application term} to specify
+whether or not to use temporary addresses which are a feature in
+IPv6, used for greater privacy
 \cite{gontTemporaryAddressExtensions2021},\cite{paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Notification of ICMP soft error message arrival}
-selection property lets an application \todo{common application term} specify whether or
-not it should be notified when an ICMP error, which does not
-force termination of the connection, arrives 
-\cite{paulyArchitectureRequirementsTransport2025}.
+selection property lets an application \todo{common application
+	term} specify whether or not it should be notified when an ICMP
+error, which does not force termination of the connection,
+arrives \cite{paulyArchitectureRequirementsTransport2025}.
 
-In addition to specifying which underlying protocol should
-be used through selection properties, the application \todo{common application term}
-using TAPS can manage the connections themselves through transport
-properties. These can be specific for a given transport protocol
-such as the selection properties, or generic and be available for
-all transport protocols. \todo[]{Should this be separated from all the above
-parts? are they all part of the same 'category'}
+In addition to specifying which underlying protocol should be
+used through selection properties, the application \todo{common
+	application term} using TAPS can manage the connections
+themselves through transport properties. These can be specific
+for a given transport protocol such as the selection properties,
+or generic and be available for all transport protocols.
+\todo[]{Should this be separated from all the above parts? are
+	they all part of the same 'category'}
 
 The \texttt{Connection Group Transmission Scheduler} transport
-property decides which scheduler is used within a given connection
-group, to divide the available capacity between the connections.
+property decides which scheduler is used within a given
+connection group, to divide the available capacity between the
+connections. \cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Capacity Profile} transport property is used to
+select a capacity profile, which will be a tradeoff between
+delay, delay variation, and efficient use of the available
+capacity based on the capacity profile specified
 \cite{paulyArchitectureRequirementsTransport2025}.
 
-The \texttt{Capacity Profile} transport property is used
-to select a capacity profile, which will be a tradeoff between 
-delay, delay variation, and efficient use of the available capacity 
-based on the capacity profile specified
-\cite{paulyArchitectureRequirementsTransport2025}.
+The \texttt{Isolate Session} transport property set in order to
+have new connections use as little cacheed information as
+possible from previous connections not in the same connection
+group \cite{paulyArchitectureRequirementsTransport2025}.
 
-The \texttt{Isolate Session} transport property set in order
-to have new connections use as little cacheed information as possible
-from previous connections not in the same connection group
-\cite{paulyArchitectureRequirementsTransport2025}.
-
-There are already several working TAPS implementations, but they are lacking
-in different ways. Two prominent implementations are \texttt{dynamic-taps}
-implemented in C 
-and \texttt{python-asyncio-taps} implemented in Python 
-\cite{dukeDynamictaps2025}\todo{Is this actually the one Michael was talking about, what is NEAT?}
-\cite{frankePythonasynciotaps2025}. This thesis
-aims to be an improvement over these implementations. By being a C implementation
-it will be suitable for lower level applications. It aims to improve on the
-existing C implementation by being more modular and easier to use. Currently,
-\texttt{dynamic-taps} is a monolitic implementation \todo{is this actually true}
-and has not been updated since 2021. This thesis will provide an alternative
-written after the final TAPS RFC has been published. It will also be more
-modular and well tested, making it easier to use an to integrate into an
-existing library or application.
+There are already several working TAPS implementations, but they
+are lacking in different ways. Two prominent implementations are
+\texttt{dynamic-taps} implemented in C and
+\texttt{python-asyncio-taps} implemented in Python
+\cite{dukeDynamictaps2025}\todo{Is this actually the one Michael
+	was talking about, what is NEAT?}
+\cite{frankePythonasynciotaps2025}. This thesis aims to be an
+improvement over these implementations. By being a C
+implementation it will be suitable for lower level applications.
+It aims to improve on the existing C implementation by being
+more modular and easier to use. Currently, \texttt{dynamic-taps}
+is a monolitic implementation \todo{is this actually true} and
+has not been updated since 2021. This thesis will provide an
+alternative written after the final TAPS RFC has been published.
+It will also be more modular and well tested, making it easier
+to use an to integrate into an existing library or application.
 
 \textbf{Write about \texttt{Python alternative} \texttt{Old bloated
-C alternative} etc.}
-    
+		C alternative} etc.}
 
 \sout{Things we need to mention:}
 \begin{itemize}
-    \item \sout{Sockets are dominant}
-    \item Why are they dominant?
-    \item Advantages of sockets
-    \item Disadvantages of sockets
-        \begin{itemize}
-            \item \sout{Compile-time binding to transport layer protocols}
-            \item Lack of flexibility
-        \end{itemize}
-    \item What is QUIC?
-        \begin{itemize}
-            \item Why QUIC?
-            \item Advantages of QUIC
-            \item Disadvantages of QUIC
-        \end{itemize}
-    \item What is TAPS?
-        \begin{itemize}
-            \item Why TAPS?
-                \begin{itemize}
-                    \item When was TAPS developed?
-                    \item Who developed TAPS?
-                    \item What is the goal of TAPS?
-                \end{itemize}
-            \item Advantages of TAPS
-                \begin{itemize}
-                    \item \sout{Flexibility}
-                    \item \sout{Transport protocol agnostic}
-                    \item \sout{switching between transport protocols}
-                    \item utilizing QUIC
-                \end{itemize}
-            \item Disadvantages of TAPS
-            \item Specific TAPS features
-        \end{itemize}
-    \item Why does this thesis exist
-        \begin{itemize}
-            \item Existing implementations
-            \item Problems with existing implementations
-            \item Advantages of this implementation
-        \end{itemize}
+	\item \sout{Sockets are dominant}
+	\item Why are they dominant?
+	\item Advantages of sockets
+	\item Disadvantages of sockets
+	      \begin{itemize}
+		      \item \sout{Compile-time binding to transport layer protocols}
+		      \item Lack of flexibility
+	      \end{itemize}
+	\item What is QUIC?
+	      \begin{itemize}
+		      \item Why QUIC?
+		      \item Advantages of QUIC
+		      \item Disadvantages of QUIC
+	      \end{itemize}
+	\item What is TAPS?
+	      \begin{itemize}
+		      \item Why TAPS?
+		            \begin{itemize}
+			            \item When was TAPS developed?
+			            \item Who developed TAPS?
+			            \item What is the goal of TAPS?
+		            \end{itemize}
+		      \item Advantages of TAPS
+		            \begin{itemize}
+			            \item \sout{Flexibility}
+			            \item \sout{Transport protocol agnostic}
+			            \item \sout{switching between transport protocols}
+			            \item utilizing QUIC
+		            \end{itemize}
+		      \item Disadvantages of TAPS
+		      \item Specific TAPS features
+	      \end{itemize}
+	\item Why does this thesis exist
+	      \begin{itemize}
+		      \item Existing implementations
+		      \item Problems with existing implementations
+		      \item Advantages of this implementation
+	      \end{itemize}
 \end{itemize}
-
-
 
 \section{Past work}
 
