@@ -74,19 +74,61 @@ able to fall back to TCP if necessary. This will allow TAPS to act in
 a message-oriented way, while still being able to use a connection-oriented
 protocol such as TCP.
 
-One of the key selling points for TAPS is the ability to use different
-network protocols with the same API. This will for example ease the
-development of applications that for example use QUIC. 
 QUIC is a internet protocol developed by Google, released to
 the public in 2013, described in RFC 9000 
 \cite{iyengarQUICUDPBasedMultiplexed2021}.
+QUIC is a transport layer protocol, which is designed to be a replacement
+for TCP. QUIC is a connection-oriented protocol which is built on
+top of UDP. QUIC enables 0-RTT connection establishment and
+integrates encryption as a mandatory feature of the protocol.
+
+The abstraction presented to an application for communication via
+QUIC is called a stream. A stream can be either unidirectional or
+biderectional. Streams can be created and closed by either endpoint,
+and multple streams can exist over a single QUIC connection. This
+is an example of the concept of multiplexed connections.
+Individual pieces of data sent over a stream are encapsulated
+as stream frames. By using the stream ID and the byte offset of the
+stream frame, the receiving endpoint reassembles the data into
+the correct order. All implementaitons must support in-order delivery of 
+data, they may choose to allow out-of-order delivery of data as well,
+but this is not a requirement of the protocol
+This only happens on a per-stream basis, so
+when multiplexing multiple streams over a single connection, the
+streams are independent of each other and we avoid head-of-line blocking.
+
+
+A given stream frame has the following format, as describted in RFC 9000:
+
+\begin{figure}[H]
+    \centering
+    \begin{lstlisting}
+        STREAM Frame {
+          Type (i) = 0x08..0x0f,
+          Stream ID (i),
+          [Offset (i)],
+          [Length (i)],
+          Stream Data (..),
+        }
+    \end{lstlisting}
+    \caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
+    \label{fig:stream_frame_format}
+\end{figure}
+
+The reason for QUIC being built on top of UDP is to avoid
+issues stemming from network ossification. A lot of middleboxes
+and other networking infrastructure is optimized for TCP and UDP,
+and may in some cases refuse to forward packets where the transport
+layer protocol is not TCP or UDP. Avoiding similar issues in the future
+is one of the reasons for why QUIC integrates TLS 1.3 as a mandatory
+part of the protocol. By obscuring as much as possible of the packet
+from middleboxes, they cannot grow to depend on the contents of the packet.
+This will avoid future problems with middleboxes expecting a certain format
+like we see with them expecting either TCP or UDP.
+
 The key advantages of QUIC over TCP is that it is designed to be
 more efficient thatn TCP, and be able to handle more streams of
 data in a better way due to the lack of head-of-line blocking.
-QUIC is implemented in user space on top of UDP, but acts as a
-transport-level protocol. It is designed on top of UDP, in order
-to avoid issues with middleware dropping packets which are not
-TCP or UDP.
 
 As mentioned previously, one of the key selling points of
 TCP is the ubiquity of sockets, which are implemented in kernel space.
