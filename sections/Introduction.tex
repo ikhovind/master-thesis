@@ -43,9 +43,143 @@ will allow TAPS to act in a message-oriented way, while still
 being able to use a connection-oriented protocol such as TCP.
 
 \section{What is TAPS}
+Transport Services (TAPS) is a \say{application Programming Interface 
+(API) to the transport layer that enables the selection of 
+transport protocols and network paths dynamically at runtime}
+\cite{trammellAbstractApplicationProgramming2025}. TAPS is
+designed to remove the compile-time binding to transport layer
+protocols, enabling updates to underlying transport protocols
+without having to rewrite application logic. TAPS does not
+require that both endpoints of a connection use TAPS, and TAPS
+can communicate with any endpoint which supports the underlying
+transport protocol being used.
+
+The following figure explains the API model when using
+sockets: \todo{Should these be here? If yes, recreate in tikz}
+
+\begin{figure}[H]
+    \centering
+    \begin{lstlisting}
+        +-----------------------------------------------------+
+        |                    Application                      |
+        +-----------------------------------------------------+
+                |                 |                  |
+          +------------+     +------------+    +--------------+
+          |  DNS Stub  |     | Stream API |    | Datagram API |
+          |  Resolver  |     +------------+    +--------------+
+          +------------+          |                  |
+                            +---------------------------------+
+                            |    TCP                UDP       |
+                            |    Kernel Networking Stack      |
+                            +---------------------------------+
+                                            |
+        +-----------------------------------------------------+
+        |               Network-Layer Interface               |
+        +-----------------------------------------------------+
+    \end{lstlisting}
+    \caption{API model for socket programming \cite{trammellAbstractApplicationProgramming2025}}
+\end{figure}
+
+The following figure explains the API model when using TAPS:
+
+\begin{figure}[H]
+    \centering
+    \begin{lstlisting}
+        +-----------------------------------------------------+
+        |                    Application                      |
+        +-----------------------------------------------------+
+                                  |
+        +-----------------------------------------------------+
+        |              Transport Services API                 |
+        +-----------------------------------------------------+
+                                  |
+        +-----------------------------------------------------+
+        |          Transport Services Implementation          |
+        |  (Using DNS, UDP, TCP, SCTP, DCCP, TLS, QUIC, etc.) |
+        +-----------------------------------------------------+
+                                  |
+        +-----------------------------------------------------+
+        |               Network-Layer Interface               |
+        +-----------------------------------------------------+
+    \end{lstlisting}
+    \caption{API model for TAPS \cite{trammellAbstractApplicationProgramming2025}}
+\end{figure}
+
+TODO - define key abstractions in TAPS - connections as well as
+transport properties
+
+Abstracting away the underlying transport protocols is done by
+letting the application specify a set of requirements
+and preferences for the network behavior. This set of requirements
+and preferences are known as Transport Properties. These transport
+properties can again be divided into three categories, selection
+properties, connection properties and message properties. Selection
+properties are properties used to select the path and protocol stack
+to use for a given connection. Connection properties are used
+during connection establishment and to define the behavior of the
+established connection. Message properties are settings set on an
+individual message. Typical transport properties are specified as
+a \texttt{preference}, with the possible values being \texttt{require},
+\texttt{prefer}, \texttt{no preference}, \texttt{avoid} and \texttt{prohibit}.
+The difference between \texttt{require} and \texttt{prefer} is whether
+or not the connection establishment will fail if the property cannot
+be satisfied. This is mirrored in the difference between \texttt{avoid}
+and \texttt{prohibit}.
+
+An example of a selection property is \texttt{Reliable Data Transfer}.
+This property is used to specify whether or not the application
+should use a protocol which ensures that all data is received at 
+a remote endpoint in order, without loss or duplication. Setting
+this to \texttt{require} will force TAPS to use an underlying protocol
+which guarantees this, such as TCP or QUIC. Setting this as
+\texttt{prohibit} will force TAPS to use a protocol which does not
+guarantee this, such as UDP.
+
+An example of a connection property is \texttt{Timeout for Aborting Connection}.
+This property is used to specify the how long to wait before deciding that an
+active connection has failed when trying to reliably deliver data to the Remote Endpoint.
+This naturally can only take effect if the underlying protocol supports reliability.
+
+An example of a message property is \texttt{priority}. This property specifies
+the prority of a given message relative to other messages over the same connection.
+Lower priority message will yield in favor of higher priority messages.
+
+TAPS is designed to provide an interface which more accurately
+reflects how a typical application uses the network. Socket programming
+is for example blocking by default, while most modern applications
+interact with the network in an asynchronous way 
+\cite{trammellAbstractApplicationProgramming2025}. TAPS
+is therefore designed to be asynchronous. An additional
+example of how TAPS is designed to reflect how applications
+use the network is that TAPS is message-oriented. TCP
+is a stream-oriented protocol, and presents data to application
+as a continious stream of bytes. However, most applications
+use the network in a message-oriented way, and therefore
+have to include delimiters and other logic to separate the
+data into discrete messages. For example, several protocols
+such as HTTP contain length fields, which are used to delimit
+transferred data into discrete messages. In order to reflect
+how the applications actually use the network, TAPS is therefore
+message-oriented, while still supporitng applications reliant on 
+streaming through the use of \texttt{framers}.
+
+A framer is a data translation layer, which is used to define
+how encapsulate or encode outbound message, and how to decapsulate
+or decode inbound messages. This for example allows applications
+to receive a byte stream as input if needed.
+
+TAPS is backwards compatible with existing protocols as it does not
+define how these underlying protocols should transfer data over
+the network. TAPS is also designed to coexist with existing
+socket programming APIs, allowing a gradual transition from
+socket programming to TAPS.
+
+Another key feature difference between TAPS and sockets is that socket
+APIs are commonly limited to communicating with a single address over 
+a single interface. TAPS is deisgned to handle multiple endpoints,
+protocols and paths.
 
 \section{Stream oriented vs message oriented (trash)}
-
 Being stream-oriented or message-oriented has to do with how the
 transferred data is represented. In a stream oriented protocol
 such as TCP, the data is represented as a stream of bytes. From
