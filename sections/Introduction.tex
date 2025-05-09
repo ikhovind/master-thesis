@@ -1,5 +1,6 @@
 \part{Introduction}
 \chapter{Background}
+\section{What are network sockets}\todo{Headers should be removed after editing is finished}
 Anyone programming any kind of networking application in a UNIX
 environment are bound to come across sockets as the dominant
 API. Sockets have been around, in more or less their current
@@ -23,6 +24,27 @@ stream-oriented, a setting which is decided at compile time.
 This has propagated into network sockets, for which the type of
 underlying connection, either TCP or UDP, has to be decided at
 compile time.
+
+This compile-time binding may not seem like a large problem, as
+it reflects the fact that a connection cannot swap protocols
+midway through. And the type of protocol is usually deeply bound
+to the application, and large redesigns likely have to take
+place if an application were to change from using a
+connection-oriented to a stream-oriented connection. However,
+different parts of the application may have different
+requirements, for example a connection to a video-streaming
+website itself may be connection-oriented, while the
+video-stream itself will likely be stream-oriented.
+
+One of the key features of TAPS is to give the developer access
+to more advanced features of protocols such as QUIC or SCTP,
+while still being able to fall back to TCP if necessary. This
+will allow TAPS to act in a message-oriented way, while still
+being able to use a connection-oriented protocol such as TCP.
+
+\section{What is TAPS}
+
+\section{Stream oriented vs message oriented (trash)}
 
 Being stream-oriented or message-oriented has to do with how the
 transferred data is represented. In a stream oriented protocol
@@ -58,22 +80,7 @@ message-oriented protocol, which makes it possible, but not
 mandatory, to not guarantee in-order delivery, one application
 does not have to wait for the other application's data.
 
-This compile-time binding may not seem like a large problem, as
-it reflects the fact that a connection cannot swap protocols
-midway through. And the type of protocol is usually deeply bound
-to the application, and large redesigns likely have to take
-place if an application were to change from using a
-connection-oriented to a stream-oriented connection. However,
-different parts of the application may have different
-requirements, for example a connection to a video-streaming
-website itself may be connection-oriented, while the
-video-stream itself will likely be stream-oriented.
-
-One of the key features of TAPS is to give the developer access
-to more advanced features of protocols such as QUIC or SCTP,
-while still being able to fall back to TCP if necessary. This
-will allow TAPS to act in a message-oriented way, while still
-being able to use a connection-oriented protocol such as TCP.
+\section{What is quic}
 
 QUIC is a internet protocol developed by Google, released to the
 public in 2013, described in RFC 9000
@@ -204,8 +211,53 @@ addresses, the affected endpoint can signal this to the other
 peer by using a \texttt{NO\_VIABLE\_PATH} error.
 
 Much like TCP, QUIC also implements congestion control, there are
-however some key differences between the algorithms. TODO continue
-here \cite{iyengarQUICLossDetection2021}.
+however some key differences between the algorithms. A key concept
+to QUIC's congestion control is the 'packet number space'. Packet
+number spaces are the context in which a packet can be processed
+and acknowledged \cite{iyengarQUICUDPBasedMultiplexed2021}. 
+\todo{Er det greit med direkte sitat på denne måten?}
+This context reflects the level of encryption and there 
+are therefore three separate packet number spaces. Initial space,
+for the initial handshake packets, handshake space, for packets
+exchanged during the cryptographic handshake, and application
+data space, for packets exchanged after the cryptographic handshake
+has been completed. Separating these spaces allows QUIC to
+avoid spurious retransmission from one space affecting another,
+and allows QUIC to handle retransmissions more efficiently, for
+example by using a different expected acknowledgement delay for packets sent
+in the initial space, as these are not expected to be cached
+by the peer. Although the packet number spaces are handled
+separately when it comes to acknowledgements, they are still
+unified when it comes to congestion control and round trip
+time measurements.
+
+Another difference between how QUIC and TCP handle acknowledgements
+is that QUIC separates the transmission order from the delivery order.
+This is done by using stream offset as delivery order, and packet number as
+transmission order. This removes ambiguity about whether the
+original or the retransmitted packet is acknowledged in the case
+of retransmissions, making RTT measurements in these cases more accurate
+\cite{iyengarQUICUDPBasedMultiplexed2021}. Another key difference
+is that instead of TCP algorithms such as retransmission timeout (RTO)
+and tail-loss probe (TLP), QUIC uses probe timeout (PTO).
+PTO is an algorithm which is used to detect lost packets. Every
+time a packet requiring an acknowledgement is sent, a timer is started. If
+the timer expires, the packet is resent and the PTO period is
+set to twice its previous value. When an acknowledgement is received,
+the PTO period is reset to its previous value, as long as the
+client is certain that the server has finished validating the 
+client's address.
+
+For QUIC a single connection can exist over several paths and
+congestion control is done on a per-path basis. Multiple streams
+can be transmitted over a single connection and data from
+multiple stream frames can be transmitted in a single packet.
+If a packet is lost, only applications using the streams contained
+in that packet will be affected. This is a key difference from TCP,
+where a single lost packet will block all other streams of data
+over the same connection. This is called head-of-line blocking.
+This problem is avoided by QUIC, since QUIC only guarantees
+in-order delivery of data on a per-stream basis.
 
 The reason for QUIC being built on top of UDP is to avoid issues
 stemming from network ossification. A lot of middleboxes and
@@ -246,6 +298,8 @@ single connection, but the streams are independent of each
 other. This is made possible because QUIC is built on top of
 UDP; which does not guarantee packet ordering for separate
 streams.
+
+\section{TAPS configurations explained}
 
 TAPS exposes several configurations which can be used to specify
 a preference of requirement, which then sets a preference or a
@@ -366,6 +420,7 @@ have new connections use as little cacheed information as
 possible from previous connections not in the same connection
 group \cite{paulyArchitectureRequirementsTransport2025}.
 
+\section{Existing TAPS implementations}
 There are already several working TAPS implementations, but they
 are lacking in different ways. Two prominent implementations are
 \texttt{dynamic-taps} implemented in C and
