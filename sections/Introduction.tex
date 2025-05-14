@@ -8,17 +8,34 @@ form, since the 1980s
 \cite[p.~xx]{stevensUNIXNetworkProgramming2013}. The initial
 mention of sockets in relation to ARPANET comes from RFC 33,
 published in 1970 \cite{crockerNewHostHostProtocol1970}.
+Sockets have proven to be immensely popular, and have grown
+to become the de facto standard for low-level network programming 
+\cite[p. 502]{tanenbaumComputerNetworks2011}.
+
+How to write 1000 words about sockets:
+\begin{itemize}
+    \item What is a socket \cite[p. 8]{donahooTCPIPSockets2009}
+    \item History of sockets
+    \item Compile time binding, SOCK\_DGRAM vs SOCK\_STREAM
+    \item What do each of these sockets represent
+    \item If you wanted to switch to QUIC, what would be required
+\end{itemize}
 
 Network sockets have grown alongside with the growth of UNIX.
 Network sockets have grown out of the Berkeley sockets which
 first appeared in version 4.2 of the Berkeley Software
 Distribution, originally used for inter-process communication.
-With their early appearance for inter-process communication in
-the Berkeley Software Distribution version 4.2 in 1983, sockets
-have grown to become the dominant way low-level network
-programming is done today. [citation] As mentioned previously,
-the original Berkeley sockets were designed for inter-process
-communication. As a continuation of this, the implementation of
+In practice, a socket is an abstraction where an application
+can send and receive data over a network. In order to reflect
+the underlying transport protocols, several types of sockets exist.
+In the Linux kernels \texttt{sys/socket.h} file, there exists
+5 standard socket types. One of these types is passed as a
+parameter when creating a socket, which the most common
+variants being \texttt{SOCK\_DGRAM} and \texttt{SOCK\_STREAM}.
+
+\texttt{SOCK\_DGRAM} is used for TODO cont here
+
+As a continuation of this, the implementation of
 network sockets can be either connection oriented or
 stream-oriented, a setting which is decided at compile time.
 This has propagated into network sockets, for which the type of
@@ -123,8 +140,41 @@ level groups of actions that an application can perform:
     \item \texttt{Event handling}: Notifications that an application
         can receive from a connection, and the handling of them.
     \item \texttt{Termination}: How transmission is stopped and
-        a conneciton is torn down.
+        a connection is torn down.
 \end{itemize}
+
+In addition, the lifeline of a connection is divided into three distinct
+phases, \texttt{preestablishment}, the \texttt{Established state}, and 
+\texttt{termination of a Connection} \cite{paulyArchitectureRequirementsTransport2025}.
+Each of these phases are associated
+with one or more of the groups of actions that an application can perform
+as described above. Establishment ends the preestablishment phase. When a
+connection is in the established state, the connection can be used to
+transfer data. When a connection has been established, it can either
+be closed or aborted, with closing being associated with normal termination,
+and aborting being abnormal termination associated with errors.
+
+After the desired transport properties and cryptographic parameters have
+been set, a connection can be established. There are three ways of
+establishing a connection, \texttt{initiate}, \texttt{listen} and
+\texttt{rendezvous} \cite{paulyArchitectureRequirementsTransport2025}.
+
+Initiate is used to establish a connection to a remote endpoint which
+is assumed to be listening for incoming connections. How this connection
+is established under the hood, is dependent on the underlying transport
+protocol selected based on the specified transport properties.
+
+Listen is used to passively open a connection. This is done in order to
+wait for connections from remote endpoints. Listen returns a listener
+object. When a remote endpoint connects to this listener, a \texttt{ConnectionReceived}
+event occurs. This event contains a Connection object for the 
+established connection.
+
+Rendezvous is used to establish a peer-to-peer connection between two endpoints
+simultaneously.
+
+4283
+
 
 If a single application has multiple connections, these can be organized
 into connection groups. Connection groups represent a set of connections
@@ -143,7 +193,9 @@ letting the application specify a set of requirements
 and preferences for the network behavior. This set of requirements
 and preferences are known as Transport Properties. These transport
 properties can again be divided into three categories: selection
-properties, connection properties and message properties. Selection
+properties, connection properties and message properties. 
+
+Selection
 properties are properties used to select the path and protocol stack
 to use for a given connection. Connection properties are used
 during connection establishment and to define the behavior of the
@@ -155,8 +207,6 @@ The difference between \texttt{require} and \texttt{prefer} is whether
 or not the connection establishment will fail if the property cannot
 be satisfied. This is mirrored in the difference between \texttt{avoid}
 and \texttt{prohibit}.
-
-TODO - when can these be set? Talk about preestablishment phase.
 
 An example of a selection property is \texttt{Reliable Data Transfer}.
 This property is used to specify whether or not the application
