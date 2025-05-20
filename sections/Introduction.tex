@@ -12,35 +12,41 @@ Sockets have proven to be immensely popular, and have grown
 to become the de facto standard for low-level network programming 
 \cite[p. 502]{tanenbaumComputerNetworks2011}.
 
+Network sockets have grown alongside with the growth of UNIX.
+Network sockets have grown out of the Berkeley sockets which
+first appeared in version 4.2 of the Berkeley Software
+Distribution, originally used for inter-process communication.
+
+The most basic definition of a socket is that it is an abstraction
+for a network connection, through which an application can send
+and receive data \cite[p. 8]{donahooTCPIPSockets2009}. When creating
+a socket, the application needs to specify the type, domain and
+protocol which will be used. The domain specifies the type of
+addressing which will be used, for example \texttt{AF\_UNIX}
+for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
+for IPv6. The type specifies the protocol which will be used over the socket.
+The two most frequent types here are \texttt{SOCK\_DGRAM} and \texttt{SOCK\_STREAM}.
+Specifying \texttt{SOCK\_DGRAM} means that the socket will be using 
+datagrams, meaning unreliable discrete messages. The default protocol
+for the \texttt{SOCK\_DGRAM} is therefore UDP. 
+Specifying \texttt{SOCK\_STREAM}
+means that the socket will be providing a reliable stream of bytes.
+The default protocol for the \texttt{SOCK\_STREAM} is TCP.
+The protocol parameter is used if there are multiple protocols
+which support the requirements given by the domain and type.
+
+The fact that the application has to specify both the domain
+and the type of the socket at compile time means that both the
+underlying addressing and the protocol are bound at compile time.
+
 How to write 1000 words about sockets:
 \begin{itemize}
-    \item What is a socket \cite[p. 8]{donahooTCPIPSockets2009}
+    \item What is a socket 
     \item History of sockets
     \item Compile time binding, SOCK\_DGRAM vs SOCK\_STREAM
     \item What do each of these sockets represent
     \item If you wanted to switch to QUIC, what would be required
 \end{itemize}
-
-Network sockets have grown alongside with the growth of UNIX.
-Network sockets have grown out of the Berkeley sockets which
-first appeared in version 4.2 of the Berkeley Software
-Distribution, originally used for inter-process communication.
-In practice, a socket is an abstraction where an application
-can send and receive data over a network. In order to reflect
-the underlying transport protocols, several types of sockets exist.
-In the Linux kernels \texttt{sys/socket.h} file, there exists
-5 standard socket types. One of these types is passed as a
-parameter when creating a socket, which the most common
-variants being \texttt{SOCK\_DGRAM} and \texttt{SOCK\_STREAM}.
-
-\texttt{SOCK\_DGRAM} is used for TODO cont here
-
-As a continuation of this, the implementation of
-network sockets can be either connection oriented or
-stream-oriented, a setting which is decided at compile time.
-This has propagated into network sockets, for which the type of
-underlying connection, either TCP or UDP, has to be decided at
-compile time.
 
 This compile-time binding may not seem like a large problem, as
 it reflects the fact that a connection cannot swap protocols
