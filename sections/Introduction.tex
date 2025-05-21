@@ -38,15 +38,11 @@ which support the requirements given by the domain and type.
 The fact that the application has to specify both the domain
 and the type of the socket at compile time means that both the
 underlying addressing and the protocol are bound at compile time.
-
-How to write 1000 words about sockets:
-\begin{itemize}
-    \item What is a socket 
-    \item History of sockets
-    \item Compile time binding, SOCK\_DGRAM vs SOCK\_STREAM
-    \item What do each of these sockets represent
-    \item If you wanted to switch to QUIC, what would be required
-\end{itemize}
+This means, that barring fairly advanced logic when setting up
+the necessary sockets, the application will be bound to a specific
+protocol and addressing scheme. This means that any update in
+the underlying protocol will require a recompilation and 
+redistribution of the application. 
 
 This compile-time binding may not seem like a large problem, as
 it reflects the fact that a connection cannot swap protocols
@@ -662,43 +658,7 @@ alternative written after the final TAPS RFC has been published.
 It will also be more modular and well tested, making it easier
 to use an to integrate into an existing library or application.
 
-\textbf{Write about \texttt{Python alternative} \texttt{Old bloated
-		C alternative} etc.}
-
-\sout{Things we need to mention:}
 \begin{itemize}
-	\item \sout{Sockets are dominant}
-	\item Why are they dominant?
-	\item Advantages of sockets
-	\item Disadvantages of sockets
-	      \begin{itemize}
-		      \item \sout{Compile-time binding to transport layer protocols}
-		      \item Lack of flexibility
-	      \end{itemize}
-	\item What is QUIC?
-	      \begin{itemize}
-		      \item Why QUIC?
-		      \item Advantages of QUIC
-		      \item Disadvantages of QUIC
-	      \end{itemize}
-	\item What is TAPS?
-	      \begin{itemize}
-		      \item Why TAPS?
-		            \begin{itemize}
-			            \item When was TAPS developed?
-			            \item Who developed TAPS?
-			            \item What is the goal of TAPS?
-		            \end{itemize}
-		      \item Advantages of TAPS
-		            \begin{itemize}
-			            \item \sout{Flexibility}
-			            \item \sout{Transport protocol agnostic}
-			            \item \sout{switching between transport protocols}
-			            \item utilizing QUIC
-		            \end{itemize}
-		      \item Disadvantages of TAPS
-		      \item Specific TAPS features
-	      \end{itemize}
 	\item Why does this thesis exist
 	      \begin{itemize}
 		      \item Existing implementations
