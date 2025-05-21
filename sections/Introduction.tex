@@ -27,11 +27,9 @@ for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket.
 The two most frequent types here are \texttt{SOCK\_DGRAM} and \texttt{SOCK\_STREAM}.
 Specifying \texttt{SOCK\_DGRAM} means that the socket will be using 
-datagrams, meaning unreliable discrete messages. The default protocol
-for the \texttt{SOCK\_DGRAM} is therefore UDP. 
+datagrams, meaning unreliable discrete messages.
 Specifying \texttt{SOCK\_STREAM}
 means that the socket will be providing a reliable stream of bytes.
-The default protocol for the \texttt{SOCK\_STREAM} is TCP.
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
@@ -45,8 +43,7 @@ the underlying protocol will require a recompilation and
 redistribution of the application. 
 
 This compile-time binding may not seem like a large problem, as
-it reflects the fact that a connection cannot swap protocols
-midway through. And the type of protocol is usually deeply bound
+the type of protocol is usually deeply bound
 to the application, and large redesigns likely have to take
 place if an application were to change from using a
 connection-oriented to a stream-oriented connection. However,
@@ -60,6 +57,49 @@ to more advanced features of protocols such as QUIC or SCTP,
 while still being able to fall back to TCP if necessary. This
 will allow TAPS to act in a message-oriented way, while still
 being able to use a connection-oriented protocol such as TCP.
+
+\section{Contemporary protocols}
+The most common protocol today by far is TCP. This is a
+well known protocol and will not be described in detail in
+this thesis. In summary, it is a connection-oriented protocol,
+which means that a connection has to be established before 
+any data can be sent. This connection along with the underlying
+packet loss detection allows it to
+guarantee reliable delivery of packets. 
+This additional
+functionality comes at the cost of
+increased complexity and overhead.
+
+With modern socket programming, the most frequent protocols
+are UDP and TCP. UDP is a connectionless protocol, and was
+designed originally as a transport layer protocol on top of
+IP, with as little overhead as possible \cite{postelUserDatagramProtocol1980}.
+UDP is an unreliable protocol, menaing that it does not guarantee
+delivery of sent packets. However, reliability algorithms can
+be built into protocols built on top of UDP, which is done in
+for example QUIC. 
+
+When building new internet protocols, they are commonly built
+on top of UDP. This is due to several reasons. Primarily it
+is a result of network ossification. This is the process
+of middleboxes and other network infrastructure becoming
+reliant on the parts of certain parts of the protocol stack.
+A middlebox may for example choose to drop an IP packet if
+the transport layer protocol is not TCP or UDP. This makes
+development of new protocols difficult, as they may in certain
+scenarios become complete unusable due to underlying networking
+hardware. Luckily, UDP is a simple protocol which contains
+very little overhead. This allows future protocols to bypass
+the issue of network ossification by using UDP as the underlying
+protocol. This does however mean, that if the protocol needs
+mechanisms present in TCP, such as reliability, then these have
+to be implemented by the new protocol, as done in QUIC.
+
+Building new protocols on top of UDP has become so common that
+it has prompted an official RFC from the IETF, describing
+the best practices \cite{eggertUnicastUDPUsage2008}. \todo{Forumulate
+    this better}
+
 
 \section{What is TAPS}
 Transport Services (TAPS) is a \say{application Programming Interface 
@@ -300,6 +340,8 @@ message-oriented protocol, which makes it possible, but not
 mandatory, to not guarantee in-order delivery, one application
 does not have to wait for the other application's data.
 
+\section{What is SCTP}
+
 \section{What is quic}
 
 QUIC is a internet protocol developed by Google, released to the
@@ -479,14 +521,10 @@ over the same connection. This is called head-of-line blocking.
 This problem is avoided by QUIC, since QUIC only guarantees
 in-order delivery of data on a per-stream basis.
 
-The reason for QUIC being built on top of UDP is to avoid issues
-stemming from network ossification. A lot of middleboxes and
-other networking infrastructure is optimized for TCP and UDP,
-and may in some cases refuse to forward packets where the
-transport layer protocol is not TCP or UDP. Avoiding similar
-issues in the future is one of the reasons for why QUIC
-integrates TLS 1.3 as a mandatory part of the protocol. By
-obscuring as much as possible of the packet from middleboxes,
+Future network ossification related to QUIC is avoided
+since QUIC mandates TLS 1.3 as part of the protocol.
+By encrypting as much of the packet as possible, QUIC is able to
+obscure details about the protocol from middleboxes, and
 they cannot grow to depend on the contents of the packet. This
 will avoid future problems with middleboxes expecting a certain
 format like we see with them expecting either TCP or UDP.
@@ -641,22 +679,22 @@ possible from previous connections not in the same connection
 group \cite{paulyArchitectureRequirementsTransport2025}.
 
 \section{Existing TAPS implementations}
-There are already several working TAPS implementations, but they
-are lacking in different ways. Two prominent implementations are
-\texttt{dynamic-taps} implemented in C and
-\texttt{python-asyncio-taps} implemented in Python
-\cite{dukeDynamictaps2025}\todo{Is this actually the one Michael
-	was talking about, what is NEAT?}
-\cite{frankePythonasynciotaps2025}. This thesis aims to be an
-improvement over these implementations. By being a C
-implementation it will be suitable for lower level applications.
-It aims to improve on the existing C implementation by being
-more modular and easier to use. Currently, \texttt{dynamic-taps}
-is a monolitic implementation \todo{is this actually true} and
-has not been updated since 2021. This thesis will provide an
-alternative written after the final TAPS RFC has been published.
-It will also be more modular and well tested, making it easier
-to use an to integrate into an existing library or application.
+% There are already several working TAPS implementations, but they
+% are lacking in different ways. Two prominent implementations are
+% \texttt{dynamic-taps} implemented in C and
+% \texttt{python-asyncio-taps} implemented in Python
+% \cite{dukeDynamictaps2025}\todo{Is this actually the one Michael
+% 	was talking about, what is NEAT?}
+% \cite{frankePythonasynciotaps2025}. This thesis aims to be an
+% improvement over these implementations. By being a C
+% implementation it will be suitable for lower level applications.
+% It aims to improve on the existing C implementation by being
+% more modular and easier to use. Currently, \texttt{dynamic-taps}
+% is a monolitic implementation \todo{is this actually true} and
+% has not been updated since 2021. This thesis will provide an
+% alternative written after the final TAPS RFC has been published.
+% It will also be more modular and well tested, making it easier
+% to use an to integrate into an existing library or application.
 
 \begin{itemize}
 	\item Why does this thesis exist
