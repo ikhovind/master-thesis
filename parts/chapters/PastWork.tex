@@ -1,9 +1,63 @@
 \chapter{Past work}
 
 \section{NEAT}
+One of the first open source implementations of TAPS is 
+NEAT (A New, Evolutive API and Transport-Layer Architecture for the Internet) 
+\cite{khademiNEATPlatformProtocolIndependent2017}. NEAT and its associated
+library, NEAT Library were funded alongside the TAPS project from 2015 to 2018.
+Developed alongside TAPS, the development of NEAT affected the TAPS API and
+the TAPS API natrually affected the development of NEAT. NEAT abstracts
+away transport layer communication through the use of flows. Much like
+a connection in TAPS, a flow can be first created without specifying
+which transport protocol to use. Much like TAPS, NEAT is also asynchronous,
+using an event loop and allowing for users to add their own callbacks.
+An example of where a user may add their own callback is the
+\texttt{on\_connect} callback, which allows the user to specify
+what to do when a conneciton is first established.
+
+Much like TAPS, NEAT uses properties, which consists of key-value pairs,
+in order to specify requirements for the underlying transport protocol.
+Unlike TAPS, properties in NEAT are not given as transport property
+objects, but rather as JSON objects. The biggest difference is however
+that NEAT forces the application to directly specify one or more protocols
+to be used, instead of selecting the characteristics desired for the communication.
+According to the documentation, \todo{Reference the documentation}
+NEAT supports two properties, \texttt{transport}
+and \texttt{security}. The transport property specifies which underlying
+transport protocol to use, and supports SCTP, SCTP/UDP (SCTP tunneled over UDP),
+TCP, UDP and UDP-Lite. \todo{Is this actually true?, check source code
+to double check}
+
+Instead of making the application directly select the transport protocol,
+TAPS focuses on the desired characterisitics of the connection, as described
+in the chapter \ref{chap:background}.
+
+Since the conclusion of the NEAT project, TAPS has continued to evolve
+so today the APIs differ to some extent. NEAT also does not feature
+key selling points of TAPS, such as the ability to use QUIC.
 
 \section{NEATPy}
 NEATPy \cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
 is a Python implementation and further development of the NEAT project.
 It was undertaken as a master thesis at the department of informatics
-at the University of Oslo.
+at the University of Oslo. It was undertaken as an attempt to create a
+Python layer to bridge the growing gap between NEAT and TAPS.
+
+Because NEATPy is a Python shim on top of NEAT, certain parts of it is
+limited by NEAT itself. For example,
+using NEATPy you cannot specify the \texttt{Interface Instance or Type}
+or the \texttt{Use Temporary Local Address} selection properties 
+\cite{NEATPyDocumentationNEATPy}. In addition, NEATPy does not
+allow support QUIC, as this is not supported by NEAT. Within the
+limitations of the underlying NEAT library, NEATPy is compliant with
+the TAPS API as of 2020. The TAPS API has since evolved, and was 
+published as an evolved standard in January 2025
+\cite{trammellAbstractApplicationProgramming2025}.
+Since then, new specifications have been added to the standard.
+For example, the support for giving more than one local and remote
+endpoint when creating a PreConnection. This is done when the application
+wants to indicate that several endpoints are eligible for the connection
+or provide the same service.
+
+This is naturally not supported by NEATPy, which has not had active
+development since 2020.
