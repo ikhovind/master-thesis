@@ -1,106 +1,79 @@
 \chapter{Background} \label{chap:background}
-\section{What are network sockets}\todo{Headers should be removed after editing is finished}
-Anyone programming any kind of networking application in a UNIX
-environment are bound to come across sockets as the dominant
-API. Sockets have been around, in more or less their current
-form, since the 1980s
-\cite[p.~xx]{stevensUNIXNetworkProgramming2013}. The initial
-mention of sockets in relation to ARPANET comes from RFC 33,
-published in 1970 \cite{crockerNewHostHostProtocol1970}.
-Sockets have proven to be immensely popular, and have grown
-to become the de facto standard for low-level network programming 
-\cite[p. 502]{tanenbaumComputerNetworks2011}.
-
-Network sockets have grown alongside with the growth of UNIX.
-Network sockets have grown out of the Berkeley sockets which
-first appeared in version 4.2 of the Berkeley Software
-Distribution, originally used for inter-process communication.
-
-The most basic definition of a socket is that it is an abstraction
+\section{What are network sockets} \todo{Headers should be removed after editing is finished}
+Anyone perfoming any kind of low-level network programming in a UNIX
+environment are bound to have encountered sockets. Sockets exist
+in several forms, and can be used for both inter-process communication
+and network communication. 
+In its bost basic definition, a network sockets is an abstraction
 for a network connection, through which an application can send
-and receive data \cite[p. 8]{donahooTCPIPSockets2009}. When creating
-a socket, the application needs to specify the type, domain and
-protocol which will be used. The domain specifies the type of
+and receive data \cite[p. 8]{donahooTCPIPSockets2009}. 
+First mentioned in 1970 in relation to ARPANET, the
+simplicity of sockets and their ubiquity in all UNIX distributions
+since version 4.2 of the Berkeley Software Distribution have
+led to them becoming the de facto standard for low-level network
+programming \cite{crockerNewHostHostProtocol1970}\cite[p. 502]{tanenbaumComputerNetworks2011}.
+
+Modern sockets are standardized across UNIX-like systems through
+the POSIX standard. Implementations of the C POSIX library define
+the socket API primarily through the \texttt{sys/socket.h} header file.
+
+When creating a socket on an UNIX-like system, the application
+invokes the \texttt{socket} system call. This system call
+\say{creates an endpoint for communication and returns a file 
+descriptor that refers to that endpoint} \cite{Socket2LinuxManual}.
+This system call takes three parameters, the domain, the type
+and the protocol which will be used for the socket.
+The domain specifies the type of
 addressing which will be used, for example \texttt{AF\_UNIX}
 for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
-for IPv6. The type specifies the protocol which will be used over the socket.
-The two most frequent types here are \texttt{SOCK\_DGRAM} and \texttt{SOCK\_STREAM}.
-Specifying \texttt{SOCK\_DGRAM} means that the socket will be using 
-datagrams, meaning unreliable discrete messages.
-Specifying \texttt{SOCK\_STREAM}
-means that the socket will be providing a reliable stream of bytes.
+for IPv6. The type specifies the protocol which will be used over the socket, for
+example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
+for a reliable stream of bytes.
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
 The fact that the application has to specify both the domain
-and the type of the socket at compile time means that both the
+and the type of the socket means that both the
 underlying addressing and the protocol are bound at compile time.
-This means, that barring fairly advanced logic when setting up
+This means that barring fairly advanced logic when setting up
 the necessary sockets, the application will be bound to a specific
-protocol and addressing scheme. This means that any update in
-the underlying protocol will require a recompilation and 
-redistribution of the application. 
+protocol and addressing scheme. Therefore, updating
+the underlying protocol will require a recompilation of the application. 
+Naturally, this makes adopting new protocols difficult, even
+if the new protocol is better suited to the application's requirements.
 
-This compile-time binding may not seem like a large problem, as
-the type of protocol is usually deeply bound
-to the application, and large redesigns likely have to take
-place if an application were to change from using a
-connection-oriented to a stream-oriented connection. However,
-different parts of the application may have different
-requirements, for example a connection to a video-streaming
-website itself may be connection-oriented, while the
-video-stream itself will likely be stream-oriented.
+Another challenge with new transport-layer protocols apart
+from TCP and UDP is that developing them has proven to be challenging, 
+in part because of TCP and UDP's ubiquity. 
 
-One of the key features of TAPS is to give the developer access
-to more advanced features of protocols such as QUIC or SCTP,
-while still being able to fall back to TCP if necessary. This
-will allow TAPS to act in a message-oriented way, while still
-being able to use a connection-oriented protocol such as TCP.
+Network middleboxes have have been
+optimized to support TCP and UDP, and may sometimes
+even drop packets if they contain another transport layer protocol.
+The resulting difficulty in innovating on the transport-layer
+due to network growing accustomed to the current state of things
+is known as network ossification. Due to this network ossification,
+most new protocols are built on top of UDP.
 
-\section{Contemporary protocols}
-The most common protocol today by far is TCP. This is a
-well known protocol and will not be described in detail in
-this thesis. In summary, it is a connection-oriented protocol,
-which means that a connection has to be established before 
-any data can be sent. This connection along with the underlying
-packet loss detection allows it to
-guarantee reliable delivery of packets. 
-This additional
-functionality comes at the cost of
-increased complexity and overhead.
-
-With modern socket programming, the most frequent protocols
-are UDP and TCP. UDP is a connectionless protocol, and was
-designed originally as a transport layer protocol on top of
-IP, with as little overhead as possible \cite{postelUserDatagramProtocol1980}.
-UDP is an unreliable protocol, menaing that it does not guarantee
-delivery of sent packets. However, reliability algorithms can
-be built into protocols built on top of UDP, which is done in
-for example QUIC. 
-
-When building new internet protocols, they are commonly built
-on top of UDP. This is due to several reasons. Primarily it
-is a result of network ossification. This is the process
-of middleboxes and other network infrastructure becoming
-reliant on the parts of certain parts of the protocol stack.
-A middlebox may for example choose to drop an IP packet if
-the transport layer protocol is not TCP or UDP. This makes
-development of new protocols difficult, as they may in certain
-scenarios become complete unusable due to underlying networking
-hardware. Luckily, UDP is a simple protocol which contains
-very little overhead. This allows future protocols to bypass
-the issue of network ossification by using UDP as the underlying
-protocol. This does however mean, that if the protocol needs
-mechanisms present in TCP, such as reliability, then these have
-to be implemented by the new protocol, as done in QUIC.
-
-Building new protocols on top of UDP has become so common that
+Due to UDP's simplicity, it presents very little overhead
+and applications can themselves implement needed features
+such as reliability and congestion control.
+This has become so common that
 it has prompted an official RFC from the IETF, describing
-the best practices \cite{eggertUnicastUDPUsage2008}. \todo{Forumulate
-    this better}
-
+the best practices for implementing congestion control on top of UDP 
+\cite{eggertUnicastUDPUsage2008}.
 
 \section{What is TAPS}
+Solving the problem with the strong coupling between application
+level code and the underlying transport protocol
+is one of the key goals of TAPS. This will allow faster adaptation
+of new protocols and abstract away network-layer details from the
+application layer. From the application's point of view, this
+means that it will be able to gain access to new protocols, such
+as QUIC, without having to implement its own fallback logic
+in cases where QUIC is not available. It will also simplify
+the networking logic, tying it more closely to how modern
+applications actually use the network.
+
 Transport Services (TAPS) is a \say{application Programming Interface 
 (API) to the transport layer that enables the selection of 
 transport protocols and network paths dynamically at runtime}
@@ -163,59 +136,61 @@ The following figure explains the API model when using TAPS:
     \caption{API model for TAPS \cite{trammellAbstractApplicationProgramming2025}}
 \end{figure}
 
+\subsection{TAPS abstractions}
 Abstracting away the underlying transport protocols is done by
 presenting a set of abstractions to the application. The most
-central of these abstractions is the connection. A connection
-represents one or more transport protocol instances that can
-send or receive messages between local and remote endpoints 
-\cite{trammellAbstractApplicationProgramming2025}.
-When working with connection objects, TAPS provides five high
-level groups of actions that an application can perform:
+central of these abstractions is the Connection. A Connection
+represents a \say{shared state of two or more endpoints that persists
+across messages that are transmitted between these endpoints}
+\cite{welzlUsageTransportFeatures2018}.
+When working with Connection objects, TAPS provides five high
+level \textit{groups of actions} that an application can perform:
 \begin{itemize}
     \item \texttt{Preestablishment}: Pass properties to specify
-        requirements and preferences for establishing a connection.
-    \item \texttt{Establishment}: Prepare connection object for data
+        requirements and preferences for establishing a Connection.
+    \item \texttt{Establishment}: Prepare a Connection object for data
         transfer.
     \item \texttt{Data transfer}: Sending and receiving messages
-        over the connection.
+        over the Connection.
     \item \texttt{Event handling}: Notifications that an application
-        can receive from a connection, and the handling of them.
+        can receive from a Connection, and the handling of them.
     \item \texttt{Termination}: How transmission is stopped and
-        a connection is torn down.
+        a Connection is torn down.
 \end{itemize}
 
-In addition, the lifeline of a connection is divided into three distinct
-phases, \texttt{preestablishment}, the \texttt{Established state}, and 
-\texttt{termination of a Connection} \cite{paulyArchitectureRequirementsTransport2025}.
+In addition, the lifeline of a Connection is divided into three distinct
+phases, \textit{preestablishment}, the \textit{Established state}, and 
+\textit{termination of a Connection} \cite{paulyArchitectureRequirementsTransport2025}.
 Each of these phases are associated
-with one or more of the groups of actions that an application can perform
-as described above. Establishment ends the preestablishment phase. When a
-connection is in the established state, the connection can be used to
-transfer data. When a connection has been established, it can either
-be closed or aborted, with closing being associated with normal termination,
-and aborting being abnormal termination associated with errors.
+with one or more of the \textit{groups of actions} that an application can perform,
+as described above. 
 
 After the desired transport properties and cryptographic parameters have
-been set, a connection can be established. There are three ways of
-establishing a connection, \texttt{initiate}, \texttt{listen} and
-\texttt{rendezvous} \cite{paulyArchitectureRequirementsTransport2025}.
+been set during the preestablishment phase, a connection can be established. 
+When a Connection is in the established phase the Connection can be used to
+transfer data. 
 
-Initiate is used to establish a connection to a remote endpoint which
+There are three ways of
+establishing a connection: \textit{initiate}, \textit{listen} and
+\textit{rendezvous} \cite{paulyArchitectureRequirementsTransport2025}.
+
+\textit{Initiate} is used to establish a connection to a remote endpoint which
 is assumed to be listening for incoming connections. How this connection
 is established under the hood, is dependent on the underlying transport
-protocol selected based on the specified transport properties.
+protocol, which has been selected based on the specified transport properties.
 
-Listen is used to passively open a connection. This is done in order to
+\textit{Listen} is used to passively open a connection. This is done in order to
 wait for connections from remote endpoints. Listen returns a listener
 object. When a remote endpoint connects to this listener, a \texttt{ConnectionReceived}
 event occurs. This event contains a Connection object for the 
 established connection.
 
-Rendezvous is used to establish a peer-to-peer connection between two endpoints
+\textit{Rendezvous} is used to establish a peer-to-peer connection between two endpoints
 simultaneously.
 
-4283
-
+After a Connection has been established, it can either
+be closed or aborted, with closing being associated with normal termination,
+and aborting being abnormal termination associated with errors.
 
 If a single application has multiple connections, these can be organized
 into connection groups. Connection groups represent a set of connections
@@ -224,39 +199,48 @@ transport protocols. Connections in the same connection group can be
 multiplexed together, in order to more efficiently utilize the available
 bandwith.
 
-In addition to the connection, TAPS also provides several other objects
-abstracting key elements. For example endpoint objects and message objects
-among others.
+In addition to the Connection, TAPS also provides several other objects
+abstracting key elements. For example Endpoint objects and Message objects.
 
-When it comes to TAPS selecting the underlying transport protocol to
-be used, this is done by
+\subsection{Selecting the transport protocol}
+TAPS selects the underlying transport protocol by
 letting the application specify a set of requirements
-and preferences for the network behavior. This set of requirements
-and preferences are known as Transport Properties. These transport
-properties can again be divided into three categories: selection
-properties, connection properties and message properties. 
+and preferences for the Connection behavior. This set of requirements
+and preferences are known as \textit{Transport Properties}. These transport
+properties can again be divided into three categories: \textit{selection
+properties}, \textit{connection properties} and \textit{message properties}. 
 
-Selection
-properties are properties used to select the path and protocol stack
-to use for a given connection. Connection properties are used
-during connection establishment and to define the behavior of the
-established connection. Message properties are settings set on an
-individual message. Typical transport properties are specified as
-a \texttt{preference}, with the possible values being \texttt{require},
-\texttt{prefer}, \texttt{no preference}, \texttt{avoid} and \texttt{prohibit}.
-The difference between \texttt{require} and \texttt{prefer} is whether
-or not the connection establishment will fail if the property cannot
-be satisfied. This is mirrored in the difference between \texttt{avoid}
-and \texttt{prohibit}.
+\begin{itemize}
+    \item \textit{Selection
+properties} are properties used to select the path and protocol stack
+to use for a given connection. 
 
-An example of a selection property is \texttt{Reliable Data Transfer}.
+    \item \textit{Connection properties} are used
+during Connection establishment and to define the behavior of the
+established Connection. 
+
+    \item \textit{Message properties} are settings set on an
+individual message. 
+\end{itemize}
+
+Typical transport properties are specified as
+a \textit{preference}, with the possible values being \textit{require},
+\textit{prefer}, \textit{no preference}, \textit{avoid} and \textit{prohibit}.
+\textit{Require} means that the Connection establishment will fail if the property cannot
+be satisfied, while \textit{prefer} will allow the application to continue.
+This distinction is mirrored in the difference between \textit{prohibit} and \textit{avoid}.
+
+An example of a selection property is Reliable Data Transfer.
 This property is used to specify whether or not the application
 should use a protocol which ensures that all data is received at 
-a remote endpoint in order, without loss or duplication. Setting
-this to \texttt{require} will force TAPS to use an underlying protocol
+a remote endpoint, in order, without loss or duplication. Setting
+this to \textit{require} will force TAPS to use an underlying protocol
 which guarantees this, such as TCP or QUIC. Setting this as
-\texttt{prohibit} will force TAPS to use a protocol which does not
+\textit{prohibit} will force TAPS to use a protocol which does not
 guarantee this, such as UDP.
+
+
+% =============== REVISED TO HERE ================
 
 An example of a connection property is \texttt{Timeout for Aborting Connection}.
 This property is used to specify the how long to wait before deciding that an
@@ -338,8 +322,6 @@ This is called head-of-line blocking. When using a
 message-oriented protocol, which makes it possible, but not
 mandatory, to not guarantee in-order delivery, one application
 does not have to wait for the other application's data.
-
-\section{What is SCTP}
 
 \section{What is quic}
 
