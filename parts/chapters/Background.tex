@@ -240,9 +240,7 @@ which guarantees this, such as TCP or QUIC. Setting this as
 guarantee this, such as UDP.
 
 
-% =============== REVISED TO HERE ================
-
-An example of a connection property is \texttt{Timeout for Aborting Connection}.
+An example of a connection property is Timeout for Aborting Connection.
 This property is used to specify the how long to wait before deciding that an
 active connection has failed when trying to reliably deliver data to the Remote Endpoint.
 This naturally can only take effect if the underlying protocol supports reliability.
@@ -254,23 +252,36 @@ Lower priority message will yield in favor of higher priority messages.
 TAPS is designed to provide an interface which more accurately
 reflects how a typical application uses the network. Socket programming
 is for example blocking by default, while most modern applications
-interact with the network in an asynchronous way 
-\cite{trammellAbstractApplicationProgramming2025}. TAPS
-is therefore designed to be asynchronous. 
+tinteract with the network in an asynchronous way 
+\cite{trammellAbstractApplicationProgramming2025}.
 
 An additional
 example of how TAPS is designed to reflect how applications
-use the network is that TAPS is message-oriented. TCP
-is a stream-oriented protocol and presents data to application
-as a continious stream of bytes. However, most applications
-use the network in a message-oriented way, and therefore
-have to include delimiters and other logic to separate the
+use the network is that TAPS is message-oriented. 
+Being stream-oriented or message-oriented has to do with how the
+transferred data is represented. In a stream oriented protocol
+such as TCP, the data is represented as a stream of bytes. From
+the application's point of view, the data arrives continuously
+and not in discrete chunks. This means that the application
+cannot easily differentiate between different messages. 
+
+TCP has to
+handle  data arriving in discrete IP packets and glue them together into
+a stream of bytes. This also includes handling messages arriving
+out of order, which has to be handled before they can be
+presented as a stream in order.
+Since most applications
+use the network in a message-oriented way, they
+have to include delimiters and other logic to separate TCP 
 data into discrete messages. For example, several protocols
 such as HTTP contain length fields, which are used to delimit
-transferred data. In order to reflect
-how the applications actually use the network, TAPS is therefore
-message-oriented, while still supporitng applications reliant on 
-streaming through the use of \texttt{framers}.
+transferred data. 
+
+This is the reason why TAPS is designed to be message-oriented,
+as it simplifies the logic needed for most applications to
+use the network in the desired way. Despite being message-oriented,
+TAPS can still support applications reliant on 
+streaming through the use of \textit{framers}.
 
 A framer is a data translation layer, which is used to define
 how encapsulate or encode outbound message, and how to decapsulate
@@ -288,60 +299,27 @@ APIs are commonly limited to communicating with a single address over
 a single interface. TAPS is deisgned to handle multiple endpoints,
 protocols and paths.
 
-\section{Stream oriented vs message oriented (trash)}
-Being stream-oriented or message-oriented has to do with how the
-transferred data is represented. In a stream oriented protocol
-such as TCP, the data is represented as a stream of bytes. From
-the application's point of view, the data arrives continuously
-and not in discrete chunks. This means that the appliaction
-cannot easily differentiate between different messages. As
-everything is ran over IP, which is a message-oriented protocol,
-TCP, which is a transport layer protocol, has to be able to
-handle receiving discrete messages and gluing them together into
-a stream of bytes. This also includes handling messages arriving
-out of order, which has to be handled before they can be
-presented as a stream in order. This is called in-order delivery
-and is a key feature guaranteed to the client by TCP.
-
-With message-oriented protocols, such as UDP, the data is
-represented as discrete messages. This means that the
-application can easily differentiate between them. Because the
-data is represented in discrete messages, this allows the
-protocol to not have do deliver the messages in order. Firstly,
-this allows the application to access the data quicker, as it
-does not have to wait for any delayed packets to arrive, before
-the other data can he handed over. This becomes very important
-when multiplexing multiple streams of data over a single
-connection. This is done in order to more efficiently utilize
-bandwith, but faces problems if data from one stream is delayed
-if we are using a protocol which guarantees in-order delivery.
-Even if only one application's data is delayed, the second
-application's data will have to wait, as they are together
-treated as a single stream and have to be delivered in order.
-This is called head-of-line blocking. When using a
-message-oriented protocol, which makes it possible, but not
-mandatory, to not guarantee in-order delivery, one application
-does not have to wait for the other application's data.
 
 \section{What is quic}
 
 QUIC is a internet protocol developed by Google, released to the
-public in 2013, described in RFC 9000
+public in 2013 described in RFC 9000
 \cite{iyengarQUICUDPBasedMultiplexed2021}. QUIC is a transport
-layer protocol, which is designed to be a replacement for TCP.
+layer protocol which is designed to be a replacement for TCP.
 QUIC is a connection-oriented protocol which is built on top of
 UDP. QUIC enables 0-RTT connection establishment and integrates
 encryption as a mandatory feature of the protocol.
 
 The abstraction presented to an application for communication
-via QUIC is called a stream. A stream can be either
-unidirectional or biderectional. Streams can be created and
+via QUIC is called a stream. A stream is an either either
+unidirectional or biderectional ordered stream of data, much
+like what an application sees when using TCP. Streams can be created and
 closed by either endpoint, and multple streams can exist over a
 single QUIC connection. This is an example of the concept of
 multiplexed connections. Individual pieces of data sent over a
 stream are encapsulated as stream frames. The stream frame boundaries
 are not expected to be preserved, and are therefore not visible
-to the application. \todo{Is this true?}
+to the application.
 
 By using the stream ID and the byte offset of the stream frame,
 the receiving endpoint reassembles the data into the correct
@@ -456,9 +434,8 @@ peer by using a \texttt{NO\_VIABLE\_PATH} error.
 Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
-number spaces are the context in which a packet can be processed
-and acknowledged \cite{iyengarQUICUDPBasedMultiplexed2021}. 
-\todo{Er det greit med direkte sitat på denne måten?}
+number spaces are \say{the context in which a packet can be processed
+and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021}. 
 This context reflects the level of encryption and there 
 are therefore three separate packet number spaces. Initial space,
 for the initial handshake packets, handshake space, for packets
@@ -485,11 +462,13 @@ is that instead of TCP algorithms such as retransmission timeout (RTO)
 and tail-loss probe (TLP), QUIC uses probe timeout (PTO).
 PTO is an algorithm which is used to detect lost packets. Every
 time a packet requiring an acknowledgement is sent, a timer is started. If
-the timer expires, the packet is resent and the PTO period is
+the timer expires, QUIC sends a probe packet and the PTO period is
 set to twice its previous value. When an acknowledgement is received,
 the PTO period is reset to its previous value, as long as the
-client is certain that the server has finished validating the 
-client's address.
+connection has moved out of the Initial space. This is beneficial
+as it can mitigate lost acknowledgements, and does not rely on
+duplicate acknowledgements, making it beneficial in several cases
+such as tail-loss. \todo{Make sure this is correct}
 
 For QUIC a single connection can exist over several paths and
 congestion control is done on a per-path basis. Multiple streams
@@ -500,43 +479,38 @@ in that packet will be affected. This is a key difference from TCP,
 where a single lost packet will block all other streams of data
 over the same connection. This is called head-of-line blocking.
 This problem is avoided by QUIC, since QUIC only guarantees
-in-order delivery of data on a per-stream basis.
+in-order delivery of data on a per-stream basis. This leads
+to a better utilization of the available bandwidth, when
+compared to multiplexing streams over a single TCP connection.
 
-Future network ossification related to QUIC is avoided
+Future network ossification related to QUIC is also avoided
 since QUIC mandates TLS 1.3 as part of the protocol.
 By encrypting as much of the packet as possible, QUIC is able to
 obscure details about the protocol from middleboxes, and
-they cannot grow to depend on the contents of the packet. This
-will avoid future problems with middleboxes expecting a certain
-format like we see with them expecting either TCP or UDP.
+they cannot grow to depend on the contents of the packet.
 
-The key advantages of QUIC over TCP is that it is designed to be
-more efficient thatn TCP, and be able to handle more streams of
-data in a better way due to the lack of head-of-line blocking.
-
-As mentioned previously, one of the key selling points of TCP is
-the ubiquity of sockets, which are implemented in kernel space.
+As mentioned previously, one of many reasons behind the success
+of TCP is
+the universal support of sockets, which are implemented in kernel space.
 There is no equivalent API for QUIC, and with a relatively
 advanced implementation, users have to settle for one of the
 existing libraries.
 
+
 Currently, few applications can be built exclusively on top of
 QUIC, as it requires support from both the client and the
-server. QUIC is a transport protocol that is built on top of
-UDP, and is designed to be a replacement for TCP. QUIC uses
-multiplexed connections to for more efficient use of the
-network. Multiplexed connections are also used in http/2, but
-there it suffers from head-of-line blocking, which is caused by
-TCP's requirement for all packets to be delivered in order. This
-problem is exacerbated when using multiple streams of data over
-a single TCP connection, as a single lost packet will block all
-other streams.
+server. This means that a client wanting to use QUIC, also
+has to have support for fallback code, in case the server
+it wants to connect to, does not have the required support.
+As mentioned previously, making the adoption of new protocols
+such as QUIC is one of the key selling points of TAPS. With TAPS,
+the client would be able to specify the requirements for the
+connection, and TAPS could select QUIC if it was supported, otherwise
+falling back to TCP. This would require no change in logic for
+the client, and would not require TAPS to be supported both
+by the client and the server.
 
-With QUIC, the multiplexed connections can still be sent over a
-single connection, but the streams are independent of each
-other. This is made possible because QUIC is built on top of
-UDP; which does not guarantee packet ordering for separate
-streams.
+% =============== REVISED TO HERE ================
 
 \section{TAPS configurations explained}
 
