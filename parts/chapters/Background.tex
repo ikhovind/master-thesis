@@ -229,6 +229,11 @@ a \textit{preference}, with the possible values being \textit{require},
 \textit{Require} means that the Connection establishment will fail if the property cannot
 be satisfied, while \textit{prefer} will allow the application to continue.
 This distinction is mirrored in the difference between \textit{prohibit} and \textit{avoid}.
+Not all transport properties are set as a preference, and are
+instead specified for example as a boolean, an integer or an enum value.
+A full list of transport properties can be found in the Architecture and Requirements for
+Transport Services RFC
+\cite{paulyArchitectureRequirementsTransport2025}.
 
 An example of a selection property is Reliable Data Transfer.
 This property is used to specify whether or not the application
@@ -299,6 +304,104 @@ APIs are commonly limited to communicating with a single address over
 a single interface. TAPS is deisgned to handle multiple endpoints,
 protocols and paths.
 
+
+\subsection{TAPS configurations explained}
+
+As mentioned above, TAPS allows the application to control
+both the behavior and selection of the underlying transport
+protocol through the use of \textit{Transport Properties}.
+
+In addition to the basic transport properties such as reliability
+or timeout, TAPS also exposes several more advanced
+transport properties. These are still useful to understand,
+and a selection of the more advanced properties are explained below:
+
+The \texttt{Multistream Connections in Group} selection property
+allows the application to select whether the
+application would prefer multiple Connections within a
+Connection Group to be provided by streams of a single
+underlying transport connection where possible
+\cite{paulyArchitectureRequirementsTransport2025}.
+Multistreaming in this context is the act of providing multiple
+streams of data over a single underlying connection. This is
+advantageous as it allows for more efficient use of the network,
+since the connection will better saturate the available
+bandwidth. This avoids long convergence times for the connection
+and allows fresh connection to utilize the large congestion
+window already achieved, without having to wait for slow start
+to ramp up. This is especially useful for applications with many
+small streams of data, such as web browsers.
+
+The \texttt{Full Checksum Coverage on Sending} and \texttt{Full
+	Checksum Coverage on Re\-ceiving} selection properties specify
+the application's need for protection against corruption for all
+data transmitted or received on a given connection. This is used
+to specify how many bytes of the message which needs to be
+protected by a checksum. This checksum is used to protect the
+data from corruption caused by lower-layer protocols. The
+setting \texttt{Full coverage} means that the entire message is
+protected, while \texttt{0} specifies no checksum is required.
+If any other value than \texttt{Full coverage} is specified, the
+connection may still fall back to \texttt{Full coverage}.
+
+The \texttt{Provisioning Domain Instance or Type} selection
+property allows the application
+to control path selection by selecting for specific Provisioning
+Domain or categories of domains
+\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
+Domains define consistent sets of network properties that might
+be more specific than network interfaces
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Use Temporary Local Address} selection property
+allows the application to specify
+whether or not to use temporary addresses which are a feature in
+IPv6, used for greater privacy
+\cite{gontTemporaryAddressExtensions2021},\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Notification of ICMP soft error message arrival}
+selection property lets an application specify whether or 
+not it should be notified when an ICMP
+error, which does not force termination of the connection,
+arrives \cite{paulyArchitectureRequirementsTransport2025}.
+
+In addition to specifying which underlying protocol should be
+used through selection properties, the application using TAPS
+can manage the connections
+themselves through connection properties. These can be specific
+for a given transport protocol
+or generic and be available for all transport protocols.
+
+The \texttt{Connection Group Transmission Scheduler} connection 
+property decides which scheduler is used within a given
+connection group, to divide the available capacity between the
+connections. \cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Capacity Profile} connection property is used to
+select a capacity profile, which will be a tradeoff between
+delay, delay variation, and efficient use of the available
+capacity based on the capacity profile specified
+\cite{paulyArchitectureRequirementsTransport2025}.
+
+The \texttt{Isolate Session} connection property set in order to
+have new connections use as little cacheed information as
+possible from previous connections not in the same connection
+group \cite{paulyArchitectureRequirementsTransport2025}.
+
+The final type of transport properties are message properties.
+These are set by the application on a per-message basis, and
+can be used to control the behavior of individual messages.
+These are typically fairly self-explanatory, but do
+include certain properties which can override other properties
+set for the whole Connection.
+
+For example, the \textit{Ordered}
+message property can be used to ensure in-order delivery
+of a certain set of messages, even if the connection
+does not require it. This naturally requires that the underlying
+transport protocol supports switching between ordered and
+unordered delivery of messages. This can for example be
+supported by an implementaiton of QUIC, but it is not mandatory.
 
 \section{What is quic}
 
@@ -510,125 +613,43 @@ falling back to TCP. This would require no change in logic for
 the client, and would not require TAPS to be supported both
 by the client and the server.
 
-% =============== REVISED TO HERE ================
+\section{SCTP}
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+Vestibulum luctus sem a dui ultricies elementum. Sed eget est 
+cursus, finibus risus et, fermentum justo. Donec fringilla metus 
+ante, vitae efficitur est aliquam id. Lorem ipsum dolor sit amet, 
+consectetur adipiscing elit. Ut neque eros, commodo vel pharetra
+quis, fringilla in lectus. Curabitur erat lectus, molestie id 
+suscipit a, mollis ac urna. Etiam nisl ligula, porta et tempor 
+ut, placerat quis magna. Nullam a sem imperdiet, mattis magna
+vitae, lobortis lacus. Donec euismod quam vel mauris consectetur
+rutrum. Mauris posuere magna id mi imperdiet pulvinar. Cras non
+odio nulla. Curabitur tincidunt, enim vitae maximus scelerisque,
+ligula urna egestas ligula, at tincidunt risus felis ac nisi.
+Etiam placerat fringilla rutrum. Morbi et orci nisi. In ullamcorper
+porttitor justo, eu facilisis tellus finibus ut. Vivamus diam augue,
+vulputate ullamcorper dictum ut, faucibus vel elit.
 
-\section{TAPS configurations explained}
+Proin vulputate pharetra magna nec fringilla. Quisque scelerisque
+elementum mauris, sed tempor erat lacinia in. Nulla sodales tempus
+lectus. Aliquam bibendum hendrerit euismod. Integer lobortis erat
+vel auctor blandit. Donec ut massa a magna blandit sodales. Donec
+auctor dolor mauris, et ultrices erat iaculis aliquam.
 
-TAPS exposes several configurations which can be used to specify
-a preference of requirement, which then sets a preference or a
-requirement for which underlying transport protocol to use.
-These configurations come in the form of transport properties.
-These properties are broken down into three categories:
-Selection properites, Connection properties, and message
-properties. Selection properties are requirements for the
-underlying transport protocol, which TAPS uses to select which
-protocol to use for the connection. Connection properties are
-properties which are set on a per-connection basis, for example
-the timeout for aborting a connection or the connection
-priority. Message properties are properties which are set on a
-per-message basis, for example the priority or the lifetime of
-the given message. A full list of properites can be found in the
-Architecture and Requirements for Transport Services RFC
-\cite{paulyArchitectureRequirementsTransport2025}.
+Sed velit mi, aliquam et accumsan id, placerat ut odio. Praesent
+id ligula lectus. Vivamus laoreet tellus et elit consectetur, vel 
+tincidunt turpis accumsan. Class aptent taciti sociosqu ad litora 
+torquent per conubia nostra, per inceptos himenaeos. Nunc commodo
+consequat ligula, vel gravida risus. Vestibulum ante ipsum primis
+in faucibus orci luctus et ultrices posuere cubilia curae; Pellentesque
+ultrices arcu eget iaculis viverra. Etiam ut aliquet tellus, sit
+amet mollis nibh. Cras fringilla dapibus justo, ut pretium dui
+ullamcorper vitae. Ut sit amet faucibus elit, et tempus metus.
+Donec nec lectus vitae risus sodales eleifend egestas vitae nibh.
+Suspendisse potenti. Mauris sed dapibus ex. Quisque vulputate ac
+nisi mollis laoreet.
 
-Selection properties can, as mentioned above, be specified to
-varying degrees of strictness. With five different values
-\texttt{Require}, \texttt{Prefer}, \texttt{No Preference},
-\texttt{Avoid}, and \texttt{Prohibit}. Here, \texttt{Require}
-means that establishing the connection will fail if the property
-cannot be satisfied with the available transport protocols.
-\texttt{Prefer} means that the connection can fall back to a
-protocol not supporting the property, if no protocol satisfying
-the property is available. \texttt{Avoid} and \texttt{Prohibit}
-function in the same way as \texttt{Require} and
-\texttt{Prefer}, but selecting for protocols which do not have
-the selected property. A simple example of a selection property
-is selecting for reliable data transfer. If this was set as
-required, TAPS would be forced to use for example TCP or QUIC as
-the underlying protocol. If UDP was the only available protocol,
-establishing the connection would fail. If the user selected
-\texttt{prefer}, then UDP could be selected if nothing else was
-available, even though it does not fulfill the property.
-
-There are also more advanced selection properties available. Out
-of these, the least intuitive are \texttt{Multistream
-	Connections in Group}, \texttt{Full Checksum Coverage on
-	Sending} and \texttt{Full Checksum Coverage on Receiving},
-\texttt{Provisioning Domain Instance or Type}, \texttt{Use
-	Temporary Local Address}, and \texttt{Notification of ICMP soft
-	error message arrival}.
-
-The \texttt{Multistream Connections in Group} selection property
-allows the user \todo{TODO - select term for "user" of TAPS api
-	(developer of networking application)} to select whether the
-application would prefer multiple Connections within a
-Connection Group to be provided by streams of a single
-underlying transport connection where possible
-\cite{paulyArchitectureRequirementsTransport2025}.
-Multistreaming in this context is the act of providing multiple
-streams of data over a single underlying connection. This is
-advantageous as it allows for more efficient use of the network,
-since the connection will better saturate the available
-bandwidth. This avoids long convergence times for the connection
-and allows fresh connection to utilize the large congestion
-window already achieved, without having to wait for slow start
-to ramp up. This is especially useful for applications with many
-small streams of data, such as web browsers.
-
-The \texttt{Full Checksum Coverage on Sending} and \texttt{Full
-	Checksum Coverage on Re\-ceiving} selection properties specify
-the application's need for protection against corruption for all
-data transmitted or received on a given connection. This is used
-to specify how many bytes of the message which needs to be
-protected by a checksum. This checksum is used to protect the
-data from corruption caused by lower-layer protocols. The
-setting \texttt{Full coverage} means that the entire message is
-protected, while \texttt{0} specifies no checksum is required.
-If any other value than \texttt{Full coverage} is specified, the
-connection may still fall back to \texttt{Full coverage}.
-
-The \texttt{Provisioning Domain Instance or Type} selection
-property allows the applicatio \todo{common application term}n
-to control path selection by selecting for specific Provisioning
-Domain or categories of domains
-\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
-Domains define consistent sets of network properties that might
-be more specific than network interfaces
-\cite{paulyArchitectureRequirementsTransport2025}.
-
-The \texttt{Use Temporary Local Address} selection property
-allows the application \todo{common application term} to specify
-whether or not to use temporary addresses which are a feature in
-IPv6, used for greater privacy
-\cite{gontTemporaryAddressExtensions2021},\cite{paulyArchitectureRequirementsTransport2025}.
-
-The \texttt{Notification of ICMP soft error message arrival}
-selection property lets an application \todo{common application
-	term} specify whether or not it should be notified when an ICMP
-error, which does not force termination of the connection,
-arrives \cite{paulyArchitectureRequirementsTransport2025}.
-
-In addition to specifying which underlying protocol should be
-used through selection properties, the application \todo{common
-	application term} using TAPS can manage the connections
-themselves through transport properties. These can be specific
-for a given transport protocol such as the selection properties,
-or generic and be available for all transport protocols.
-\todo[]{Should this be separated from all the above parts? are
-	they all part of the same 'category'}
-
-The \texttt{Connection Group Transmission Scheduler} transport
-property decides which scheduler is used within a given
-connection group, to divide the available capacity between the
-connections. \cite{paulyArchitectureRequirementsTransport2025}.
-
-The \texttt{Capacity Profile} transport property is used to
-select a capacity profile, which will be a tradeoff between
-delay, delay variation, and efficient use of the available
-capacity based on the capacity profile specified
-\cite{paulyArchitectureRequirementsTransport2025}.
-
-The \texttt{Isolate Session} transport property set in order to
-have new connections use as little cacheed information as
-possible from previous connections not in the same connection
-group \cite{paulyArchitectureRequirementsTransport2025}.
+Integer dapibus dolor in molestie condimentum. Phasellus augue
+justo, euismod eget elit sit amet, egestas commodo nisl. Sed
+pellentesque, elit mattis lobortis vestibulum, leo nisl maximus
+augue, et semper quam ligula quis sapien. Etiam. 

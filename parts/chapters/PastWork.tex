@@ -3,34 +3,35 @@
 \section{NEAT}
 One of the first open source implementations of TAPS is 
 NEAT (A New, Evolutive API and Transport-Layer Architecture for the Internet) 
-\cite{khademiNEATPlatformProtocolIndependent2017}. NEAT and its associated
-library, NEAT Library were funded alongside the TAPS project from 2015 to 2018.
-Developed alongside TAPS, the development of NEAT affected the TAPS API and
-the TAPS API natrually affected the development of NEAT. NEAT abstracts
-away transport layer communication through the use of flows. Much like
-a connection in TAPS, a flow can be first created without specifying
+\cite{khademiNEATPlatformProtocolIndependent2017}. NEAT was funded alongside the 
+TAPS project from 2015 to 2018.
+Developed alongside TAPS, the development of TAPS and NEAT naturally
+affected each other. However, while NEAT halted development in 2018,  \todo{double check year}
+the TAPS API has continued to evolve, and the final TAPS RFC was published
+in 2025 \cite{trammellAbstractApplicationProgramming2025}.
+
+The equivalent of the TAPS Connection for NEAT is the flow. A flow can
+be first created without specifying
 which transport protocol to use. Much like TAPS, NEAT is also asynchronous,
 using an event loop and allowing for users to add their own callbacks.
 An example of where a user may add their own callback is the
 \texttt{on\_connect} callback, which allows the user to specify
 what to do when a conneciton is first established.
 
+Multiple flows can exist in a single "Context", which are used
+to group flows and services for these flows together.
+
 Much like TAPS, NEAT uses properties, which consists of key-value pairs,
 in order to specify requirements for the underlying transport protocol.
 Unlike TAPS, properties in NEAT are not given as transport property
-objects, but rather as JSON objects. The biggest difference is however
-that NEAT forces the application to directly specify one or more protocols
-to be used, instead of selecting the characteristics desired for the communication.
-According to the documentation, \todo{Reference the documentation}
-NEAT supports two properties, \texttt{transport}
-and \texttt{security}. The transport property specifies which underlying
-transport protocol to use, and supports SCTP, SCTP/UDP (SCTP tunneled over UDP),
-TCP, UDP and UDP-Lite. \todo{Is this actually true?, check source code
-to double check}
+objects, but rather as JSON objects. 
 
-Instead of making the application directly select the transport protocol,
-TAPS focuses on the desired characterisitics of the connection, as described
-in the chapter \ref{chap:background}.
+Within the documented properties, NEAT has a different approach
+to central concepts than TAPS. For example with the \say{transport} property,
+the application can specify \say{reliable}, but also directly
+specify one or more potential transport protocols to use. This
+is in contrast to TAPS, where the application only interfaces
+with the protocol through selection properties.
 
 Since the conclusion of the NEAT project, TAPS has continued to evolve
 so today the APIs differ to some extent. NEAT also does not feature
