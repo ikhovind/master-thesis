@@ -614,42 +614,40 @@ the client, and would not require TAPS to be supported both
 by the client and the server.
 
 \section{SCTP}
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-Vestibulum luctus sem a dui ultricies elementum. Sed eget est 
-cursus, finibus risus et, fermentum justo. Donec fringilla metus 
-ante, vitae efficitur est aliquam id. Lorem ipsum dolor sit amet, 
-consectetur adipiscing elit. Ut neque eros, commodo vel pharetra
-quis, fringilla in lectus. Curabitur erat lectus, molestie id 
-suscipit a, mollis ac urna. Etiam nisl ligula, porta et tempor 
-ut, placerat quis magna. Nullam a sem imperdiet, mattis magna
-vitae, lobortis lacus. Donec euismod quam vel mauris consectetur
-rutrum. Mauris posuere magna id mi imperdiet pulvinar. Cras non
-odio nulla. Curabitur tincidunt, enim vitae maximus scelerisque,
-ligula urna egestas ligula, at tincidunt risus felis ac nisi.
-Etiam placerat fringilla rutrum. Morbi et orci nisi. In ullamcorper
-porttitor justo, eu facilisis tellus finibus ut. Vivamus diam augue,
-vulputate ullamcorper dictum ut, faucibus vel elit.
+Another transport protocol which could be adopted easier
+when using TAPS is Stream Control Transmission Protocol (SCTP).
+SCTP provides a reliable, message-oriented transport protocol.
+SCTP also provides congestion avoidance and flow control like TCP.
+It also has support for multihoming, which helps provide a more
+reliabale service than traditional TCP connections \cite{leungMultihomedCommunicationSCTP2013}.
+By provdiding a message-oriented transport protocol, SCTP provides
+a more realistic abstractoin for how applications actually interact
+with the network, as mentioned with TAPS. 
+However, since SCTP is a transport layer protocol traditionally
+built on top of IP, it provides a good case study of how network
+ossification can prevent the adoption of new protocols. Even
+SCTP/UDP, which is a version of SCTP built on top of UDP, has
+struggled with adoption, showing that not only network ossification
+prevents the adoption of new protocols, but also that
+the design-time binding of an application to a specific
+transport protocol also presents a large obstacle to adoption.
 
-Proin vulputate pharetra magna nec fringilla. Quisque scelerisque
-elementum mauris, sed tempor erat lacinia in. Nulla sodales tempus
-lectus. Aliquam bibendum hendrerit euismod. Integer lobortis erat
-vel auctor blandit. Donec ut massa a magna blandit sodales. Donec
-auctor dolor mauris, et ultrices erat iaculis aliquam.
+Like TCP, SCTP is connection-oriented, but unlike TCP,
+\say{the SCTP association is a broader concept than the TCP connection} \cite{leungMultihomedCommunicationSCTP2013}.
+SCTP associations can consist of multiple transport addresses,
+which consists of a IP address and SCTP port, each of which
+can be used to reach the given endpoint. This allows SCTP to
+support multihoming, allowing the communication to migrate
+in case one connection becomes unavailable.
 
-Sed velit mi, aliquam et accumsan id, placerat ut odio. Praesent
-id ligula lectus. Vivamus laoreet tellus et elit consectetur, vel 
-tincidunt turpis accumsan. Class aptent taciti sociosqu ad litora 
-torquent per conubia nostra, per inceptos himenaeos. Nunc commodo
-consequat ligula, vel gravida risus. Vestibulum ante ipsum primis
-in faucibus orci luctus et ultrices posuere cubilia curae; Pellentesque
-ultrices arcu eget iaculis viverra. Etiam ut aliquet tellus, sit
-amet mollis nibh. Cras fringilla dapibus justo, ut pretium dui
-ullamcorper vitae. Ut sit amet faucibus elit, et tempus metus.
-Donec nec lectus vitae risus sodales eleifend egestas vitae nibh.
-Suspendisse potenti. Mauris sed dapibus ex. Quisque vulputate ac
-nisi mollis laoreet.
-
-Integer dapibus dolor in molestie condimentum. Phasellus augue
-justo, euismod eget elit sit amet, egestas commodo nisl. Sed
-pellentesque, elit mattis lobortis vestibulum, leo nisl maximus
-augue, et semper quam ligula quis sapien. Etiam. 
+Originally designed to support telephony signaling, SCTP
+has achieved adoption in areas such as mubile telephony, \todo{cite book from wikipedia}
+however adoption in other areas has been limited. Part of
+this reason is the lack of support, for example Windows does
+not have native SCTP support \cite{hoggWhatStreamControl}.
+Another challenge with SCTP adoption is the same as with
+many other transport protocols, network ossification.
+As a mitigation for this, SCTP can be used over UDP, which
+was designed to allow SCTP to be used in environments
+where middleboxes are not aware of SCTP, and therefore
+do not support it \cite{tuexenUDPEncapsulationStream2013}.

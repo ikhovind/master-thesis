@@ -37,7 +37,9 @@
 \usepackage[colorinlistoftodos, textwidth=\marginparwidth]{todonotes}
 % To make todonotes not go beyond the page
 \setlength{\marginparwidth}{3cm}
-\usepackage{ulem}
+
+% To make reference list properly aligned
+\usepackage[normalem]{ulem}
 
 \usepackage{import}     % Enable importing of sections
 
@@ -57,7 +59,7 @@
 \newcommand\wordcount{\input{|"texcount -inc -sum -0 -template={SUM} \jobname.tex"}}
 
 
-\addbibresource{mybib.bib}            %% ... or whatever
+\addbibresource{references/masterthesis.bib}            %% ... or whatever
 
 \begin{document}
 \uiomasterfp[
@@ -95,6 +97,5 @@
 % If you want to break on URL UPPER CASE letters
 \setcounter{biburlucpenalty}{9000}
 \hfuzz=14pt
-\raggedright
 \printbibliography{}
 \end{document}
