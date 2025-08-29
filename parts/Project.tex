@@ -1,2 +1,175 @@
 \part{The project}                    %% ... or ??
-\chapter{Planning the project}        %% ... or ??
+\chapter{Planning the project} \label{planningTheProject}
+\section{Development in C}
+Since a key desire when designing the initial task for
+the master thesis was to reach as many developers as possible,
+especially lower-level developers who normally work with sockets,
+it was decided that the inital implementation should be done in C.
+C forms the backbone of many modern programming libraries, and lack
+many of the quality of life networking features of higher level languages.
+By implementing TAPS in C, it would also be possible to try to integrate it
+into a software library such as glib. \todo{What library did michael actually talk about here?}
+
+Integrating a TAPS implementation into a larger library would be the easiest
+way of making it available to more developers, as they would not have to
+rely on a relatively unknown implementation, in order to gain the benefits
+of transport services.
+
+Apart from the ubiquity, C offers several advantages. First and foremost
+is the raw performance of C and the maturity of software libraries written
+for it. If you are for example writing a high performance networking server,
+then C or C++ is a natural choice. The maturity of many available software libraries is
+another big advantage with C. For example, since TAPS is designed to be asynchronous,
+it needed to run an event loop as a core part of the application. For this,
+several mature libraries, which are already used in large applications are
+available, such as libuv, which is used to form the core event loop of NodeJS. \cite{Libuv2025}
+
+\section{Downsides of C}
+The abstract interface described by the TAPS WG is very clearly object
+oriented, C is a procedural programming language, and does not feature
+the concept of classes or objects, which would most neatly map to the
+TAPS interface. Instead, the object orientation and division of responsibility
+featured in an object-oriented language has to be emulated through the use of
+structs, and dedicated functions which operate on them. An example of this
+would be the struct representing remote endpoints, which contains all the
+context related to remote endpoints, which is for example used
+in Connections and Listeners:
+
+\begin{minted}{C}
+typedef struct RemoteEndpoint{
+  RemoteEndpointType type;
+  uint16_t port;
+  union {
+    struct sockaddr_storage address;
+    char* hostname;
+  } data;
+} RemoteEndpoint;
+\end{minted}
+
+Along with the definition of this struct, the files containing the
+source code for remote endpoints also contain functions to create 
+remote endpoints with different types of data, in ways which might be useful
+to an application programmer, for example for initially clearing the struct
+and building it with an IPv4 address:
+
+\begin{minted}{C}
+void remote_endpoint_build(RemoteEndpoint* remote_endpoint) {
+  remote_endpoint->data.address.ss_family = AF_UNSPEC;
+  memset(&remote_endpoint->data, 0, sizeof(remote_endpoint->data));
+}
+
+void remote_endpoint_with_ipv4(RemoteEndpoint* remote_endpoint, in_addr_t ipv4_addr) {
+  remote_endpoint->type = REMOTE_ENDPOINT_TYPE_ADDRESS;
+
+  struct sockaddr_in* addr = (struct sockaddr_in*)&remote_endpoint->data.address;
+  addr->sin_family = AF_INET;
+  addr->sin_addr.s_addr = ipv4_addr;
+  addr->sin_port = htons(remote_endpoint->port);
+}
+\end{minted} 
+\todo{Update this when the final code is done}
+
+By defining structs and dedicated functions to work on the structs like
+above, we can to a very large degree emulate the encapsulation of responsibilites
+as seen in a object oriented language.
+
+The above code snippets also show another common design pattern used in C, which
+is the use of output parameters instead of return values. In C there is no garbage
+collector, and no built in support for reference counting, such as with \texttt{std::shared\_ptr}
+in C++ for example, the programmer has to manage allocation of memory themselves.
+If we could not use output parameters, the function would have to allocate memory on
+the heap itself, before returning a pointer to this region of memory, expecting the
+user of the library to later free this region of memory. 
+This will lead to memory leaks
+if the user of the library is not aware that they have to do this. 
+The function cannot
+return a pointer to a variable it has defined on the stack, as this stack
+region can be overwritten after the function has returned, and will lead to a dangling
+pointer.
+By using output parameters as often as possible, the library avoids having to
+allocate memory other than when strictly necessary. If the user of a library
+wants a long-lived struct, they can allocate memory on the heap themselves, before
+passing a pointer to this region of memory to a library function. This has
+the added benefit of making the library user more aware of when memory is allocated,
+minimizing the risk of them forgetting to free memory.
+
+\section{Testing the project}
+A core tenet since the very start of development was that the library should be
+as robust as possible. This would to a very large degree achieved primarily through
+the use of automated testing, and continious integration. By writing automated tests
+which run on every commit to the repository, it would be easy to see exactly which change
+has lead to a bug, making it far easier to fix. A well-tested library is also an absolute
+necessity when trying to attract external dependents, or to integrate it into a larger software
+library. This is especially important for large libraries such as TAPS, which abstract away
+large amounts of logic away from the application programmer, making it harder to detect bugs
+and know exactly where the problem in their application lies.
+
+Writing tests for an asynchronous networking library is not necessarily straight-forward.
+Both networking and asynchronous programming is not necessarily deterministic, which makes
+it harder to write reliable tests which can verify the library's expected behaviour. Another
+challenge is that there are not very many testing libraries available in pure C. Early on,
+it was therefore decided to write the tests in C++, which allows for interoperability with the C
+library, but would also allow for using a C++ testing library such as Google test. \cite{GoogleTest2025}
+This allows for a richer feature set than a simpler library or manually written tests in C,
+and allows for a richer set of assertions, verifying for example that the library fails in the expected
+manner when given invalid data.
+
+Tests are first separated into type and then into responsibility. When separating
+by type, the main types are integration tests and unit tests. Integration tests perform a larger check on the
+whole library and often actually interact with the network by sending packets or creating
+connections to a local server. \todo{Talk about how this is done, maybe via docker?}
+Unit tests perform a smaller check on individual functions, attempting to verify
+all logic and that differing branches are hit when expected, based on the input data.
+When dividing by responsibility, the testing stack largerly follows the same model
+as the main library, with test files separated by responsibility of the original
+file or struct that it is performing tests on.
+
+A central concept when writing good tests is to isolate the component being tested from
+external libraries. This is important for several reasons. First of all, we are not interested
+in verifying the behavior of our external dependencies, as we have to assume that they
+work well in order to limit the scope of our testing. Secondly, we need to know that if
+an external library \textit{does} fail, we need to know that our library will handle it
+in the correct manner. Therefore we have to simulate that an external library fails and
+verify our applications behaviour in this case. All of these concerns are best met by
+mocking. Mocking is the concept of defining a custom behaviour for an external library
+or dependency when testing, instead of invoking the real library. By using this we can
+simulate the full range of behaviours from the external library and verify that our application
+reacts correctly, while also avoiding time-consuming API calls, making unit tests
+significantly faster. For mocking, CTaps decided on FFF, which is a small open-source
+framework for creating fake C functions when testing. \cite{longFakeFunctionFramework2025}
+FFF can either mock the external library functions, such as \texttt{uv\_getaddrinfo},
+which is the built in support for DNS lookup in libuv, or mock a call to a different
+function, which either contains a call to an external library, or which we are simply
+not interested in testing.
+
+\begin{figure}
+\begin{minted}{Cpp}
+DEFINE_FFF_GLOBALS;
+FAKE_VALUE_FUNC(int, uv_udp_bind, uv_udp_t*, const struct sockaddr*, unsigned int)
+FAKE_VALUE_FUNC(int, uv_udp_recv_start, uv_udp_t*, uv_alloc_cb, uv_udp_recv_cb)
+
+TEST(InitiationTests, respectsLocalEndpoint) {
+    uv_udp_bind_fake.return_val = 0;
+    uv_udp_recv_start_fake.return_val = 0;
+    
+    ... Rest of code which calls uv_udp_bind and uv_udp_recv_start ...
+    ... assertions ...
+}
+
+\end{minted}
+\caption{Example test mocking udp functions, using FFF}
+\end{figure}
+
+\chapter{External dependencies}
+As mentioned in chapter \ref{planningTheProject}, CTaps is reliant on several
+external libraries, both for testing and for core functionality. The largest
+and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
+event loop which allows CTaps to be asynchronous. It also provides several quality
+of life features, such as built in support for asynchronous interactions with TCP
+and UDP, through the \texttt{uv\_tcp\_t} and \texttt{uv\_udp\_t} handles respectively.
+When adding protocols which libuv does not have native support for, such as QUIC,
+it offers a custom work handle \texttt{uv\_work\_t}, which can be used to define
+a custom piece of work. This can be used to define both a long-lived QUIC-based
+server, or a short interaction with an existing server. Which underlying handle
+is actually used in libuv is naturally abstracted away in CTaps, and for the
+end-user of the library the interaction is the same no matter what. \todo {very informal lol}
