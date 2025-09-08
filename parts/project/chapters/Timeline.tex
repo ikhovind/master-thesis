@@ -1,0 +1,61 @@
+\externaldocument{./parts/project/chapters/PlanningTheProject.tex}
+
+\chapter{Project Timeline} \label{projectTimeline}
+The first goal while developing the CTaps library was to get a minimal viable implementation,
+able to send and receive UDP messages to a ping server. In order to
+achieve this, the project structure was generated to allow for automated
+testing in order to verify this behaviour as easily as possible.
+A simple dummy library was developed, both to test the packaging system,
+and to verify the testing library Google Test and the mocking framework FFF.
+After both libraries and the project structure were verified to work
+as expected, minimal versions of the Preconnection, Connection and Message
+were defined in order to implement the functionality needed to set up a
+basic UDP ping test.
+
+After the basic structures needed to send an UDP message were implemented,
+a test verifying this behaviour was implemented. Libuv was also selected
+as the library to use for the primary event loop. This would serve as the
+basis for CTaps' asynchronous, event-driven model. Libuv had the added benefit
+of having built-in support for UDP and TCP handles. This eased the development
+of the initial application pinging a UDP ping server, which was complete around
+a week after starting development. A simple interface for future protocols was
+also implemented, with members  pointers for each function necessary. This would
+make it as easy as possible to implement a new transport layer protocol, without
+changing the actual interface of the library or adding new logic outside of the
+new protocol implementation.
+
+\begin{figure}[H]
+\begin{minted}{C}
+typedef struct ProtocolImplementation {
+  const char* name;
+  ProtocolFeatures features;
+  int (*init)(struct Connection* connection, InitDoneCb init_done_cb);
+  int (*send)(struct Connection*, Message*);
+  int (*receive)(struct Connection*, ReceiveMessageRequest receive_cb);
+  int (*listen)(struct SocketManager* socket_manager);
+  int (*stop_listen)(struct SocketManager*);
+  int (*close)(const struct Connection*);
+} ProtocolImplementation;
+\end{minted}
+\label{The interface used to interact with protocols}
+\end{figure}
+
+After writing a successful test both sending
+and receiving a message from an UDP server, development started on simple DNS
+lookup functionality, using the built-in asynchronous implementations of
+\texttt{getaddrinfo} from Libuv.
+
+After the development of the basic DNS functionality was completed, 
+the listening functionality was started, in order to try to replace
+the external UDP ping server initially used in the tests. The listening
+functionality necessitated a fair amount of redesign and new features.
+For example, there was previously no support for incoming Messages being
+multiplexed to a Connection, as Connections were bound to a single
+Libuv UDP handle each. In accordance with the methodology described in
+section \ref{developmentMethodology}, the minimal changes needed to
+make Connections abstract enough to support more than one protocol,
+and the needed code to multiplex incoming UDP messages were implemented.
+A new SocketManager structure was introduced, in order to handle listening
+for connections. It was designed to multiplex the incoming UDP messages
+and delegate incoming TCP connections, for when TCP functionality would
+be implemented.

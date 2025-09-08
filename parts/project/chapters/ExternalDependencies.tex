@@ -1,4 +1,6 @@
 \chapter{External dependencies}
+
+\section{Libuv}
 As mentioned in chapter \ref{planningTheProject}, CTaps is reliant on several
 external libraries, both for testing and for core functionality. The largest
 and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
@@ -11,3 +13,5 @@ a custom piece of work. This can be used to define both a long-lived QUIC-based
 server, or a short interaction with an existing server. Which underlying handle
 is actually used in libuv is naturally abstracted away in CTaps, and for the
 end-user of the library the interaction is the same no matter what. \todo {very informal lol}
+
+\section{Glib}

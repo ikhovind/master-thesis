@@ -11,6 +11,7 @@
 \usepackage[backend=biber,style=numeric-comp,url=false]{biblatex}
 \usepackage[hidelinks, hypertexnames=false]{hyperref}
 \usepackage{minted}
+\usepackage{xr}
 
 \usepackage{silence}
 \usepackage{fancyhdr}
@@ -29,11 +30,17 @@
 \WarningFilter{latex}{Marginpar on page 16 moved}
 \WarningFilter{latex}{Marginpar on page 17 moved}
 \WarningFilter{latex}{Marginpar on page 18 moved}
+\WarningFilter{latex}{Marginpar on page 26 moved}
+\WarningFilter{latex}{Marginpar on page 27 moved}
+\WarningFilter{latex}{Marginpar on page 28 moved}
+\WarningFilter{latex}{Marginpar on page 29 moved}
 \usepackage{hyperref}
 \usepackage{tikz}
 \usepackage{amsmath}
 \usepackage{dirtytalk}
 \usepackage{listings}
+\usepackage{siunitx}
+\usepackage{calculator}
 \usepackage{babel, csquotes, graphicx, textcomp, uiomasterfp, varioref}
 \usepackage[colorinlistoftodos, textwidth=\marginparwidth]{todonotes}
 % To make todonotes not go beyond the page
@@ -57,7 +64,7 @@
 \fancyhead[L]{A Taps Implementation for Linux} % left header
 \fancyhead[R]{Ingebrigt Hovind} % right header
 \renewcommand{\headrulewidth}{0pt} % remove the horizontal line
-\newcommand\wordcount{\input{|"texcount -inc -sum -0 -template={SUM} \jobname.tex"}}
+\newcommand\wordcount{\input{|"texcount -inc -sub -sum -0 -template={SUM} \jobname.tex"}}
 
 
 \addbibresource{references/masterthesis.bib}            %% ... or whatever
@@ -87,7 +94,7 @@
 
 \import{./parts/introductionAndBackground/}{IntroductionAndBackground}
 
-\import{./parts/}{Project}
+\import{./parts/project/}{Project}
 
 \import{./parts/}{Conclusion}
 

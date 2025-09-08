@@ -67,6 +67,16 @@ it has prompted an official RFC from the IETF, describing
 the best practices for implementing congestion control on top of UDP 
 \cite{eggertUnicastUDPUsage2008}.
 
+\section{Transport Services}
+At its core, a protocol is an abstraction which provides a set of
+services to an upper-layer protocol or application. In the context of
+networking, these services encompass transporting data from one endpoint
+to another, with the individual features of a transport service deciding the behavior of
+this service, for example when experiencing packet loss, packet reordering
+or other issues. Which transport services are provided by which transport
+protocols has been mapped by the IETF in RFC8095, as part of the
+TAPS working group \cite{fairhurstServicesProvidedIETF2017}.
+
 \section{What is TAPS}
 Solving the problem with the strong coupling between application
 level code and the underlying transport protocol
@@ -78,6 +88,7 @@ as QUIC, without having to implement its own fallback logic
 in cases where QUIC is not available. It will also simplify
 the networking logic, tying it more closely to how modern
 applications actually use the network.
+\todo{Write something about it 'expanding' the responsibility of the transport layer}
 
 Transport Services (TAPS) is a \say{application Programming Interface 
 (API) to the transport layer that enables the selection of 
@@ -412,7 +423,7 @@ supported by an implementaiton of QUIC, but it is not mandatory.
 
 QUIC is a internet protocol developed by Google, released to the
 public in 2013 described in RFC 9000
-\cite{iyengarQUICUDPBasedMultiplexed2021}. QUIC is a transport
+\cite{iyengarQUICUDPBasedMultiplexed2021b}. QUIC is a transport
 layer protocol which is designed to be a replacement for TCP.
 QUIC is a connection-oriented protocol which is built on top of
 UDP. QUIC enables 0-RTT connection establishment and integrates
@@ -452,7 +463,7 @@ RFC 9000:
           Stream Data (..),
         }
     \end{lstlisting}
-	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
+	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021b}}
 	\label{fig:stream_frame_format}
 \end{figure}
 
@@ -506,26 +517,26 @@ receiving streams as described previously.
    | Recvd |                   | Recvd |
    +-------+                   +-------+
     \end{lstlisting}
-    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021}}
+    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021b}}
     \label{fig:stream_states}
 \end{figure}
 
 Another important abstraction presented by QUIC is the connection.
 A QUIC connection is a shared state between a client and a server 
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
+\cite{iyengarQUICUDPBasedMultiplexed2021b}.
 A connection is established through a handshake, with support
 for 0-RTT handshakes as mentioned previously. The connection
 is identified by a connection ID, which is selected by each
 endpoint's peer. Packets sent to this peer are identified as
 belonging to a given connection, by a destination connection ID
 field. Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
+protocols \cite{iyengarQUICUDPBasedMultiplexed2021b}. Each endpoint
 has a unique connection ID, making sure that external observers cannot
 identify that the two endpoints are communicating with each
 other by looking at the connection ID.
 
 Using a connection ID allows the connectoin to survive a change
-in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
+in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021b}.
 This functionality is enabled by default, but can be disbled by
 one of the peers. When an address is changed, each endpoint has to
 independently verify that they can communicate using the new address.
@@ -543,7 +554,7 @@ Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
 number spaces are \say{the context in which a packet can be processed
-and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021}. 
+and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021b}. 
 This context reflects the level of encryption and there 
 are therefore three separate packet number spaces. Initial space,
 for the initial handshake packets, handshake space, for packets
@@ -565,7 +576,7 @@ This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
 of retransmissions, making RTT measurements in these cases more accurate
-\cite{iyengarQUICUDPBasedMultiplexed2021}. Another key difference
+\cite{iyengarQUICUDPBasedMultiplexed2021b}. Another key difference
 is that instead of TCP algorithms such as retransmission timeout (RTO)
 and tail-loss probe (TLP), QUIC uses probe timeout (PTO).
 PTO is an algorithm which is used to detect lost packets. Every
@@ -655,3 +666,4 @@ As a mitigation for this, SCTP can be used over UDP, which
 was designed to allow SCTP to be used in environments
 where middleboxes are not aware of SCTP, and therefore
 do not support it \cite{tuexenUDPEncapsulationStream2013}.
+

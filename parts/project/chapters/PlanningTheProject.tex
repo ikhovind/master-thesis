@@ -1,3 +1,5 @@
+\externaldocument{./parts/project/chapters/Timeline.tex}
+
 \chapter{Planning the project} \label{planningTheProject}
 \section{Development in C}
 Since a key desire when designing the initial task for
@@ -34,6 +36,7 @@ would be the struct representing remote endpoints, which contains all the
 context related to remote endpoints, which is for example used
 in Connections and Listeners:
 
+\begin{figure}[H]
 \begin{minted}{C}
 typedef struct RemoteEndpoint{
   RemoteEndpointType type;
@@ -44,6 +47,8 @@ typedef struct RemoteEndpoint{
   } data;
 } RemoteEndpoint;
 \end{minted}
+\caption{Remote endpoint type in C}
+\end{figure}
 
 Along with the definition of this struct, the files containing the
 source code for remote endpoints also contain functions to create 
@@ -51,13 +56,16 @@ remote endpoints with different types of data, in ways which might be useful
 to an application programmer, for example for initially clearing the struct
 and building it with an IPv4 address:
 
+\begin{figure}[H]
 \begin{minted}{C}
 void remote_endpoint_build(RemoteEndpoint* remote_endpoint) {
   remote_endpoint->data.address.ss_family = AF_UNSPEC;
   memset(&remote_endpoint->data, 0, sizeof(remote_endpoint->data));
 }
 
-void remote_endpoint_with_ipv4(RemoteEndpoint* remote_endpoint, in_addr_t ipv4_addr) {
+void remote_endpoint_with_ipv4(
+    RemoteEndpoint* remote_endpoint, 
+    in_addr_t ipv4_addr) {
   remote_endpoint->type = REMOTE_ENDPOINT_TYPE_ADDRESS;
 
   struct sockaddr_in* addr = (struct sockaddr_in*)&remote_endpoint->data.address;
@@ -66,11 +74,15 @@ void remote_endpoint_with_ipv4(RemoteEndpoint* remote_endpoint, in_addr_t ipv4_a
   addr->sin_port = htons(remote_endpoint->port);
 }
 \end{minted} 
+\caption{Remote endpoint utility functions}
+\end{figure}
 \todo{Update this when the final code is done}
 
 By defining structs and dedicated functions to work on the structs like
 above, we can to a very large degree emulate the encapsulation of responsibilites
-as seen in a object oriented language.
+as seen in a object oriented language. By encapsulating the data structures in the
+above way, we can also ensure that the external API which is exposed to the end user,
+is as similar as possible to the API described in RFC9622 \cite{trammellAbstractApplicationProgramming2025}
 
 The above code snippets also show another common design pattern used in C, which
 is the use of output parameters instead of return values. In C there is no garbage
@@ -92,7 +104,7 @@ passing a pointer to this region of memory to a library function. This has
 the added benefit of making the library user more aware of when memory is allocated,
 minimizing the risk of them forgetting to free memory.
 
-\section{Testing the project}
+\section{Testing the project} \label{testingTheProject}
 A core tenet since the very start of development was that the library should be
 as robust as possible. This would to a very large degree achieved primarily through
 the use of automated testing, and continious integration. By writing automated tests
@@ -163,3 +175,42 @@ TEST(InitiationTests, respectsLocalEndpoint) {
 \caption{Example test mocking udp functions, using FFF}
 \end{figure}
 
+
+\section{Code Style}
+Because CTaps was devised as an open source library, which
+should either provide a usable solution for application
+developers looking to make use of Transport Services, or as
+a useful branching off point for a larger implementation, CTaps has aimed
+to keep a consistent, opionated coding style, in order to keep a look and
+feel which remains consistent, both with the TAPS API, and which remains
+consistent within the project itself. This style was early on decided that
+it should follow an established style guide, making as few changes to the configuration
+as possible, in order to make the project seem as familiar as possible to external
+users and developers. The chosen style guide was the Google C++ style guide, which
+where the subset of rules applicable to C, would be applied to the project \cite{googleGoogleStyleGuide}
+
+The formatting of CTaps is automated using clang-format, which can parse
+and automatically fix simple format changes \todo{citation?}. This has built-in
+support for the Google style guide. \todo{Write about verifying the formatting in github actions?}
+
+\section{Development Methodology} \label{developmentMethodology}
+Since this thesis was developed by one person, it has not
+followed a strict development methodology such as Scrum, however,
+it has tried to be as agile as possible, working on development of minimal features
+at a time. A detailed overview of the development timeline and iterations can be
+seen in chapter \ref{projectTimeline}. Instead of carefully planning how the TAPS
+API concepts would be implemented, they were instead implemented in a a minimal state,
+later revising as more features were needed. An example of this is Connections, which
+first were implemented with only support for UDP, later updating them to be generic,
+in order to support TCP and other protocols.
+
+Developing in small iterations, ensuring correct functionality at each iteration, helps
+limit the complexity, both when first implementing, but especially when trying to fix
+issues with the implementation. By trying to ensure correctness at each step in the development,
+one can to as a large degree as possible limit where bugs will arise. This ties
+into another important factor in the development of this thesis, which is the use of
+Test-Driven-Development (TDD). When developing a new feature, a test
+verifying the functionality of this feature was developed alongside it.
+This verifies that the new functionality is actually functional,
+while ensuring that breaking changes are not introduced at a later stage.
+A detailed overview of the test system can be seen in section \ref{testingTheProject}

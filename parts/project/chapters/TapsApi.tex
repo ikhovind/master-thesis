@@ -1,0 +1,57 @@
+\chapter{The CTaps API}
+CTaps is not a complete implementation of the TAPS standard,
+as that would be too large of a scope for a singular thesis.
+\todo{Check in on this later, describe how large of a subset}
+This chapter will describe which parts of the TAPS API that has
+been implemented in CTaps, and what operations that are supported
+in CTaps.
+
+\section{Basic TAPS Objects}
+The basic TAPS objects:
+\texttt{Preonnection}, \texttt{Connection}, \texttt{Local Endpoint}, \texttt{Remote Endpoint}, 
+\texttt{Listener} and \texttt{Message} are each represented as a type defined
+struct.
+
+\begin{figure}[H]
+\begin{minted}{C}
+typedef struct Connection {
+  TransportProperties transport_properties;
+  LocalEndpoint local_endpoint;
+  RemoteEndpoint remote_endpoint;
+  // TODO - decide on if this has to be a pointer
+  ProtocolImplementation protocol;
+  uv_handle_t* protocol_uv_handle;
+  ConnectionOpenType open_type;
+  struct SocketManager* socket_manager;
+  // TODO this is shared state and should be locked
+  // Queue for pending receive() calls that arrived before the data
+  GQueue* received_callbacks;
+  GQueue* received_messages;
+} Connection;
+
+\end{minted}
+\caption{Connection typedef structure}
+\end{figure} \todo{Update this when having finalized Connection struct}
+
+Each of these objects has a set of associated functions, in order to encapsulate
+the responsibililty of this structure as best as possible. 
+
+\begin{figure}[H]
+\begin{minted}{C}
+int send_message(Connection* connection, Message* message);
+int receive_message(
+    Connection* connection,
+    ReceiveMessageRequest receive_message_cb
+);
+void connection_build_from_listener(
+    Connection* connection,
+    struct Listener* listener,
+    RemoteEndpoint* remote_endpoint
+);
+void connection_close(Connection* connection);
+\end{minted}
+\caption{Function declarations from connection.h}
+\end{figure}
+
+\section{Callbacks}
+Talk about how the API is callback-based and events etc. etc.
