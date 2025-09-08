@@ -1,0 +1,13 @@
+\chapter{External dependencies}
+As mentioned in chapter \ref{planningTheProject}, CTaps is reliant on several
+external libraries, both for testing and for core functionality. The largest
+and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
+event loop which allows CTaps to be asynchronous. It also provides several quality
+of life features, such as built in support for asynchronous interactions with TCP
+and UDP, through the \texttt{uv\_tcp\_t} and \texttt{uv\_udp\_t} handles respectively.
+When adding protocols which libuv does not have native support for, such as QUIC,
+it offers a custom work handle \texttt{uv\_work\_t}, which can be used to define
+a custom piece of work. This can be used to define both a long-lived QUIC-based
+server, or a short interaction with an existing server. Which underlying handle
+is actually used in libuv is naturally abstracted away in CTaps, and for the
+end-user of the library the interaction is the same no matter what. \todo {very informal lol}
