@@ -77,9 +77,25 @@ As parameters to this callback, CTaps passes pointer to the relevant (pre?) conn
 and a reason for the failure, letting the user know what caused the error,
 so that they can respond accordingly.
 
-When receiving messages
+Due to the asynchronous nature of the library, users can request to
+receive messages at any time, and the library can receive messages
+over the network and cache them at any time. When a user requests
+to receive a message they pass a callback to the application, if a
+message is available, that is, the library has received a message
+over the network and has cached it, the callback is invoked immediately,
+passing the first cached message as a parameter to the callback.
+If no message has been received by the library, then the callback
+itself is cached. The callback is then invoked the next time a message
+is received over the network. This way, the user does not have to
+spin while waiting for messages and is perform other work while
+waiting for incoming messages. Each invocation only receives
+a single message, and will always receive the first message in
+the message queue.
 
-When sending messages....
+When sending messages the message is not cached, instead
+immediately passed to the libuv event loop. The message
+may queue here for a while, depending on the number of tasks
+in the loop.
 
 
 \section{Selecting the desired protocol}

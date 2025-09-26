@@ -228,3 +228,29 @@ the tree is sorted according to the stated selection properties, as described in
 \cite{brunstromImplementingInterfacesTransport2025}.
 
 \section{Candidate Racing}
+
+\section{Internal Protocol API} \todo{split this into a "Transport System Implementation" and a "Transport System API"}
+In order to make the CTaps design as modular as possible and ease the
+process of adding more protocols, CTaps uses an internal interface for a protocol,
+which abstracts away the implementation details. This interface consists of
+a struct containing the name of the protocols, and function pointers for
+the necessary functions for the wider CTaps library to interact with the protocol.
+Each protocol implementation is this way kept as small as possible, and is
+isolated from the rest of the library.
+ 
+\begin{figure}[H]
+\begin{minted}{C}
+typedef struct ProtocolImplementation {
+  const char* name;
+  SelectionProperties selection_properties;
+  int (*init)(struct Connection* connection, InitDoneCb init_done_cb);
+  int (*send)(struct Connection*, Message*);
+  int (*receive)(struct Connection*, ReceiveMessageRequest receive_cb);
+  int (*listen)(struct SocketManager* socket_manager);
+  int (*stop_listen)(struct SocketManager*);
+  int (*close)(const struct Connection*);
+} ProtocolImplementation;
+\end{minted}
+\caption{Connection typedef structure}
+\end{figure} \todo{Update this when having finalized the code}
+\todo{Add UDP implementation here}
