@@ -419,6 +419,58 @@ transport protocol supports switching between ordered and
 unordered delivery of messages. This can for example be
 supported by an implementaiton of QUIC, but it is not mandatory.
 
+\subsection{Candidate Gathering}
+When initiating a preconnection, a TAPS system will gather a
+set of candidates for establishing a connection. This process
+is known as Candidate Gethering. The candidates are based on
+the specified local and remote endpoints of the preconnection,
+as well as the protocols which are available to use. 
+One of the key tenets of TAPS is to support multiple protocols,
+it also allows the user to specify both several local and remote endpoints,
+in addition to specifying remote endpoints by hostname, which
+may resolve into several IP addresses, a single preconnection
+can have many possible combinations of protocol, local and 
+remote endpoints. Therefore, when intitating a preconnection,
+a TAPS implementation needs a way of representing these various
+combinations.
+
+RFC9623 conceptualises these combinations as a tree,
+with a root node representing the final connection, the
+first level of child nodes representing the possible network paths,
+which is represented by the possible interfaces given by
+any local endpoints specified \cite{brunstromImplementingInterfacesTransport2025}.
+\todo{Ask Michael if this is true}
+The second level of child nodes represent the possible protocols
+which can be used.
+The third and final level of child nodes represent any resolved
+endpoints. as mentioned before, a single hostname can resolve 
+into multiple addresses, both IPv4 and IPv6.
+Each leaf node in this tree represents a single candidate
+which can be used to establish a connection.
+
+Which branches are possible at each level can be restricted
+by the use of selection properties. For example, if the
+selection property for reliability is set as "require",
+then no branch representing UDP will be featured in the
+second level of the final tree. The possible types of interfaces
+in the first level can be restricted via the "interface" selection
+property and the possible addresses resolved in the third level can
+for example be restricted by requiring the use of temporary local
+addresses, as these are only featured in IPv6.
+
+While RFC9623 uses a tree to conceptualize the different combinations
+of candidates, it places no bearing on the actual implementation
+in a real TAPS system, it does however recommend to branch in the
+same order as the RFC, to place concepts more important to a
+eventual connection higher in the conceptual tree.
+
+After all the candidates have been gathered, a single candidate
+needs to be selected to be used for this connection. This is done
+through Candidate Racing.
+
+
+\subsection{Candidate Racing}
+
 \section{What is quic}
 
 QUIC is a internet protocol developed by Google, released to the
