@@ -214,3 +214,17 @@ verifying the functionality of this feature was developed alongside it.
 This verifies that the new functionality is actually functional,
 while ensuring that breaking changes are not introduced at a later stage.
 A detailed overview of the test system can be seen in section \ref{testingTheProject}
+
+\section{Candidate Gathering}
+CTaps follows the recommended procedure for Candidate Gathering from RFC 9623
+very closely. CTaps represents the candidates in a tree, using a GNode struct from
+GLib to represent a N-ary tree. CTaps first builds the entire tree, resolving
+all possible local interfaces, all protocols and all possible resolutions of
+remote hostnames respectively. If the client has specified multiple remote endpoints,
+then they are treated the same way as each invidvidual resolution from a hostname
+endpoint. After the entire tree has been built, CTaps prunes the branches which
+are not compatible with the required or prohibited selection properties. After pruning,
+the tree is sorted according to the stated selection properties, as described in RFC 9623 
+\cite{brunstromImplementingInterfacesTransport2025}.
+
+\section{Candidate Racing}

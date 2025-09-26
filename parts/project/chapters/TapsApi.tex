@@ -53,8 +53,34 @@ void connection_close(Connection* connection);
 \caption{Function declarations from connection.h}
 \end{figure}
 
+\section{Event Loop}
+
 \section{Callbacks}
-Talk about how the API is callback-based and events etc. etc.
+Most modern interactions with networking applications are asynchronous
+and the TAPS API reflects this. CTaps is therefore callback based. Any
+interactions with the network or other I/O-bound activities are loaded
+performed by the central event loop, which is managed by libuv. Whenever
+a user wants to initiate a Connection, send a message or receive a message,
+they pass a structure containing the relevant function pointers for the given
+functionality. \todo{This struct way is not the current implementation, but perhaps the desired one?}
+This includes function pointers for when a relevant action succeeds or fails.
+If the initiation is successful, then the callback passed to the initiation
+function which is associated with a successful initiation is invoked. \todo{Kronglete lol}
+When invoking this callback, the new Connection is passed as a parameter,
+along with a void pointer consisting of data specified by the user.
+This void pointer allows the user to pass any data desired to the callback.
+
+If initiating a preconnection fails because the endpoint could not be
+reached, then the function pointer associated with the failure of creating
+a connection is invoked. \todo{This is not currently implemented, show code when it has been}
+As parameters to this callback, CTaps passes pointer to the relevant (pre?) connection \todo {sort out uncertainity}
+and a reason for the failure, letting the user know what caused the error,
+so that they can respond accordingly.
+
+When receiving messages
+
+When sending messages....
+
 
 \section{Selecting the desired protocol}
 Talk about how the user can use selection properties to select the desired protocol 

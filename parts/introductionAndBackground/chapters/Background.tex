@@ -464,12 +464,74 @@ in a real TAPS system, it does however recommend to branch in the
 same order as the RFC, to place concepts more important to a
 eventual connection higher in the conceptual tree.
 
-After all the candidates have been gathered, a single candidate
+After all the candidates have been gathered, a TAPS implementation
+has to sort them according to the requirements of the user. The
+candidates are sorted from most to least preferred, with the
+leaf nodes representing the candidates that are most desirable.
+
+After all the candidates have been gathered and sorted, a single candidate
 needs to be selected to be used for this connection. This is done
 through Candidate Racing.
 
 
-\subsection{Candidate Racing}
+\subsection{Candidate Racing} \label{candidateRacing}
+When a tree or other representation of the candidates has
+been constructed, a single candidate needs to be selected for use
+by the final application. This is done through a process known as
+Candidate Racing. Candidate Racing is the process of negotiating
+a connection using a single protocol over a single path with
+a single endpoint as quickly as possible, optimizing for the
+user requirements while minimizing the network load \cite{brunstromImplementingInterfacesTransport2025}.
+This is achieved by trying to establish connections with
+the various candidates and finally selecting one of them.
+The exact process of racing the candidates and selecting
+a winner can vary by implementation. RFC 9623 lists three
+ways of performing candidate racing:
+
+\begin{enumerate}
+    \item Simultaneous
+    \item Staggered
+    \item Failover
+\end{enumerate}
+
+Simultaneous racing is the process of trying to establish
+connections with all candidates at the same time. RFC 9623
+discourages this method, as it can lead to an unecessarily large
+network load.
+
+Staggered racing is the process of trying to establish connections
+with several candidates at once, but with a delay between the start
+of each candidate. This delay is configurable, but should be based
+on the expected amount of time for the handshake \cite{brunstromImplementingInterfacesTransport2025}. 
+Since the most desirable candidate will be raced first, it
+can be chosen if it connects successfully, limiting the amount
+of needed attempts to find a connection. When racing IP addresses,
+TAPS implementations should follow the algorithm described
+in RFC 8305 \cite{schinaziHappyEyeballsVersion2017}. The relevance
+of this algorithm for TAPS is described in section \ref{happyEyeballs}.
+
+Failover racing is the process of racing a single candidate
+at a time, only attempting the next candidate if the previous
+fails. This can be used when an application has a stirng preference
+of one branch over another.
+
+Connection establishment has been completed when a single candidate,
+has successfully established a connection with a remote endpoint, or
+when all candidates have failed. 
+
+\section{Happy Eyeballs} \label{happyEyeballs}
+Write about protocol racing and happy eyeballs in RFC8305.
+Include "Destination Address Selection" from section 6 of RFC 6274.
+Happy Eyeballs, which is described in RFC 86305 is named after the
+goal of the algorithm, which is to "reduce user-visible delays on dual-stack hosts"
+\cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering
+and Candidate Racing algorithm found in TAPS is based on Happy Eyeballs,
+so they share a lot of central features, however, Happy Eyeballs is
+primarily concerned with racing IPv4 and IPv6 addresses. \todo{Is this true?}
+Happy Eyeballs implements a staggered racing algorithm with a preference for
+IPv6, but uses interleaved IPv6 and IPv4 addresses in order to maximize
+IPv6 usage but minimize latency due to IPv6 brokenness.
+
 
 \section{What is quic}
 
@@ -718,8 +780,4 @@ As a mitigation for this, SCTP can be used over UDP, which
 was designed to allow SCTP to be used in environments
 where middleboxes are not aware of SCTP, and therefore
 do not support it \cite{tuexenUDPEncapsulationStream2013}.
-
-\section{Happy Eyeballs}
-Write about protocol racing and happy eyeballs in RFC8305.
-Include "Destination Address Selection" from section 6 of RFC 6274.
 
