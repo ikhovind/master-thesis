@@ -88,7 +88,18 @@ as QUIC, without having to implement its own fallback logic
 in cases where QUIC is not available. It will also simplify
 the networking logic, tying it more closely to how modern
 applications actually use the network.
-\todo{Write something about it 'expanding' the responsibility of the transport layer}
+
+Despite being implemented in user-space, TAPS conceptually resides
+in the transport layer. TAPS provides convenience to the application
+layer by expanding the responsiblity of the transport layer. Instead
+of the application layer being responsible for resolving addresses,
+for example through DNS, or being responsible for chosing the specific
+transport layer API to use, TAPS provides a unified interface, which
+both handles simple interactions with the network for resolving hostnames,
+in addition to unifying the transport protocol APIs. This minimizes
+how much the application layer has to adapt to the underlying transport
+layer, and minimizes the coupling between the two layers.
+\todo{Michael hadde en presentasjon om "problemene" med transportlaget i IN4230, sjekk om den har noe relevant}
 
 Transport Services (TAPS) is a \say{application Programming Interface 
 (API) to the transport layer that enables the selection of 

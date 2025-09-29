@@ -97,6 +97,16 @@ immediately passed to the libuv event loop. The message
 may queue here for a while, depending on the number of tasks
 in the loop.
 
+\todo{Overview of callbacks here}
+
 
 \section{Selecting the desired protocol}
 Talk about how the user can use selection properties to select the desired protocol 
+
+\section{Control Flow}
+Since the primary functionality of the library is handled
+by the underlying libuv event loop, the control flow has
+to be handed over to the event loop after the primary setup
+of an application has been handled. Further control has
+to be
+handled through the callbacks invoked by the library.

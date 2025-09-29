@@ -251,6 +251,44 @@ typedef struct ProtocolImplementation {
   int (*close)(const struct Connection*);
 } ProtocolImplementation;
 \end{minted}
-\caption{Connection typedef structure}
+\caption{Connection typedef struct}
 \end{figure} \todo{Update this when having finalized the code}
-\todo{Add UDP implementation here}
+
+When implementing a new protocol, all that is needed is an
+implementation of the struct, filling out the function pointers
+with custom behaviour for the given protocol:
+
+\begin{figure}[H]
+\begin{minted}{C}
+int udp_init(Connection* connection, InitDoneCb init_done_cb);
+int udp_close(const Connection* connection);
+int udp_send(Connection* connection, Message* message);
+int udp_receive(Connection* connection, ReceiveMessageRequest receive_message_cb);
+int udp_listen(struct SocketManager* socket_manager);
+int udp_stop_listen(struct SocketManager* listener);
+
+static ProtocolImplementation udp_protocol_interface = {
+    .name = "UDP",
+    .selection_properties = {
+      .selection_property = {
+        get_selection_property_list(create_property_initializer)
+        [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+      }
+    },
+    .send = udp_send,
+    .init = udp_init,
+    .receive = udp_receive,
+    .close = udp_close,
+    .listen = udp_listen,
+    .stop_listen = udp_stop_listen
+};
+\end{minted}
+\caption{UDP protocol implementation struct}
+\end{figure} \todo{Update this when having finalized the code}
+ 
+These implementations are kept track of in a central array,
+and new protocols can be dynamically registered by consumers
+of the library. Implementations of the interface also register
+a list of the applicable selection properties, allowing the library
+to later prune and sort the Candidate Tree protocols, when selecting
+candidates.

@@ -1,6 +1,7 @@
 \chapter{External dependencies}
 
-\section{Libuv}
+\section{Dynamically Linked Dependencies?} \todo{Are these actually dynamically linked?}
+\subsection{Libuv}
 As mentioned in chapter \ref{planningTheProject}, CTaps is reliant on several
 external libraries, both for testing and for core functionality. The largest
 and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
@@ -14,4 +15,38 @@ server, or a short interaction with an existing server. Which underlying handle
 is actually used in libuv is naturally abstracted away in CTaps, and for the
 end-user of the library the interaction is the same no matter what. \todo {very informal lol}
 
-\section{Glib}
+\subsection{Glib}
+In order to increase the reliability of internal data structures, as well as
+minimizing the amount of time spent reinventing the wheel, CTaps relies on the
+Glib library. Glib is a low level core library which is used at the core of
+larger libraries such as GTK and GNOME \todo{citation}. Glib provides several
+key data structures used internally in CTaps. Among others, it provides the
+Hash Map used to keep track of received Connections in a Listener, the tree
+used to gather candidates in the Candidate Gathering algorithm, among others.
+While adding an external library, especially in core functionaly such as networking,
+poses a risk, the benefits were deemed to be greater than the costs. Primarily,
+this consideration was made on the basis of Glib being a relatively high-profile
+library used in several large projects already, in addition to the benefits of
+increased development speed, since CTaps would not have to implement its own 
+basic data structures. Using a well-tested external library has the added benefit
+of avoiding bugs, as if CTaps rolled its own data structures, it would have
+to worry not only about bugs in the library logic, but also in the
+data structures themselves.
+
+In order to minimize how much a library consumers would have to
+adhere to Glib, it was decided that the external API should be
+kept free of Glib data structures, and that all external functions
+should only take parameters defined in standard C or in CTaps itself.
+
+\section{Statically Linked Dependencies}
+Minor software which does not provide a core functionality to CTaps
+is statically linked and is therefore distributed along with the
+compiled executable. \todo{Hvordan blir biblioteket egentlig formatert}
+This is done in order to make installation of
+CTaps as easy as possible. Since the libraries are small, they
+do not bloat the CTaps binary to the same degree as a larger library
+such as libuv would, if it were to be statically linked.
+
+\subsection{log.c}
+Logging
+https://github.com/rxi/log.c

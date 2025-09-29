@@ -59,3 +59,22 @@ A new SocketManager structure was introduced, in order to handle listening
 for connections. It was designed to multiplex the incoming UDP messages
 and delegate incoming TCP connections, for when TCP functionality would
 be implemented.
+
+After the necessary updates to Connections were made in order
+for Listeners to work, work was started on more advanced candidate
+gathering and candidate racing algorithms. The previous algorithm
+only considered which selection properties were prohibited/required,
+ranked protocols according to the number of avoid/prefer categories
+it fulfilled, picking the top ranked protocol every time. A more advanced
+Candidate Gathering algorithm with lay the groundwork for later Candidate
+Racing, ensuring that only branches which are actually prohibited are
+eliminated, making the overal solution far more flexible and robust,
+allowing the use of a undesirable path, if none of the more desirable
+ones succeed. The Candidate Gathering functionality was implemented using
+N-ary tree functionality from Glib. This was chosen because the robustness
+of an established library, while the Candidate Gathering functionality would
+not be directly exposed to consuming application, making sure that the
+actual API was kept neat and in pure C.
+
+The Candidate Racing algorithm was implemented according to the recommendations
+in RFC 9623. Cont...
