@@ -1,6 +1,7 @@
-\externaldocument{./parts/project/chapters/Timeline.tex}
+\externaldocument{./parts/project/chapters/TransportSystemApi.tex}
+\externaldocument{./parts/project/chapters/TransportSystemImpl.tex}
 
-\chapter{Planning the project} \label{planningTheProject}
+\chapter{General Development Details} \label{planningTheProject}
 \section{Development in C}
 Since a key desire when designing the initial task for
 the master thesis was to reach as many developers as possible,
@@ -25,7 +26,7 @@ it needed to run an event loop as a core part of the application. For this,
 several mature libraries, which are already used in large applications are
 available, such as libuv, which is used to form the core event loop of NodeJS. \cite{Libuv2025}
 
-\section{Downsides of C}
+\subsection{Downsides of C}
 The abstract interface described by the TAPS WG is very clearly object
 oriented, C is a procedural programming language, and does not feature
 the concept of classes or objects, which would most neatly map to the
@@ -215,34 +216,138 @@ This verifies that the new functionality is actually functional,
 while ensuring that breaking changes are not introduced at a later stage.
 A detailed overview of the test system can be seen in section \ref{testingTheProject}
 
-\section{Candidate Gathering}
-CTaps follows the recommended procedure for Candidate Gathering from RFC 9623
-very closely. CTaps represents the candidates in a tree, using a GNode struct from
-GLib to represent a N-ary tree. CTaps first builds the entire tree, resolving
-all possible local interfaces, all protocols and all possible resolutions of
-remote hostnames respectively. If the client has specified multiple remote endpoints,
-then they are treated the same way as each invidvidual resolution from a hostname
-endpoint. After the entire tree has been built, CTaps prunes the branches which
-are not compatible with the required or prohibited selection properties. After pruning,
-the tree is sorted according to the stated selection properties, as described in RFC 9623 
-\cite{brunstromImplementingInterfacesTransport2025}.
 
-\section{Candidate Racing}
+\section{External dependencies}
+\subsection{Dynamically Linked Dependencies?} \todo{Are these actually dynamically linked?}
+\subsubsection{Libuv}
+As mentioned in chapter \ref{planningTheProject}, CTaps is reliant on several
+external libraries, both for testing and for core functionality. The largest
+and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
+event loop which allows CTaps to be asynchronous. It also provides several quality
+of life features, such as built in support for asynchronous interactions with TCP
+and UDP, through the \texttt{uv\_tcp\_t} and \texttt{uv\_udp\_t} handles respectively.
+When adding protocols which libuv does not have native support for, such as QUIC,
+it offers a custom work handle \texttt{uv\_work\_t}, which can be used to define
+a custom piece of work. This can be used to define both a long-lived QUIC-based
+server, or a short interaction with an existing server. Which underlying handle
+is actually used in libuv is naturally abstracted away in CTaps, and for the
+end-user of the library the interaction is the same no matter what. \todo {very informal lol}
 
-\section{Internal Protocol API} \todo{split this into a "Transport System Implementation" and a "Transport System API"}
-In order to make the CTaps design as modular as possible and ease the
-process of adding more protocols, CTaps uses an internal interface for a protocol,
-which abstracts away the implementation details. This interface consists of
-a struct containing the name of the protocols, and function pointers for
-the necessary functions for the wider CTaps library to interact with the protocol.
-Each protocol implementation is this way kept as small as possible, and is
-isolated from the rest of the library.
- 
+\subsubsection{Glib}
+In order to increase the reliability of internal data structures, as well as
+minimizing the amount of time spent reinventing the wheel, CTaps relies on the
+Glib library. Glib is a low level core library which is used at the core of
+larger libraries such as GTK and GNOME \todo{citation}. Glib provides several
+key data structures used internally in CTaps. Among others, it provides the
+Hash Map used to keep track of received Connections in a Listener, the tree
+used to gather candidates in the Candidate Gathering algorithm, among others.
+While adding an external library, especially in core functionaly such as networking,
+poses a risk, the benefits were deemed to be greater than the costs. Primarily,
+this consideration was made on the basis of Glib being a relatively high-profile
+library used in several large projects already, in addition to the benefits of
+increased development speed, since CTaps would not have to implement its own 
+basic data structures. Using a well-tested external library has the added benefit
+of avoiding bugs, as if CTaps rolled its own data structures, it would have
+to worry not only about bugs in the library logic, but also in the
+data structures themselves.
+
+In order to minimize how much a library consumers would have to
+adhere to Glib, it was decided that the external API should be
+kept free of Glib data structures, and that all external functions
+should only take parameters defined in standard C or in CTaps itself.
+
+\subsection{Statically Linked Dependencies}
+Minor software which does not provide a core functionality to CTaps
+is statically linked and is therefore distributed along with the
+compiled executable. \todo{Hvordan blir biblioteket egentlig formatert}
+This is done in order to make installation of
+CTaps as easy as possible. Since the libraries are small, they
+do not bloat the CTaps binary to the same degree as a larger library
+such as libuv would, if it were to be statically linked.
+
+\subsubsection{log.c}
+Logging
+https://github.com/rxi/log.c
+
+\section{Build System}
+Should we describe the build system? Automated testing which I will set up?
+CMake? automated packaging etc. etc. 
+
+\section{Architecture}
+CTaps follows the overarching architecture as described in RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.
+This splits a TAPS system into two two main parts, a Transport Services
+API as described in \cref{transportSystemApi} and a Transport System Implementation
+as described in \cref{transportSystemImpl}.
+
+\begin{figure}[H]
+    \centering
+    \begin{lstlisting}
+     +-----------------------------------------------------+
+     |                    Application                      |
+     +-+----------------+------^-------+--------^----------+
+       |                |      |       |        |
+     pre-               |     data     |      events
+     establishment      |   transfer   |        |
+       |        establishment  |   termination  |
+       |                |      |       |        |
+       |             +--v------v-------v+       |
+     +-v-------------+   Connection(s)  +-------+----------+
+     |  Transport    +--------+---------+                  |
+     |  Services              |                            |
+     |  API                   |  +-------------+           |
+     +------------------------+--+  Framer(s)  |-----------+
+                              |  +-------------+
+     +------------------------|----------------------------+
+     |  Transport             |                            |
+     |  System                |        +-----------------+ |
+     |  Implementation        |        |     Cached      | |
+     |                        |        |      State      | |
+     |  (Candidate Gathering) |        +-----------------+ |
+     |                        |                            |
+     |  (Candidate Racing)    |        +-----------------+ |
+     |                        |        |     System      | |
+     |                        |        |     Policy      | |
+     |             +----------v-----+  +-----------------+ |
+     |             |    Protocol    |                      |
+     +-------------+    Stack(s)    +----------------------+
+                   +-------+--------+
+                           V
+   +-----------------------------------------------------+
+   |               Network-Layer Interface               |
+   +-----------------------------------------------------+
+    \end{lstlisting}
+    \caption{TAPS architecture as described by RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}}
+\end{figure}
+
+\section{Development Timeline} \label{projectTimeline}
+The first goal while developing the CTaps library was to get a minimal viable implementation,
+able to send and receive UDP messages to a ping server. In order to
+achieve this, the project structure was generated to allow for automated
+testing in order to verify this behaviour as easily as possible.
+A simple dummy library was developed, both to test the packaging system,
+and to verify the testing library Google Test and the mocking framework FFF.
+After both libraries and the project structure were verified to work
+as expected, minimal versions of the Preconnection, Connection and Message
+were defined in order to implement the functionality needed to set up a
+basic UDP ping test.
+
+After the basic structures needed to send an UDP message were implemented,
+a test verifying this behaviour was implemented. Libuv was also selected
+as the library to use for the primary event loop. This would serve as the
+basis for CTaps' asynchronous, event-driven model. Libuv had the added benefit
+of having built-in support for UDP and TCP handles. This eased the development
+of the initial application pinging a UDP ping server, which was complete around
+a week after starting development. A simple interface for future protocols was
+also implemented, with members  pointers for each function necessary. This would
+make it as easy as possible to implement a new transport layer protocol, without
+changing the actual interface of the library or adding new logic outside of the
+new protocol implementation.
+
 \begin{figure}[H]
 \begin{minted}{C}
 typedef struct ProtocolImplementation {
   const char* name;
-  SelectionProperties selection_properties;
+  ProtocolFeatures features;
   int (*init)(struct Connection* connection, InitDoneCb init_done_cb);
   int (*send)(struct Connection*, Message*);
   int (*receive)(struct Connection*, ReceiveMessageRequest receive_cb);
@@ -251,44 +356,44 @@ typedef struct ProtocolImplementation {
   int (*close)(const struct Connection*);
 } ProtocolImplementation;
 \end{minted}
-\caption{Connection typedef struct}
-\end{figure} \todo{Update this when having finalized the code}
+\label{The interface used to interact with protocols}
+\end{figure}
 
-When implementing a new protocol, all that is needed is an
-implementation of the struct, filling out the function pointers
-with custom behaviour for the given protocol:
+After writing a successful test both sending
+and receiving a message from an UDP server, development started on simple DNS
+lookup functionality, using the built-in asynchronous implementations of
+\texttt{getaddrinfo} from Libuv.
 
-\begin{figure}[H]
-\begin{minted}{C}
-int udp_init(Connection* connection, InitDoneCb init_done_cb);
-int udp_close(const Connection* connection);
-int udp_send(Connection* connection, Message* message);
-int udp_receive(Connection* connection, ReceiveMessageRequest receive_message_cb);
-int udp_listen(struct SocketManager* socket_manager);
-int udp_stop_listen(struct SocketManager* listener);
+After the development of the basic DNS functionality was completed, 
+the listening functionality was started, in order to try to replace
+the external UDP ping server initially used in the tests. The listening
+functionality necessitated a fair amount of redesign and new features.
+For example, there was previously no support for incoming Messages being
+multiplexed to a Connection, as Connections were bound to a single
+Libuv UDP handle each. In accordance with the methodology described in
+section \ref{developmentMethodology}, the minimal changes needed to
+make Connections abstract enough to support more than one protocol,
+and the needed code to multiplex incoming UDP messages were implemented.
+A new SocketManager structure was introduced, in order to handle listening
+for connections. It was designed to multiplex the incoming UDP messages
+and delegate incoming TCP connections, for when TCP functionality would
+be implemented.
 
-static ProtocolImplementation udp_protocol_interface = {
-    .name = "UDP",
-    .selection_properties = {
-      .selection_property = {
-        get_selection_property_list(create_property_initializer)
-        [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
-      }
-    },
-    .send = udp_send,
-    .init = udp_init,
-    .receive = udp_receive,
-    .close = udp_close,
-    .listen = udp_listen,
-    .stop_listen = udp_stop_listen
-};
-\end{minted}
-\caption{UDP protocol implementation struct}
-\end{figure} \todo{Update this when having finalized the code}
- 
-These implementations are kept track of in a central array,
-and new protocols can be dynamically registered by consumers
-of the library. Implementations of the interface also register
-a list of the applicable selection properties, allowing the library
-to later prune and sort the Candidate Tree protocols, when selecting
-candidates.
+After the necessary updates to Connections were made in order
+for Listeners to work, work was started on more advanced candidate
+gathering and candidate racing algorithms. The previous algorithm
+only considered which selection properties were prohibited/required,
+ranked protocols according to the number of avoid/prefer categories
+it fulfilled, picking the top ranked protocol every time. A more advanced
+Candidate Gathering algorithm with lay the groundwork for later Candidate
+Racing, ensuring that only branches which are actually prohibited are
+eliminated, making the overal solution far more flexible and robust,
+allowing the use of a undesirable path, if none of the more desirable
+ones succeed. The Candidate Gathering functionality was implemented using
+N-ary tree functionality from Glib. This was chosen because the robustness
+of an established library, while the Candidate Gathering functionality would
+not be directly exposed to consuming application, making sure that the
+actual API was kept neat and in pure C.
+
+The Candidate Racing algorithm was implemented according to the recommendations
+in RFC 9623. Cont...

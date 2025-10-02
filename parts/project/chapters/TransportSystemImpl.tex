@@ -1,0 +1,79 @@
+\chapter{Transport System Implementation}  \label{transportSystemImpl}
+
+\section{Candidate Gathering}
+CTaps follows the recommended procedure for Candidate Gathering from RFC 9623
+very closely. CTaps represents the candidates in a tree, using a GNode struct from
+GLib to represent a N-ary tree. CTaps first builds the entire tree, resolving
+all possible local interfaces, all protocols and all possible resolutions of
+remote hostnames respectively. If the client has specified multiple remote endpoints,
+then they are treated the same way as each invidvidual resolution from a hostname
+endpoint. After the entire tree has been built, CTaps prunes the branches which
+are not compatible with the required or prohibited selection properties. After pruning,
+the tree is sorted according to the stated selection properties, as described in RFC 9623 
+\cite{brunstromImplementingInterfacesTransport2025}.
+
+\section{Candidate Racing}
+
+\section{Protocol Implementations}
+In order to make the CTaps design as modular as possible and ease the
+process of adding more protocols, CTaps uses an internal interface for a protocol,
+which abstracts away the implementation details. This interface consists of
+a struct containing the name of the protocols, and function pointers for
+the necessary functions for the wider CTaps library to interact with the protocol.
+Each protocol implementation is this way kept as small as possible, and is
+isolated from the rest of the library.
+ 
+\begin{figure}[H]
+\begin{minted}{C}
+typedef struct ProtocolImplementation {
+  const char* name;
+  SelectionProperties selection_properties;
+  int (*init)(struct Connection* connection, InitDoneCb init_done_cb);
+  int (*send)(struct Connection*, Message*);
+  int (*receive)(struct Connection*, ReceiveMessageRequest receive_cb);
+  int (*listen)(struct SocketManager* socket_manager);
+  int (*stop_listen)(struct SocketManager*);
+  int (*close)(const struct Connection*);
+} ProtocolImplementation;
+\end{minted}
+\caption{Connection typedef struct}
+\end{figure} \todo{Update this when having finalized the code}
+
+When implementing a new protocol, all that is needed is an
+implementation of the struct, filling out the function pointers
+with custom behaviour for the given protocol:
+
+\begin{figure}[H]
+\begin{minted}{C}
+int udp_init(Connection* connection, InitDoneCb init_done_cb);
+int udp_close(const Connection* connection);
+int udp_send(Connection* connection, Message* message);
+int udp_receive(Connection* connection, ReceiveMessageRequest receive_message_cb);
+int udp_listen(struct SocketManager* socket_manager);
+int udp_stop_listen(struct SocketManager* listener);
+
+static ProtocolImplementation udp_protocol_interface = {
+    .name = "UDP",
+    .selection_properties = {
+      .selection_property = {
+        get_selection_property_list(create_property_initializer)
+        [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+      }
+    },
+    .send = udp_send,
+    .init = udp_init,
+    .receive = udp_receive,
+    .close = udp_close,
+    .listen = udp_listen,
+    .stop_listen = udp_stop_listen
+};
+\end{minted}
+\caption{UDP protocol implementation struct}
+\end{figure} \todo{Update this when having finalized the code}
+ 
+These implementations are kept track of in a central array,
+and new protocols can be dynamically registered by consumers
+of the library. Implementations of the interface also register
+a list of the applicable selection properties, allowing the library
+to later prune and sort the Candidate Tree protocols, when selecting
+candidates.
