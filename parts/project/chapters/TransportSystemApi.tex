@@ -55,7 +55,8 @@ void connection_close(Connection* connection);
 
 \section{Event Loop}
 
-\section{Callbacks} \todo{Can I write some numbers here, how much is I/O bound as a percentage?}
+\section{Asynchrony} \label{asynchrony}
+\todo{Can I write some numbers here, how much is I/O bound as a percentage?}
 Most modern interactions with networking applications are asynchronous
 and the TAPS API reflects this. CTaps is therefore callback based. Any
 interactions with the network or other I/O-bound activities are loaded
@@ -111,6 +112,96 @@ of an application has been handled. Further control has
 to be
 handled through the callbacks invoked by the library.
 
-\section{Callbacks}
-List of callbacks, how there are passed and where they are invoked,
-table of callbacks and associated objects.
+\section{Events}
+As mentioned in \cref{asynchrony}, Taps is an asynchronous library.
+For CTaps, this means that any asynchronous functions take a struct
+containing function pointers as a parameter. In RFC 9622, each
+asynchronous routine finishing invokes an Event \cite{trammellAbstractApplicationProgramming2025}.
+The notation used in TAPS to denote events is shown in \cref{fig:ctapsEventNotation}.
+A full list of events and the objects that spawn them can
+be seen in \cref{fig:tapsEvents}. For each Event, CTaps
+features an associated callback function.
+
+\begin{figure}[H]
+\centering
+\begin{BVerbatim}
+Object -> Event<>
+\end{BVerbatim}
+\caption{CTaps Event notation of Object spawning an Event}
+\label{fig:ctapsEventNotation}
+\end{figure}
+
+This associated callback is set at various times. Mostly,
+they are set when initially building the object associated
+with the Event. For exapmle, the Ready event is set
+when initializing a preconnection. \todo{For listeners as well or?}
+In this case, the callback structure is stored in the
+corresponding object, so the callback can be invoked when
+the given Event occurs.
+However, some Events are passed when inititating an asynchronous action,
+such as CloneError, where the function pointer is passed as a parameter
+to the Connection.clone() function. \todo{Make sure that this is true, will we implement clone?}
+
+In order to allow the user to pass data into the callback, the structure
+containing callbacks also contains a void pointer. This void pointer
+is then passed as a parameter to the callback. This allows the user
+implementation of the callback to dereference the void pointer
+and pass any data to the callback, to make it accessible in
+the body of the callback itself. This is a standard 
+way if passing data to callbacks in C and can be
+seen for example in the libuv library, where the
+\texttt{uv\_handle\_t} struct contains a void pointer which
+can be dereferenced in any callbacks \cite{libuvUv_handle_tDocumentation2025}.
+
+\begin{figure}[H]
+    \centering
+\begin{minted}{C}
+typedef struct ConnectionCallbacks {
+  int jalla;
+} ConnectionCallbacks;
+\end{minted}
+\label{fig:connectionCallbackStructure}
+\caption{The structure passed when initiating a Preconnection}
+\end{figure}
+
+\begin{figure}[H]
+\begin{center}
+\begin{tabular}{ ||l|c|c| } 
+ \hline
+ \textbf{Event}      & \textbf{Class}                    & \textbf{Description} \\ 
+ \hline \hline
+ CloneError          & Connection                        & cell9 \\ 
+ \hline
+ Closed              & Connection                        & cell9 \\ 
+ \hline
+ ConnectionError     & Connection                        & cell9 \\ 
+ \hline
+ ConnectionReceived  & Listener                          & cell9 \\ 
+ \hline
+ EstablishmentError  & Connection/Preconnection/Listener & cell9 \\ 
+ \hline
+ Expired             & Connection                        & cell9 \\ 
+ \hline
+ PathChange          & Connection                        & cell9 \\ 
+ \hline
+ Ready               & Connection                        & cell6 \\ 
+ \hline
+ ReceiveError        & Connection                        & cell9 \\ 
+ \hline
+ ReceivedPartial     & Connection                        & cell9 \\ 
+ \hline
+ RendezousDone       & Preconnection                     & cell9 \\ 
+ \hline
+ SendError           & Connection                        & cell9 \\ 
+ \hline
+ Sent                & Connection                        & cell9 \\ 
+ \hline
+ SoftError           & Connection                        & cell9 \\ 
+ \hline
+ Stopped             & Listener                          & cell9 \\ 
+ \hline
+\end{tabular}
+\end{center}
+\caption{Table of events and associated objects}
+\label{fig:tapsEvents}
+\end{figure}
