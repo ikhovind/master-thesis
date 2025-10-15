@@ -154,14 +154,77 @@ seen for example in the libuv library, where the
 can be dereferenced in any callbacks \cite{libuvUv_handle_tDocumentation2025}.
 
 \begin{figure}[H]
-    \centering
+\centering
 \begin{minted}{C}
 typedef struct ConnectionCallbacks {
-  int jalla;
+  int (*connection_error)(struct Connection* connection, void* udata);
+  int (*establishment_error)(struct Connection* connection, void* udata);
+  int (*expired)(struct Connection* connection, void* udata);
+  int (*path_change)(struct Connection* connection, void* udata);
+  int (*ready)(struct Connection* connection, void* udata);
+  int (*send_error)(struct Connection* connection, void* udata);
+  int (*sent)(struct Connection* connection, void* udata);
+  int (*soft_error)(struct Connection* connection, void* udata);
+  void* user_data;
 } ConnectionCallbacks;
 \end{minted}
 \label{fig:connectionCallbackStructure}
-\caption{The structure passed when initiating a Preconnection}
+\caption{Event callbacks associated 1-1 with a Connection object}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minted}{C}
+typedef struct ReceiveCallbacks {
+  int (*receive_callback)(
+    struct Connection* connection,
+    Message** received_message,
+    MessageContext* ctx,
+    void* user_data
+  );
+  int (*receive_error)(
+    struct Connection* connection,
+    MessageContext* ctx,
+    const char* reason,
+    void* user_data
+  );
+  int (*receive_partial)(
+    struct Connection* connection,
+    Message** received_message,
+    MessageContext* ctx,
+    bool end_of_message, 
+    void* user_data
+  );
+  void* user_data;
+} ReceiveCallbacks;
+\end{minted}
+\label{fig:receiveCallbackStructure}
+\caption{Event callbacks associated with each request to receive a message}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minted}{C}
+typedef struct ListenerCallbacks {
+  int (*connection_received)(
+    struct Listener* listener,
+    struct Connection* new_conn,
+    void* udata
+  );
+  int (*establishment_error)(
+    struct Listener* listener,
+    const char* reason,
+    void* udata
+  );
+  int (*stopped)(
+    struct Listener* listener,
+    void* udata
+  );
+  void* user_data;
+} ListenerCallbacks;
+\end{minted}
+\label{fig:listenerCallbackStructure}
+\caption{Event callbacks associated 1-1 with a Listener object}
 \end{figure}
 
 \begin{figure}[H]
