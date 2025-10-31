@@ -8,47 +8,17 @@
 \usepackage[T1]{url}\urlstyle{sf}
 \usepackage{float}
 \usepackage[parfill]{parskip} % New line between paragraphs, no indentation
-\usepackage[backend=biber,style=numeric-comp,url=false]{biblatex}
+\usepackage[backend=biber,style=numeric-comp,url=true]{biblatex}
 \usepackage[hidelinks, hypertexnames=false]{hyperref}
 \usepackage{minted}
 \usepackage{xr}
 
 \usepackage{silence}
+\WarningFilter{latex}{Marginpar}
 \usepackage{fancyhdr}
 \usepackage{marginnote}
 \usepackage{xurl}
 \usepackage{fancyvrb}
-\WarningFilter{latex}{Marginpar on page 6 moved}
-\WarningFilter{latex}{Marginpar on page 7 moved}
-\WarningFilter{latex}{Marginpar on page 8 moved}
-\WarningFilter{latex}{Marginpar on page 9 moved}
-\WarningFilter{latex}{Marginpar on page 10 moved}
-\WarningFilter{latex}{Marginpar on page 11 moved}
-\WarningFilter{latex}{Marginpar on page 12 moved}
-\WarningFilter{latex}{Marginpar on page 13 moved}
-\WarningFilter{latex}{Marginpar on page 14 moved}
-\WarningFilter{latex}{Marginpar on page 15 moved}
-\WarningFilter{latex}{Marginpar on page 16 moved}
-\WarningFilter{latex}{Marginpar on page 17 moved}
-\WarningFilter{latex}{Marginpar on page 18 moved}
-\WarningFilter{latex}{Marginpar on page 26 moved}
-\WarningFilter{latex}{Marginpar on page 27 moved}
-\WarningFilter{latex}{Marginpar on page 28 moved}
-\WarningFilter{latex}{Marginpar on page 29 moved}
-\WarningFilter{latex}{Marginpar on page 32 moved}
-\WarningFilter{latex}{Marginpar on page 33 moved}
-\WarningFilter{latex}{Marginpar on page 34 moved}
-\WarningFilter{latex}{Marginpar on page 35 moved}
-\WarningFilter{latex}{Marginpar on page 36 moved}
-\WarningFilter{latex}{Marginpar on page 37 moved}
-\WarningFilter{latex}{Marginpar on page 38 moved}
-\WarningFilter{latex}{Marginpar on page 39 moved}
-\WarningFilter{latex}{Marginpar on page 40 moved}
-\WarningFilter{latex}{Marginpar on page 42 moved}
-\WarningFilter{latex}{Marginpar on page 43 moved}
-\WarningFilter{latex}{Marginpar on page 44 moved}
-\WarningFilter{latex}{Marginpar on page 45 moved}
-\WarningFilter{latex}{Marginpar on page 46 moved}
 \usepackage{hyperref}
 \usepackage{tikz}
 \usepackage{amsmath}
@@ -81,6 +51,7 @@
 \fancyhead[R]{Ingebrigt Hovind} % right header
 \renewcommand{\headrulewidth}{0pt} % remove the horizontal line
 \newcommand\wordcount{\input{|"texcount -inc -sub -sum -0 -template={SUM} \jobname.tex"}}
+\newcommand{\mono}[1]{\texttt{\expandafter\detokenize\expandafter{#1}}}
 
 
 \addbibresource{references/masterthesis.bib}            %% ... or whatever

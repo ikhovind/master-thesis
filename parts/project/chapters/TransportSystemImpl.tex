@@ -109,11 +109,11 @@ without having to implement custom fallback-logic or error handling. This
 greatly eases the implementation complexity and could help QUIC adoption
 on both the server and client side.
 
-\subsubsection{UDP}
+\subsubsection{UDP} \label{sec:udpImpl}
 UDP is a connectionless, message-based unreliable protocol first designed
 in 1980 \cite{postelUserDatagramProtocol1980}. It has since become one
 of the two primary transport layer protocols used today and has native
-support in libuv through the libuv \texttt{udp\_udp\_t} handle \cite{libuvUdpHandle}.
+support in libuv through the libuv \texttt{udp\_udp\_t} handle \cite{libuvLibuvUDPHandle}.
 Due to its simplicity, there is fairly little logic required to integrate
 UDP into CTaps, which can be seen by it being the protocol requiring the
 fewest lines of code to implement, as seen in \cref{fig:protocolLoc}.
@@ -206,9 +206,8 @@ When a Connection is closed, it checks whether or not it was created from a List
 and if it was, then it informs its associated Socket Manager,
 which then internally checks whether there are any remaining associated
 objects. If there are none, the socket manager closes the associated socket
-through the associated protocol, and then finally frees itself. \todo{This might be more Socket Manager section fitting}
-
-\todo{Any more UDP logic?}
+through the associated protocol, and then finally frees itself.
+\todo{Maybe separate this out into its own Socket Manager Section}
 
 \begin{figure}[H]
   \begin{minted}{C}
@@ -230,6 +229,49 @@ void socket_manager_decrement_ref(SocketManager* socket_manager) {
 
  
 \subsubsection{TCP}
+TCP is a connection-oriented, stream-based reliable protocol first designed
+in the 1970s \cite{cerfSpecificationInternetTransmission1974}. TCP forms the
+basis of much of the modern internet and is the most commonly used transport
+layer protocol. TCP is therefore naturally a requirement for any networking
+library and is supported in CTaps. TCP has native support in libuv through the
+\mono{uv_tcp_t} handle \cite{libuvLibuvTCPHandle}.
+
+The TAPS API aims to reflect the most common ways of interacting with the network,
+providing the defaults which have the broadest applicability and are least
+dangerous in terms of what a normal client expects from the network. Since
+most modern applications which use the network are built on top of TCP,
+this naturally refelcts in how most moern applications actually use the
+network, for example expecting a reliable transfer of data. This is however
+not the case with every aspect of TCP, as most application level protocols
+are not stream-based, but build their own custom framing logic on top
+of TCP. \todo{Write about framers for streams when implemented}
+
+Apart from the stream-based logic, TCP maps relatively well to the concepts
+provided by TAPS. When creating a Connection, a socket is created and
+a handshake is initiated. If this handshake succeeds, then the
+\mono{ready} callback associated with the Connection is invoked and
+the Connection is ready to send or receive data. If the handshake fails
+then the Connection could not be created and the client can be alerted
+of this immediately, without trying to send data itself.
+\todo{Candidate racing might mean that this kinda doesn't matter}
+
+When listening, the demultiplexing required in UDP, as discussed in
+\cref{sec:udpImpl}, is handled by the kernel TCP stack itself.
+Since TCP is also connection-based, there are also expectations
+that you have to listen for and spawn new connections from a given
+endpoint on a server, instead of purely receiving data as with UDP.
+This means that there is already built-in logic to handle the creation
+of new connections in this case, which can be utilized in order to spawn
+new Connection objects for the sake of a TAPS system. For example, libuv
+has the built-in function \mono{uv_listen}, which invokes a callback whenever
+a new connection is received. Since the whole protocol is connection-oriented,
+it also means that the logic of only closing the receiving socket when
+the last connection closes is built-in, and does not have to be implemented
+by CTaps. CTaps still uses a Socket Manager to keep track of the open TCP
+handle, however, for TCP this only tracks the single listener, and can be
+closed immediately when the listener is closed. The new TCP handles which
+have been spawned from this handle will not be closed, as this logic is handled
+by libuv.
 
 \begin{figure}[H]
   \begin{minted}{C}
@@ -256,6 +298,97 @@ static ProtocolImplementation tcp_protocol_interface = {
 \end{figure}
 
 \subsubsection{QUIC}
+Out of the protocols natively supported by CTaps, the logic related to QUIC 
+is by far the most complex, which can for example be seen by the required
+number of lines of code in \cref{fig:protocolLoc}. QUIC is a relatively
+new protocol, with RFC 9000 being published in 2021 \cite{iyengarQUICUDPBasedMultiplexed2021}. As QUIC and TAPS was developed relatively concurrently, the TAPS
+RFCs feature no protocol considerations or implementations hints like is featured
+for several other protocols, despite access to QUIC being one of the
+major value propositions of a TAPS system \cite{brunstromImplementingInterfacesTransport2025}. 
+\todo{Cite the WIP from the github?}
+With the recent publication of the QUIC RFCs, this also means that
+none of the current implementations of TAPS found during research for this
+thesis, such as NEAT or PyTaps, feature QUIC as one of the underlying protocols
+\cite{khademiNEATPlatformProtocolIndependent2017}\cite{frankePythonasynciotaps2025}.
+As mentioned previously, this is one of the key motivations behind devloping CTaps,
+and is the biggest value proposition behind CTaps.
+
+QUIC is a large protocol and is very configurable. In the development of CTaps,
+effort has been made to make this configurability as available as possible to
+a client using CTaps, however, since CTaps aims to be a implementation of the
+TAPS API, the decision has been made to not expose to many QUIC-specific configuration 
+options. \todo{List some of the options not exposed}
+For these configurations options, CTaps has tried to follow the principle of
+least surprise, choosing the sanest defaults as possible. Other configuration
+options are available through the TAPS Transport Properties, Security Parameters,
+other configuration options, or can be inferred by a combination of properties.
+For example, Application-Layer Protocol Negitiation (ALPN), which is mandatory for QUIC,
+is available through a dedicated ALPN Security Parameter. Some custom configuration
+was found to be necessary, for example the key and certificate files, which are required
+for creating a QUIC server and are set globally for each QUIC context have to be
+set through a global state, and are passed to when first initializing the CTaps
+context \todo{Rephrase after refactoring from global to per-instance}.
+
+Since libuv does not feature native QUIC support like it does with TCP and UDP,
+CTaps uses Picoquic as an external library, working as a "QUIC engine",
+while performing the actual transfer of data over an UDP socket provided by libuv.
+More details on why exactly picoquic was chosen over other QUIC implementations
+can be seen in \cref{sec:picoquic}.
+
+Picoquic features two primary types of state used within CTaps. The global picoquic
+context is contained within a \mono{picoquic_quic_t} structure, and the per-connection
+context is contained within a \mono{picoquic_cnx_t} context \cite{huitemachristianPicoquicInternalStructures2020}.
+
+Picoquic has two modes of operation, either it can provide the entire networking
+stack, providing its own event loop and socket handling by invoking the \mono{picoquic_packet_loop},
+or it can serve as a "QUIC engine", with the client being responsible with reading
+data from and sending data to the networking, with picoquic formatting the QUIC packets
+to send over UDP. Simple clients of picoquic which only need to use QUIC can use the
+built-in event loop, while more complex use cases such as CTaps can use the second
+use case, supplying their own event loop. Data which is read over the socket associated
+with QUIC is passed to picoquic through the \mono{picoquic_incoming_packet_ex} function
+and new QUIC packets to send over the network can be fetched through \mono{picoquic_prepare_next_packet}.
+When functioning as a "QUIC engine" \todo{Figure out better term for quic engine lol}
+all the data received over the UDP socket is passed directly to picoquic, and picoquic
+is polled at regular intervals for new messages which are ready to send.
+The maximum time until the next mandatory polling
+can be fetched using the \mono{picoquic_get_next_wake_delay} function. This function needs
+to be reset every time picoquic receives new data, as there may be a need to respond
+within a set time interval. This function returns wakeup times common to a whole QUIC Context,
+so a single
+timer will work across several QUIC connections. Internally in CTaps, the timer
+functionality is handled by a single instance of a libuv \mono{uv_timer_t} handle \cite{libuvLibuvTimerHandle}.
+
+Initiating a Connection over QUIC is fairly straight-forward, as QUIC is connection-oriented
+by default \todo{But it can be connection-less??}. First, a single UDP socket is created
+for the desired local endpoint or an ephemeral one, as with a normal UDP socket, see \cref{sec:udpImpl},
+then, \mono{picoquic_create_cnx} is invoked. This makes picoquic start to create a connection
+and generate the necessary packets for performing a handshake and when the timer fires,
+the generated data is transferred. Picoquic informs the client about the state of the
+connection through a callback supplied when first building the QUIC context. In this
+callback, CTaps can see when a given Connection is ready, and invoke its own client's
+callbacks. Data can be transferred as by the CTaps client as normal, and CTaps will
+add it to a given QUIC stream using \mono{picoquic_add_to_stream}, causing picoquic
+to build a new message with the given data.
+
+Opening a Listener is even simpler. All CTaps has to do is open a UDP socket listening
+on the desired local endpoint or an ephemeral one, and when data is received is is passed
+to picoquic through \mono{picoquic_incoming_packet_ex}. If picoquic has not seen the
+given endpoint before, it will create a new picoquic connection and pass this to CTaps.
+CTaps can then use this picoquic connection to create an inernal Connection, and invoke
+the \mono{ConnectionReady} callback from the Listener. CTaps keeps track of the created
+Connections according to their associated remote endpoints \todo{implement this, or is it in socket manager?}.
+This is
+needed because as with UDP, when closing the listener CTaps cannot automatically close the
+receiving UDP handle, since the created Connections remain active and they all receive and
+transfer data over the same UDP socket. When closing a Connection, picoquic is informed
+through \mono{picoquic_close} and it will wind down the connection. When all the created
+connections have been closed, the UDP socket will be closed as well.
+
+TODO - write about problems with handling ALPN negotiations for QUIC server
+through callback -> callback is QUIC context-wide, but ALPN can be per-listener.
+
+
 \begin{figure}[H]
 \begin{minted}{C}
 static ProtocolImplementation quic_protocol_interface = {
