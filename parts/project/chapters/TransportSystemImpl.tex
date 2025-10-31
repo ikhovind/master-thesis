@@ -1,6 +1,10 @@
 \chapter{Transport System Implementation}  \label{transportSystemImpl}
 
-\section{Candidate Gathering}
+TODO - define transport system in TAPS overview
+
+Maybe this is defined somewhere else, do something like "as mentioned in section..."
+
+\section{Candidate Gathering} \label{sec:candidateGathering}
 CTaps follows the recommended procedure for Candidate Gathering from RFC 9623
 very closely. CTaps represents the candidates in a tree, using a GNode struct from
 GLib to represent a N-ary tree. CTaps first builds the entire tree, resolving
@@ -12,9 +16,11 @@ are not compatible with the required or prohibited selection properties. After p
 the tree is sorted according to the stated selection properties, as described in RFC 9623 
 \cite{brunstromImplementingInterfacesTransport2025}.
 
-\section{Candidate Racing}
+\section{Candidate Racing} \label{sec:candidateRacing}
 
 \section{Protocol Implementations}
+
+\subsection{Protocol Interface}
 In order to make the CTaps design as modular as possible and ease the
 process of adding more protocols, CTaps uses an internal interface for a protocol,
 which abstracts away the implementation details. This interface consists of
@@ -22,7 +28,12 @@ a struct containing the name of the protocols, and function pointers for
 the necessary functions for the wider CTaps library to interact with the protocol.
 Each protocol implementation is this way kept as small as possible, and is
 isolated from the rest of the library.
- 
+
+Implementations of the interface also register
+a list of the applicable selection properties, allowing the library
+to later prune and sort the Candidate Tree protocols, when selecting
+candidates.
+
 \begin{figure}[H]
 \begin{minted}{C}
 typedef struct ProtocolImplementation {
@@ -36,12 +47,76 @@ typedef struct ProtocolImplementation {
   int (*close)(const struct Connection*);
 } ProtocolImplementation;
 \end{minted}
-\caption{Connection typedef struct}
+\caption{Protocol Implementation interface}
 \end{figure} \todo{Update this when having finalized the code}
 
-When implementing a new protocol, all that is needed is an
-implementation of the struct, filling out the function pointers
-with custom behaviour for the given protocol:
+Each protocol supported instantiates a single instance of the
+protocol interface, and adds this to a global variable keeping
+track of the supported protocols: 
+
+\begin{figure}[H]
+  \begin{minted}{C}
+int ctaps_initialize(const char *cert_file_name, const char *key_file_name) {
+  ctaps_event_loop = malloc(sizeof(uv_loop_t));
+  uv_loop_init(ctaps_event_loop);
+
+  register_protocol(&udp_protocol_interface);
+  register_protocol(&tcp_protocol_interface);
+  register_protocol(&quic_protocol_interface);
+
+  ctaps_global_config.cert_file_name = cert_file_name ? strdup(cert_file_name) : NULL;
+  ctaps_global_config.key_file_name = key_file_name ? strdup(key_file_name) : NULL;
+  return 0;
+}
+  \end{minted}
+  \caption{Example of adding protocol support}
+\end{figure}
+
+Adding the protocols is done at runtime in order to allow any
+application using CTaps to add support for custom protocols if
+desired. Because all Connections using the same protocol are associated
+with the same protocol structure, the protocol structure itself
+is naturally stateless, providing only read-only values and function
+pointers where the necessary state has to be passed in as paramaters.
+How a client can add custom protocols is discussed further in \cref{sec:addingNewProtocols}.
+
+
+Each Connection is associated with a single protocol, which
+is selected through the process of candidate gathering and candidate
+racing as described in \cref{sec:candidateGathering} and \cref{sec:candidateRacing}.
+This means, that whenever a Connection wants to interact with the network, it
+will invoke a function pointer from its associated protocol:
+
+\begin{figure}[H]
+  \begin{minted}{C}
+int send_message(Connection* connection, Message* message) {
+  return connection->protocol.send(connection, message, NULL);
+}
+  \end{minted}
+  \caption{Example usage of interface when sending Message with Connection}
+\end{figure}
+
+
+
+
+\subsection{Supported protocols}
+Currently, CTaps natively supports three transportation layer protocols:
+UDP, TCP and QUIC. TCP and UDP were added because of their ubiquity and
+relative ease of implementation due to native support in libuv. QUIC was
+added since having easier access to QUIC was one of the primary motivations
+behind the thesis as a whole. Using CTaps, an application can get access to QUIC,
+without having to implement custom fallback-logic or error handling. This
+greatly eases the implementation complexity and could help QUIC adoption
+on both the server and client side.
+
+\subsubsection{UDP}
+UDP is a connectionless, message-based unreliable protocol first designed
+in 1980 \cite{postelUserDatagramProtocol1980}. It has since become one
+of the two primary transport layer protocols used today and has native
+support in libuv through the libuv \texttt{udp\_udp\_t} handle \cite{libuvUdpHandle}.
+Due to its simplicity, there is fairly little logic required to integrate
+UDP into CTaps, which can be seen by it being the protocol requiring the
+fewest lines of code to implement, as seen in \cref{fig:protocolLoc}.
 
 \begin{figure}[H]
 \begin{minted}{C}
@@ -70,10 +145,169 @@ static ProtocolImplementation udp_protocol_interface = {
 \end{minted}
 \caption{UDP protocol implementation struct}
 \end{figure} \todo{Update this when having finalized the code}
+
+UDP does however not fit perfectly into the model assumed by
+TAPS, which is that of a Connection-based system. There is therefore
+several pieces of logic in the CTaps UDP implementation which adapt
+the underlying UDP layer to this assumption. Opening a client is
+fairly simple, as this simply creates a new UDP handle through
+libuv, binds it to either the local endpoint required or an ephemeral one
+before finally starting to receive data over that handle, and
+invoking the \texttt{Ready}-callback for the associated Connection.
+This does not actually transfer any data to the remote endpoint
+before the clients sends its first message, and any data received
+on the local handle has to be filtered based on remote endpoint,
+before being passed to the associated Connection. \todo{Write
+about how this filtering happens after impelmenting it}
+A \texttt{Ready}-callback does therefore not necessarily
+mean that the remote endpoint is actually reachable.
+\todo{Or does it, what implications does candidate racing have here?}
+
+Another piece of logic required to adapt UDP to the structure
+of a TAPS library is that surrounding the Listener. A Listener
+listens on a single \todo{correct?} port, creating a new 
+Connection each time a new client connects. With UDP not
+featuring a handshake, the Listener instead has to keep track
+of which remote endpoints it has received messages from, creating
+a new Connection whenever it receives a message from a remote endpoint
+it has not seen before. This is similar to how TCP connections
+are identified by a four-tuple of Source IP address, Source port,
+Destination IP address and Destination port. Instead of the
+demultiplexing to per-Connection happening as part of the
+operating system stack as with TCP, it has to happen as
+part of the CTaps custom UDP logic. After a message has
+been received by a Listener, the Connection associated with
+the sender is found, and any callback for received messages
+for this connection is invoked, if registered by the client.
+When sending data from a Connection created by a Listener, the
+Connection itself contains the destination remote endpoint,
+meaning that the Listener does not have to look up any state
+in this case. \todo{Listeners should receive on seeveral protocols according to RFC9623}
+
+For a TAPS system, Listeners are only responsible for receiving new
+Connections, while the created Connections are independent
+of the listener. This means that the created Connections should
+remain active, even if the Listener is stopped. In order to ensure
+the validity of the underlying UDP handles and other data structures
+used, even if the Listener is stopped and freed by the client, CTaps
+uses an underlying structure called a Socket Manager to actually
+handle contain the libuv handle and to handle the demultiplexing of
+messages. The Socket Manager contains everything necessary for keeping
+track of the received Connections and for transferring data, while the
+Listener contains all state necessary for spawning new Connections.
+When a Listener is closed and freed, the Socket Manager remains active,
+still receiving messages and passing them along to the associated Connection.
+If a message from a new remote endpoint is received after closing a
+Listener, the associated Socket Manager will simply discard it. The
+Socket Manager needs to remain active as long as there is at least
+one active associated Connection. It therefore has an internal counter,
+keeping track of the associated Listener and the number of active Connections.
+When a Connection is closed, it checks whether or not it was created from a Listener
+and if it was, then it informs its associated Socket Manager,
+which then internally checks whether there are any remaining associated
+objects. If there are none, the socket manager closes the associated socket
+through the associated protocol, and then finally frees itself. \todo{This might be more Socket Manager section fitting}
+
+\todo{Any more UDP logic?}
+
+\begin{figure}[H]
+  \begin{minted}{C}
+void socket_manager_decrement_ref(SocketManager* socket_manager) {
+  socket_manager->ref_count--;
+  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
+  if (socket_manager->ref_count == 0) {
+    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
+    if (rc < 0) {
+      log_error("Error stopping socket manager listen: %d", rc);
+    }
+    free(socket_manager);
+  }
+}
+  \end{minted}
+  \caption{Internal Socket Manager counter decrementation}
+\end{figure}
+
+
  
-These implementations are kept track of in a central array,
-and new protocols can be dynamically registered by consumers
-of the library. Implementations of the interface also register
-a list of the applicable selection properties, allowing the library
-to later prune and sort the Candidate Tree protocols, when selecting
-candidates.
+\subsubsection{TCP}
+
+\begin{figure}[H]
+  \begin{minted}{C}
+static ProtocolImplementation tcp_protocol_interface = {
+    .name = "TCP",
+    .selection_properties = {
+      .selection_property = {
+        get_selection_property_list(create_property_initializer)
+        [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
+        [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+        [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+      }
+    },
+    .send = tcp_send,
+    .init = tcp_init,
+    .receive = tcp_receive,
+    .close = tcp_close,
+    .listen = tcp_listen,
+    .stop_listen = tcp_stop_listen,
+    .remote_endpoint_from_peer = tcp_remote_endpoint_from_peer
+};
+  \end{minted}
+  \caption{TCP protocol implementation struct}
+\end{figure}
+
+\subsubsection{QUIC}
+\begin{figure}[H]
+\begin{minted}{C}
+static ProtocolImplementation quic_protocol_interface = {
+    .name = "QUIC",
+    .selection_properties = {
+      .selection_property = {
+        get_selection_property_list(create_property_initializer)
+        [RELIABILITY] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+        [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [MULTISTREAMING] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference = PROHIBIT}}, // Temporary - to make it easy to ban quic
+      }
+    },
+    .send = quic_send,
+    .init = quic_init,
+    .receive = quic_receive,
+    .close = quic_close,
+    .listen = quic_listen,
+    .stop_listen = quic_stop_listen,
+    .remote_endpoint_from_peer = quic_remote_endpoint_from_peer
+};
+\end{minted}
+\caption{QUIC protocol implementation struct}
+\end{figure} \todo{Update on final code}
+
+
+\subsection{Adding new protocols} \label{sec:addingNewProtocols}
+
+When implementing a new protocol, all that is needed is an
+implementation of the struct, filling out the function pointers
+with custom behaviour for the given protocol. Libuv features
+designated handles for TCP and UDP support, while generic
+handles can be used for other protocols. 
+With the abstraction of the protocol interface, adding new protocols
+becomes fairly simple, depending on the complexity of the protocol
+itself.
+
+\begin{figure}[H]
+\begin{center}
+\begin{tabular}{ ||l|l|c| } 
+ \hline
+ \textbf{Protocol}   & \textbf{Source files}             & \textbf{Lines of Code} \\ 
+ \hline \hline
+ UDP                 & \texttt{udp.h \& udp.c}                    & 263 \\ 
+ \hline
+ TCP                 & \texttt{tcp.h \& tcp.c}                    & 344 \\ 
+ \hline
+ QUIC                & \texttt{quic.h \& quic.c}                  & 743 \\
+ \hline
+\end{tabular}
+\end{center}
+\caption{Overview of Lines of Code (LoC) on a per-protocol basis}
+\label{fig:protocolLoc}
+\end{figure} \todo{Update lines of code at end of development}
