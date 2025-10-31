@@ -15,14 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
-
-      - name: Run a multi-line script
+      - name: Generate PDF
         run: |
+          sudo apt-get update
           sudo apt install texlive-full
           pdflatex -shell-escape main.tex
       - uses: actions/upload-artifact@v4
         with:
-          name: Current PDF
-          path: main.pdf # or path/to/artifact
+          name: Save PDF
+          path: main.pdf
