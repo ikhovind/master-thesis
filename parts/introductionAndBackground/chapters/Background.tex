@@ -538,10 +538,64 @@ goal of the algorithm, which is to "reduce user-visible delays on dual-stack hos
 \cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering
 and Candidate Racing algorithm found in TAPS is based on Happy Eyeballs,
 so they share a lot of central features, however, Happy Eyeballs is
-primarily concerned with racing IPv4 and IPv6 addresses. \todo{Is this true?}
+primarily concerned with racing IPv4 and IPv6 addresses.
 Happy Eyeballs implements a staggered racing algorithm with a preference for
 IPv6, but uses interleaved IPv6 and IPv4 addresses in order to maximize
 IPv6 usage but minimize latency due to IPv6 brokenness.
+
+While there are many reasons to try to adopt IPv6 as broadly as
+possible, there are however still several problems, meaning that fallback to
+IPv4 still has to be an option. While clients and servers should prefer using
+IPv6, adoption has been slow, and the failure has historically been
+observed to be higher than for Ipv4 %\cite{hustongeoffISPColumn}.
+This potential brokenness of IPv6 and the consideration that in certain
+situations IPv4 can provide a better user experience than IPv6
+has led to the development of the Happy Eyeballs algorithm.
+There exists several versions of Happy Eyeballs, with the
+first version being published in 2012 and describes an algorithm
+for racing an IPv4 and IPv6 connection to a server, giving a preferential
+head start to the IPv6 connection \cite{wingHappyEyeballsSuccess2012}.
+Happy Eyeballs version 2 improves
+upon problems within Happy Eyeballs version 1 by also racing the
+IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking \cite{schinaziHappyEyeballsVersion2017}.
+
+Happy Eyeballs is named after the goal of the algorithm, which
+is to improve the experience of the end user of the network.
+The basic concept is the same for every version, it
+starts two staggered connections, with a slight head start for the IPv6
+version, and then uses the connections which first succeeds.
+This can also be implemented to race several IP addresses of the
+same version in cases where the DNS results contain more than one
+result for each version. In this case, IPv6 and IPv4 are interlaced,
+avoiding issues with long delays in cases where IPv6 may not work at all.
+
+This concept of racing is a central concept of TAPS, where it is
+taken one step further to also races all combinations of local interface,
+remote endpoint and underlying transport protocol which fit with the
+specifications of the user. RFC 8305 lists four steps for protocol racing,
+which conceptually divide into Candidate Gathering and Candidate Racing 
+TAPS system.
+
+\begin{enumerate}
+  \item Initiation of asynchronous DNS queries
+  \item Sorting of resolved destination addresses
+  \item Initiation of asynchronous connection attempts
+  \item Establishment of one connection, which cancels all other attempts
+\end{enumerate} \cite{schinaziHappyEyeballsVersion2017}
+
+Here, step one and two map into the TAPS concept of Candidate gathering
+while step two and three map into the TAPS concept of Candidate Racing.
+By expanding the racing from only to IP-version to also include transport
+protocol, TAPS makes use of techiniques originally used to help IPv6
+adoption and user experience, to also help transport protocol adoption.
+TAPS cannot only discover that whether a link can be made using IPv6
+or only IPv4, but also whether the connection could be made by QUIC
+or if it has to made by TCP for example. This will not only lead to
+an improved user experience, but also handle fallback-logic which otherwise
+would have to be written on a per-application basis.
+
+The details of the impelmentation of Candidate Racing in CTaps
+is discussed in \cref{sec:candidateRacing}
 
 
 \section{What is quic}
