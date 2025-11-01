@@ -297,7 +297,7 @@ static ProtocolImplementation tcp_protocol_interface = {
   \caption{TCP protocol implementation struct}
 \end{figure}
 
-\subsubsection{QUIC}
+\subsubsection{QUIC} \label{sec:quicImpl}
 Out of the protocols natively supported by CTaps, the logic related to QUIC 
 is by far the most complex, which can for example be seen by the required
 number of lines of code in \cref{fig:protocolLoc}. QUIC is a relatively
@@ -385,9 +385,52 @@ transfer data over the same UDP socket. When closing a Connection, picoquic is i
 through \mono{picoquic_close} and it will wind down the connection. When all the created
 connections have been closed, the UDP socket will be closed as well.
 
-TODO - write about problems with handling ALPN negotiations for QUIC server
-through callback -> callback is QUIC context-wide, but ALPN can be per-listener.
+As mentioned previously ALPN is mandatory for QUIC and is supplied to picoquic
+by CTaps through a configurable Security Parameter. ALPN is a negotiation
+between a QUIC server and client, therefore, both a Listener using QUIC and
+a client using QUIC has to take this parameter into account. For a client this
+is fairly straight forward, CTaps creates a picoquic connection and when
+necessary picoquic requests a list of protocols for ALPN through a callback
+to CTaps. However, for a Listener the ALPN implementation in picoquic does
+not perfectly line up with the expected behaviour of CTaps. Since each Listener
+represents a server, each Listener has a unique set of Security Parameters and
+can therefore potentially supports varying protocols for ALPN. However, for
+picoquic the ALPN negotiation of an incoming connection to a server while
+picoquic is in the process of building the connection. Picoquic lets the
+client supply a ALPN selection callback through the function
+\mono{picoquic_set_alpn_select_fn}. This callback is only supplied the
+global picoquic context and picoquic offers no functionality for fetching
+the connection which is currently being created or to which local endpoint
+the conneciton currently undergoing ALPN is trying to connect to. There is
+therefore no way of associating an incoming connection with a Listener
+and therefore way of knowing exactly which protocols are supported.
+ALPN therefore becomes more complicated and CTaps has to make a sacrifice
+in order to be able to perform it successfully. During development three
+primary alternatives were considered, creating a global context per-Listener
+instead of a single global one, accept any ALPNs supported by at least one
+Listener and redirect if it does not match the desired endpoint, or finally
+to dissalow different ALPNs between listener associated with a single
+context. \todo{Is this actually true, maybe the second option is the expected handling}
 
+The first option was rejected as it does not match the expected usage
+of picoquic, and degrades performance while introducing unecessary complexity.
+While the second option of redirecting would be the most client-friendly
+in terms that it would lead to the largest number of successfull connections
+to a server created by CTaps, the third option was chosen for several reasons.
+First of all, third option follows the principles of failing early and offering
+the least surprise to a server implemented in CTaps and to the client trying to
+connect. If a client has requested a specific endpoint, it would be both surprising
+and difficult to debug exactly why it was redirected if it knows that a server
+is running on a given endpoint. It would also be possible that the client
+supports more ALPN protocols than the server it is trying to connect to. If
+one of the protocols supported by another Listener is selected on connection,
+the client could be redirected even if it would accept an ALPN protocol which
+is supported by the Listener on the endpoint it is trying to connect to.
+By failing during setup of the server, this limitation of picoquic becomes
+immediately apparent to a developer setting up a Listener in CTaps, and
+necessary workarounds can be made of this is truly a problem.
+\todo{Write about how different CTaps contexts can be created to achieve
+differnet ALPN for servers of really desired}
 
 \begin{figure}[H]
 \begin{minted}{C}
@@ -426,6 +469,18 @@ handles can be used for other protocols.
 With the abstraction of the protocol interface, adding new protocols
 becomes fairly simple, depending on the complexity of the protocol
 itself.
+
+New protocols can naturally be added to the core CTaps library,
+making the underlying protocol available to all consumers of CTaps
+when updating to the next release. However, new protoocls can also
+be added by run-time by consumers of the library \todo{Verify that this is actually true}.
+By writing a custom impelmentation of the protocol interface featured
+in CTaps and supplying a pointer to the interface through the CTaps
+function \mono{register_protocol}, then the protocol is added
+to the list of supported protocols, and it is featured in protocol
+selection, candidate gathering and candidate racing through the supplied
+selection properties and implementations of the protocol interface function
+pointers.
 
 \begin{figure}[H]
 \begin{center}

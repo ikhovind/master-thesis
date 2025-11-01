@@ -754,6 +754,27 @@ falling back to TCP. This would require no change in logic for
 the client, and would not require TAPS to be supported both
 by the client and the server.
 
+\section{ALPN}
+Application layer protocol negotiation is a feature in
+TLS where the application layer protocol which will be
+used is negotiated between the server and the client.
+transport layer negotitates which application layer protocol
+will be used between the server and the client. ALPN is featured
+in several encryption protocols such as TLS, and is mandatory
+in QUIC. ALPN is defined in RFC 7301 and has become necessary
+as more and more application level protocls encrypt their
+contents with TLS over port 443 \cite{friedlTransportLayerSecurity2014}.
+ALPN allows the client and server to negotiate a common protocol
+without adding network round trips. The client features
+a list of supported protocols in its client hello message
+and the server chooses a single protocol and features it in
+its server hello message. If the server does not support any
+protocols that the client supports, then it responds with an
+error notifying the client of this.
+
+The implementation of ALPN of picoquic caused some issues
+between picoquic and CTaps, as discussed in \cref{sec:quicImpl}.
+
 \section{SCTP}
 Another transport protocol which could be adopted easier
 when using TAPS is Stream Control Transmission Protocol (SCTP).
