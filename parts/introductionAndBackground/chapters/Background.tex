@@ -138,8 +138,6 @@ sockets: \todo{Should these be here? If yes, recreate in tikz}
     \caption{API model for socket programming \cite{trammellAbstractApplicationProgramming2025}}
 \end{figure}
 
-The following figure explains the API model when using TAPS:
-
 \begin{figure}[H]
     \centering
     \begin{lstlisting}
@@ -161,6 +159,67 @@ The following figure explains the API model when using TAPS:
         +-----------------------------------------------------+
     \end{lstlisting}
     \caption{API model for TAPS \cite{trammellAbstractApplicationProgramming2025}}
+\end{figure}
+
+\subsection{TAPS Architecture} \label{sec:tapsArch}
+RFC 9621 describes the architecture of and a set of requirements
+for TAPS. \cite{paulyArchitectureRequirementsTransport2025}
+A diagram of this architecture can be seen in \cref{fig:tapsArch}.
+A TAPS system consists of two primary parts, the Transport Services
+API and the Transport System Implementation. The Transport Services
+API is the public facing API used by the Application. This contains
+concepts defined in RFC 9622 such as a Preconnection, a Connection
+Messages or Events being transferred between TAPS and the Application.
+
+The Transport System Implementation consists of the internal workings
+of a TAPS system. This consists of services which are provided to the
+public API, such as data transfer or Candidate Racing. The TAPS RFCs
+do not prescribe an actual detailed implementation of the Transport
+System Implementation, leaving the details up to each TAPS implementation
+itself. RFC 9623 does however offer a set of suggestions to developers
+of a TAPS API in order to be in line with the TAPS specification,
+however these are not mandatory, and any TAPS system is therefore
+free to implement its internal workings as it sees fit.
+
+\begin{figure}[p]
+    \centering
+    \begin{lstlisting}
+     +-----------------------------------------------------+
+     |                    Application                      |
+     +-+----------------+------^-------+--------^----------+
+       |                |      |       |        |
+     pre-               |     data     |      events
+     establishment      |   transfer   |        |
+       |        establishment  |   termination  |
+       |                |      |       |        |
+       |             +--v------v-------v+       |
+     +-v-------------+   Connection(s)  +-------+----------+
+     |  Transport    +--------+---------+                  |
+     |  Services              |                            |
+     |  API                   |  +-------------+           |
+     +------------------------+--+  Framer(s)  |-----------+
+                              |  +-------------+
+     +------------------------|----------------------------+
+     |  Transport             |                            |
+     |  System                |        +-----------------+ |
+     |  Implementation        |        |     Cached      | |
+     |                        |        |      State      | |
+     |  (Candidate Gathering) |        +-----------------+ |
+     |                        |                            |
+     |  (Candidate Racing)    |        +-----------------+ |
+     |                        |        |     System      | |
+     |                        |        |     Policy      | |
+     |             +----------v-----+  +-----------------+ |
+     |             |    Protocol    |                      |
+     +-------------+    Stack(s)    +----------------------+
+                   +-------+--------+
+                           V
+   +-----------------------------------------------------+
+   |               Network-Layer Interface               |
+   +-----------------------------------------------------+
+    \end{lstlisting}
+    \caption{TAPS architecture as described by RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.}
+    \label{fig:tapsArch}
 \end{figure}
 
 \subsection{TAPS abstractions}
@@ -228,6 +287,81 @@ bandwith.
 
 In addition to the Connection, TAPS also provides several other objects
 abstracting key elements. For example Endpoint objects and Message objects.
+
+\subsubsection{Framers}
+In TAPS, a Framer is a concept responsible for briding the TAPS concept
+of a Message, with the underlying protocols concept of either a data stream
+or a datagram. In their simplest form, a Framer is responsible for encoding
+or decoding outgoing and incoming data, as well as sending any data necessary
+on initiation or closing of a connection. Because Framers may need to send
+data upon the creation of a Connection, they must be added to a Preconnection,
+before any action which may result in the creation of a Connection is taken.
+The application can define custom framers and pass them to a preconnection
+by implementing an interface provided by the TAPS system.
+
+Because of this potential need to interact with the network, 
+framers are also asynchronous. They are therefore callback-based and need
+to notify their associated connection when the processing of a given message
+has completed.
+
+The concept of a framing protocol exists outside of TAPS. Because most
+application-level protocols are both message-based and run over TCP, several
+ways of converting TCP's byte-stream into usable messages has been implemented.
+These largely fall into two categories, type-length-value (TLV) structures where
+the length of the following data is described in a header-structure, and
+delimeter-separated formats, where the beginning and end of a piece of
+data is separated by delimeters. \cite{brunstromImplementingInterfacesTransport2025}
+Examples of the two categories are HTTP/1.1 for a delimeter-separated format
+and DHCP for TLV, specifying the length of the given hardware address, allowing
+parsers which are unfamiliar with the type to skip it, since the length is known. \cite{dromsDynamicHostConfiguration1997}
+
+For a TAPS system, where the appliaction layer should not need to take into
+account which application layer protocol it is running on top of, Framers become
+useful for datagram or message-based protocols as well. By using Framers, the
+application layer protocol can ensure a consistent reception of messages in
+the desired format. Framers can also pack multiple messages into a single transport
+datagram by using the same formatting as it would for a stream-based protocol.
+
+Conceptually, a framer resides on a separate layer between a Connection and the
+underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
+
+\begin{figure}[p]
+  \begin{lstlisting}
+     Initiate()   Send()   Receive()   Close()
+       |          |         ^          |
+       |          |         |          |
+  +----v----------v---------+----------v-----+
+  |                Connection                |
+  +----+----------+---------^----------+-----+
+       |          |         |          |
+       |      +-----------------+      |
+       |      |    Messages     |      |
+       |      +-----------------+      |
+       |          |         |          |
+  +----v----------v---------+----------v-----+
+  |                Framer(s)                 |
+  +----+----------+---------^----------+-----+
+       |          |         |          |
+       |      +-----------------+      |
+       |      |   Byte-stream   |      |
+       |      +-----------------+      |
+       |          |         |          |
+  +----v----------v---------+----------v-----+
+  |         Transport Protocol Stack         |
+  +------------------------------------------+
+  \end{lstlisting}
+\caption{Protocol Stack Showing a Message Framer from RFC 9622 \cite{trammellAbstractApplicationProgramming2025}}
+\label{fig:tpsStack}
+\end{figure}
+
+A TAPS system should also support adding multiple framers to a preconnection.
+In this case, the framers run as a stack, with the last one added running first
+for outgoing messages and last for incoming ones. Conceptually, this would
+simply introduce more layers into the stack, as shown in \cref{fig:tpsStack}.
+
+Framers can also be configured on a per-message basis using a MessageContext.
+This MessageContext can for example be used to pass the type of a message
+to a Framer if the framer needs it to follow a TLV format.
 
 \subsection{Selecting the transport protocol}
 TAPS selects the underlying transport protocol by
@@ -531,8 +665,6 @@ has successfully established a connection with a remote endpoint, or
 when all candidates have failed. 
 
 \section{Happy Eyeballs} \label{happyEyeballs}
-Write about protocol racing and happy eyeballs in RFC8305.
-Include "Destination Address Selection" from section 6 of RFC 6274.
 Happy Eyeballs, which is described in RFC 86305 is named after the
 goal of the algorithm, which is to "reduce user-visible delays on dual-stack hosts"
 \cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering

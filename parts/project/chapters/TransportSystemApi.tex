@@ -53,7 +53,106 @@ void connection_close(Connection* connection);
 \caption{Function declarations from connection.h}
 \end{figure}
 
+\section{Framer}
+In CTaps, the Framer interface consists of a structure of function pointers,
+which are implemented by the application. These are then passed to a preconnection
+and are invoked at appropriate times during the lifetime of the Connection.
+Along with the Connection, Message and MessageContext, the framer is also
+passed a callback, which has to be invoked when the Framer is done modifying
+the message. Since the Connection takes a deep copy of the message, the
+Message data itself is owned by the protocol stack. This means that the
+framer can modify the message in place and does not have to allocate new
+memory, unless it is extending the length of the message.
+
+An example
+implementation from the CTaps framing tests can be seen in \cref{fig:framingTestImpl}.
+
+\begin{figure}[p]
+\begin{minted}{C}
+// Message Framer Implementation Interface
+struct ct_framer_impl_s {
+  // Encode outbound message
+  // Implementation should call the callback when encoding is complete
+  void (*encode_message)(struct ct_connection_s* connection,
+                        ct_message_t* message,
+                        ct_message_context_t* context,
+                        ct_framer_done_encoding_callback callback);
+
+  // Decode inbound data into messages
+  // Implementation should call ct_connection_deliver_to_app() for each complete message
+  void (*decode_data)(struct ct_connection_s* connection,
+                     const void* data,
+                     size_t len,
+                     ct_framer_done_decoding_callback callback);
+};
+\end{minted}
+\caption{Framer structure definition from ctaps.h}
+\end{figure}
+
+\begin{figure}[p]
+  \begin{minted}{C}
+static void length_prepend_encode(ct_connection_t* connection,
+                                   ct_message_t* message,
+                                   ct_message_context_t* context,
+                                   ct_framer_done_encoding_callback callback) {
+    // Prepend the message length as a single ascii character
+    // First byte is the length
+    message->content = (char*)realloc(message->content, message->length + 1);
+    memmove(message->content + 1, message->content, message->length);
+    // Get ascii representation of length (as long as it is <= 9 bytes)
+    message->content[0] = '0' + (char)(message->length);
+    message->length += 1;
+
+    callback(connection, message, context);
+}
+
+static void passthrough_decode(struct ct_connection_s* connection,
+                     const void* data,
+                     size_t len,
+                     ct_framer_done_decoding_callback callback) {
+    // Just pass through - deliver as-is
+    ct_message_t* msg = (ct_message_t*)malloc(sizeof(ct_message_t));
+    msg->content = (char*)malloc(len);
+    msg->length = len;
+    memcpy(msg->content, data, len);
+
+    callback(connection, msg, NULL);
+}
+
+static ct_framer_impl_t length_prepend_framer = {
+    .encode_message = length_prepend_encode,
+    .decode_data = passthrough_decode
+};
+
+  \end{minted}
+\caption{Example Framer implementation structure from the CTaps framing tests}
+\label{fig:framingTestImpl}
+\end{figure}
+
 \section{Event Loop}
+CTaps is built around a single single-threaded event loop. This event
+loop is powered by libuv \cite{Libuv2025}. This event loop is intialized
+using \mono{ctaps_initialize()} and can be started using \mono{ctaps_start_event_loop()}.
+Following the default libuv behaviour, this event loop will run until
+there are no more open handles performing work. Any set up of Connections
+which should be used during the lifetime of a given event loop has to
+be performed before starting the event loop. The event loop takes over
+execution of the main thread, and will block until execution of the underlying
+handles completes, as described above.
+
+This means that if the application invokes \mono{ct_preconnection_initiate},
+then CTaps will attempt to connect to the specified endpoint when the event
+loop is started. If this attempt is successful then an underlying handle
+listening on a Local Endpoint is active. This means that the event loop
+will not stop execution until this connection is closed.
+
+Any behaviour that has to happen after an event loop is created has to be
+specified in the callbacks provided by CTaps. For example, if a Connection
+has to immediately send a message after successfully connection to an endpoint,
+then this behaviour has to be defined in the \mono{ready} callback, which is
+passed to a Preconnection through the \mono{ct_connection_callbacks_s} struct.
+
+\todo{Write more here if we move to per-state config}
 
 \section{Asynchrony} \label{asynchrony}
 \todo{Can I write some numbers here, how much is I/O bound as a percentage?}
@@ -127,7 +226,7 @@ features an associated callback function.
 \begin{BVerbatim}
 Object -> Event<>
 \end{BVerbatim}
-\caption{CTaps Event notation of Object spawning an Event}
+\caption{TAPS Event notation of Object spawning an Event}
 \label{fig:ctapsEventNotation}
 \end{figure}
 

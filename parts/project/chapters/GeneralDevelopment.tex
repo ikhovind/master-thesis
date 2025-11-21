@@ -257,7 +257,28 @@ kept free of Glib data structures, and that all external functions
 should only take parameters defined in standard C or in CTaps itself.
 
 \subsubsection{picoquic} \label{sec:picoquic}
-Picoquic is pretty nice.
+Because the applicability of running QUIC under a TAPS system is one of
+the main research questions behind CTaps, supporting QUIC was a high
+priority. Because libuv does not feature native QUIC support like it
+does for TCP and UDP, an external library was necessary. Because of
+the exploratory nature of CTaps, picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
+C QUIC implementations such as MsQuic \cite{MsQuic} from Microsoft or XQUIC \cite{XQUIC} from Alibaba 
+because of its relative simplicty.
+
+Picoquic aims to be a minimalist implementation of the QUIC standard
+and features support for several extensions, which have not yet
+been made available to an Application through CTaps. The prime
+functionality of using QUIC as a reliable transport is however
+accessible and serves as a good proof of concept for future TAPS
+implementations.
+
+Picoquic features two modes of operation. Either an Application can
+use the built-in event loop \mono{picoquic_packet_loop} or the
+Application can supply its own timer, checking if picoquic needs
+to perform any I/O at given intervals. These intervals can be fetched
+from picoquic by using the method \mono{picoquic_get_next_wake_delay}.
+A more detailed description of the CTaps' QUIC implementation can be
+seen in \cref{sec:quicImpl}.
 
 \subsection{Statically Linked Dependencies}
 Minor software which does not provide a core functionality to CTaps
@@ -273,60 +294,68 @@ Logging
 https://github.com/rxi/log.c
 
 \section{Build System}
-Should we describe the build system? Automated testing which I will set up?
-CMake? automated packaging etc. etc. 
+CTaps is built using CMake. CMake is used for both building the library
+and all tests.
+CTaps mimics other open source libraries such as libuv as much as possible,
+in order to make the structure as familiar as possible. This includes
+having the API consist of a single header file, \mono{ctaps.h} which
+is included to expose all functionality intended to be used by an Application.
+CTaps is also compiled with visibility of all symbols set to hidden by default,
+with only the symbols marked as \mono{CT_EXTERN} being available in the final
+shared library file. This is done to hide internal state from external Applications,
+making it less complex to make use of CTaps for an external Application.
+
+CTaps is built as a shared library. This means that the library is compiled
+into a single shared object file. When compiling an Application using CTaps,
+this shared object file is not included in the compiled binary, instead the
+compiled binary looks for a shared object file at a given location at
+run time. This means that any Application depending on CTaps will by default
+have to include CTaps in its own binary, leading to a smaller file size. This
+is naturally dependent on the build configuration of the Application. 
+The largest downside of a a dynamically
+linked Application is that it requires its users to have CTaps installed on their
+systems, in order for the Application find the correct symbols at run time.
+
+In addition to the smaller binary size, the largest upside of a dynamically
+linked application is that it is far easier to update its dependencies.
+If a new version of CTaps was released then an Application could update
+its dependency by swapping the local shared object file, without having
+to recompile the entire application. If the Application was statically linked
+then it would have to update its dependency and recompile. This would also mean
+that the entire Application would have to be redistributed, instead of simply
+having users update their CTaps installation whenever needed. This becomes
+very noticable in situations with critical updates, especially if multiple
+applications rely on CTaps. If a criticial security error was found in CTaps
+and it was statically linked
+then every user of downstream Application would have to update every Application
+using CTaps. If it was dynamically linked, then the user could simple update
+a single shared object file.
+
+As a limitation of scope in the original thesis description, CTaps is only
+targeted towards Linux. However, since I/O and other system calls are handled
+by libuv which does support windows, CTaps is likely very close to being
+Windows-compatible, but this has not been tested \cite{Libuv2025}.
+Certain aspects of the build system are Linux-specific, such as GCC's
+\mono{__attribute__((visibility("default")))}, but this could quite
+easily be adapted to a Windows build, as has been done with for example
+libuv.
+
+The library and binary distributions are distributed through GitHub.
 
 \section{Architecture}
-CTaps follows the overarching architecture as described in RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.
-This splits a TAPS system into two two main parts, a Transport Services
-API as described in \cref{transportSystemApi} and a Transport System Implementation
-as described in \cref{transportSystemImpl}.
-
-\begin{figure}[H]
-    \centering
-    \begin{lstlisting}
-     +-----------------------------------------------------+
-     |                    Application                      |
-     +-+----------------+------^-------+--------^----------+
-       |                |      |       |        |
-     pre-               |     data     |      events
-     establishment      |   transfer   |        |
-       |        establishment  |   termination  |
-       |                |      |       |        |
-       |             +--v------v-------v+       |
-     +-v-------------+   Connection(s)  +-------+----------+
-     |  Transport    +--------+---------+                  |
-     |  Services              |                            |
-     |  API                   |  +-------------+           |
-     +------------------------+--+  Framer(s)  |-----------+
-                              |  +-------------+
-     +------------------------|----------------------------+
-     |  Transport             |                            |
-     |  System                |        +-----------------+ |
-     |  Implementation        |        |     Cached      | |
-     |                        |        |      State      | |
-     |  (Candidate Gathering) |        +-----------------+ |
-     |                        |                            |
-     |  (Candidate Racing)    |        +-----------------+ |
-     |                        |        |     System      | |
-     |                        |        |     Policy      | |
-     |             +----------v-----+  +-----------------+ |
-     |             |    Protocol    |                      |
-     +-------------+    Stack(s)    +----------------------+
-                   +-------+--------+
-                           V
-   +-----------------------------------------------------+
-   |               Network-Layer Interface               |
-   +-----------------------------------------------------+
-    \end{lstlisting}
-    \caption{TAPS architecture as described by RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}}
-\end{figure}
+CTaps follows the standard TAPS architecture as described in RFC 9621 
+and \cref{sec:tapsArch} \cite{paulyArchitectureRequirementsTransport2025}.
+The CTaps implementations of the Transport Services API is described in
+\cref{transportSystemApi} and the CTaps implementation of the
+Transport System Implementation is described in \cref{transportSystemImpl}.
 
 \section{AI tools}
 In order to gauge the usefulness of large language models in software development,
 several AI tools were used when writing software for this thesis. This consisted
 of several different models, primarily UioGPT, which is based on Chat GPT, 
 Google Gemini, Github Copilot and Anthropic's Claude. \todo{cite and expand}
+
+The thesis itself was written without the use of any large language model.
 
 \section{Development Timeline} \label{projectTimeline}
 The first goal while developing the CTaps library was to get a minimal viable implementation,
