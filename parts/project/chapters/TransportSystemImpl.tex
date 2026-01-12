@@ -17,6 +17,18 @@ the tree is sorted according to the stated selection properties, as described in
 \cite{brunstromImplementingInterfacesTransport2025}.
 
 \section{Candidate Racing} \label{sec:candidateRacing}
+After a list of candidates has been gathered when initiating a preconnection, CTaps
+will race them according to the specification from RFC 9623 \cite{brunstromImplementingInterfacesTransport2025}.
+The goal of candidate racing is to successfully negotiate a protocol stack, local
+and remote endpoints based on the user's specification. Candidate racing in a TAPS
+system follows the same procedure as specified in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017},
+which was originally designed to increase IPv6 adoption, see \cref{happyEyeballs}.
+TAPS takes racing a step further by not only racing IP-address families, but also
+racing potential protocols and endpoints. A TAPS system primarily follows a staggered
+approach, first sorting the gathered candidates by preference and performing a connection
+attempt for each, with a delay between each candidate. All outstanding racing attempts
+are cancelled upon the first success.
+
 
 \section{Protocol Implementations}
 

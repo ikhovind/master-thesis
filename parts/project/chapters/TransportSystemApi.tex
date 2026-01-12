@@ -129,6 +129,31 @@ static ct_framer_impl_t length_prepend_framer = {
 \label{fig:framingTestImpl}
 \end{figure}
 
+\section{Connection Cloning}
+Cloning a Connection in TAPS yields a Connection Group. A Connection Group
+is represented as an array of connections. The client operates on each individual
+Connection, with certain operations, such as aborting/closing all being able
+to operate on all connections in a connection group. For CTaps,
+all Connections
+have an associated Connection Group, with each Connection Group
+only containing a single Connection until the original Connection has been cloned.
+
+Invoking \mono{connection_clone} can lead to either a \mono{Ready} event or
+a \mono{CloneError} event. Connection Cloning is primarily used to create
+multiple logical Connections, and how this maps internally depends on the
+underlying protocol being used. For protocols which support multistreaming,
+such as QUIC, the connection group comes to represent a single overarching
+Connection, while the individual connections in the group represents single
+streams. The overarching connection can either be closed by a single operation
+on the connection group or by closing each Connection individually.
+
+For underlying protocols which do not support multistreaming, each cloned
+Connection becomes functionally independent, while still supporting the
+operations on Connection Groups. For a TCP Connection an independent Connection
+will be established from an ephemeral local port, while UDP connections will
+start listening on an ephemeral local port, immediately generate a \mono{Ready}
+event, being ready to send messages from this ephemeral port.
+
 \section{Event Loop}
 CTaps is built around a single single-threaded event loop. This event
 loop is powered by libuv \cite{Libuv2025}. This event loop is intialized

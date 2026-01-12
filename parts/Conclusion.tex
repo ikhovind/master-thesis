@@ -1,3 +1,10 @@
 \part{Conclusion}                     %% ... or ??
 \chapter{Results}                     %% ... or ??
+\section{QUIC Under TAPS}
+Things with QUIC that cannot be covered with TAPS:
+\begin{itemize}
+    \item Closing a stream without closing the connection. A TAPS connection maps to a stream while a connection group maps to a QUIC connection. However operations are performed on connections, this adds some poorly mapped operations.
+    \item Close reason code, application cannot provide a reason to peer?
+\end{itemize}
+\section{Benchmarks}
 
