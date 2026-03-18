@@ -1,10 +1,13 @@
-\part{Conclusion}                     %% ... or ??
-\chapter{Results}                     %% ... or ??
 \section{QUIC Under TAPS}
 Things with QUIC that cannot be covered with TAPS:
 \begin{itemize}
     \item Closing a stream without closing the connection. A TAPS connection maps to a stream while a connection group maps to a QUIC connection. However operations are performed on connections, this adds some poorly mapped operations.
+    \item TAPS cannot differ between RESET\_STREAM and STOP\_SENDING.?
     \item Close reason code, application cannot provide a reason to peer?
+    \item Undirectional streams?
+    \item Relative priority of streams?
+    \item Receiver flow control? Is this configurable for a QUIC sender, or is it handled by the engine
+    \item Limiting the number of streams from the peer.
+    \item kommet til kapittel 5 i rfc 9000
+\item \mono{disable_active_migration}
 \end{itemize}
-\section{Benchmarks}
-

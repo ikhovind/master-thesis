@@ -15,6 +15,8 @@
 
 \usepackage{silence}
 \WarningFilter{latex}{Marginpar}
+\usepackage{pgf}
+\providecommand{\mathdefault}[1]{#1} % Some PGF error
 \usepackage{fancyhdr}
 \usepackage{marginnote}
 \usepackage{xurl}
@@ -70,9 +72,9 @@
 
 
 
-\tableofcontents{}                          %%
-\listoffigures{}                            %% (omit if none)
-\listoftables{}                             %% (omit if none)
+\tableofcontents{}
+\listoffigures{}
+\listoftables{}
 
 
 \import{./parts/}{Preface}
@@ -83,7 +85,7 @@
 
 \import{./parts/project/}{Project}
 
-\import{./parts/}{Conclusion}
+\import{./parts/conclusion/}{Conclusion}
 
 \backmatter{}
 \setcounter{biburlnumpenalty}{9000}
