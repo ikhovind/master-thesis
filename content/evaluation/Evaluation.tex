@@ -2,10 +2,14 @@
 \section{Benchmarks}
 \subsection{Methodology}
 \subsection{Results}
+
+\subsubsection{Small file transfer}
 \input{./resources/bar_chart.pgf}
 
+\subsubsection{Path migration}
 \input{./resources/migration_throughput.pgf}
 
+\subsubsection{Handshake latency}
 \input{./resources/racing_handshake.pgf}
 
 \section{QUIC Under TAPS}
@@ -22,4 +26,119 @@ Things with QUIC that cannot be covered with TAPS:
 \item \mono{disable_active_migration}
 \end{itemize}
 
+TAPS has been designed with QUIC in mind from the very start,
+but there are several aspects of QUIC which do not map directly
+to a control flow presented to the application via the standardized
+TAPS interface. As the first TAPS implmentation to feature QUIC as
+an underlying protocol option, finding out exactly which featues of
+QUIC are available through the default TAPS interface was one of the
+key research questions for this thesis. In order to fit the concepts of QUIC
+into the concepts presented in TAPS, terminology and intented functionality
+does not map 1 to 1. This is a comprise which had to made when creating
+an API which is supposed to map neatly to both TCP and QUIC. Since the
+intention of TAPS is to create an API which reflects how most users
+actually interact with the network, so it is only natural that compromises
+has to be made in terms of QUIC, in order to reflect the ubiquity of
+TCP.
+
+The primary differences when it comes to QUIC and TAPS concepts is
+the Connection and the Connection Group. a TAPS Connection maps to an
+individual transfer of data, which naturally maps to a single TCP connection
+but maps to a QUIC stream. Since multistreaming is handled through connection
+groups in TAPS, a single QUIC connection maps to a connection group in TAPS.
+This means that the underlying behaviour of the TAPS API is affected by the
+underlying transport protocol, where the closing of a single connection to
+a specific endpoint with QUIC happens through closing a connection group.
+This differing in concepts leads to the first major hurdle in mapping QUIC
+to TAPS. A QUIC stream is designed with HTTP/3 in mind, intended to transfer
+a single object, with both the client and the server marking the transfer
+from their respective ends as independently completed to close the stream.
+While TCP connections can be closed one way, the typical behaviour is that
+when it closed by one peer, then the other peer closes the connection
+in conjunction. This does not reflect the typical behaviour of streams in QUIC.
+This means that a TAPS system has to make a choice for how to close individual
+TAPS connectoins when QUIC is the underlying protocol. The expected behaviour
+from TCP is that closing an individual connection will close both the sending
+and receiving side and start teardown. This can be achieved by sending a \mono{FIN}
+flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
+frame if their stream is in a ready or sending state \cite{iyengarQUICUDPBasedMultiplexed2021}.
+A \mono{RESET_STREAM} frame teards down a QUIC stream in the sending direction, but has
+no effect on the receiving direction. It must therefore be combined with
+to close the stream in the receving connection, to complete stream teardown.
+Even though this handling of underlying QUIC streams in TAPS is superficially
+closer to the expected behavior from TCP, is it not a graceful close is
+expected to happen on error conditions. For a graceful teardown of a single
+stream only, the expected behaviour is both sides sending \mono{FIN} flags when
+they are done sending.
+
+In order to avoid unexpected error behaviour for QUIC, the most natural mapping
+for a TAPS Connection with QUIC as an underlying protocol is therefore to simply
+send a \mono{FIN} flag in the sending direction and remain open in the receving direction.
+This will reflect to the appication in the form of it still having to monitor
+the connection for incoming messages and it not invoking a closed()-callback until
+after the peer has finished sending its data. If a peer wants to gracefully close
+a connection before all data has been received, the only way of handling it is to
+close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
+functionality form RFC9622 \cite{trammellAbstractApplicationProgramming2025}.
+If the application takes care of performing TAPS connection cloning in a consistent way,
+it can constently use \mono{ConnectionGroup.close()} and achieve the same
+expected behaviour no matter the underlying protocol in the TAPS system, this
+is however an example of underlying functionality leaking through to how the user
+should interact with the API.
+
+As mentioned above QUIC streams do not map perfectly into the expected behavior
+if TAPS Connections. This also means that not all functionality in a QUIC stream
+is available through a TAPS Connection. For example, the one-way abort mentioned
+earlier thorugh \mono{STOP_SENDING}, which requests that the peer abort their
+sending, and \mono{RESET_STREAM} which aborts the local sending side has no
+mapping through the TAPS API. An individual stream can be aborted through
+\mono{Connection.abort()}, however TAPS has no way of knowing whether the application
+wants to abort sending, receiving or both. The only natural conclusion is
+therefore to abort both sending and receiving, leaving QUIC functionality
+unavailable to the application.
+
+In addition, when opening a new TAPS Connection, unidirectional QUIC
+streams are not available through the TAPS API. While a stream can be
+immediately opened and be immediately for sending, QUIC allows
+applications to open streams to be used purely for unidiraction sending,
+with stream IDs denominating whether the stream was opened by the client
+or the server and whether or not the stream is unidirectional on bidirectional.
+A TAPS system has to assume that every new stream opened via \mono{Connection.clone()}
+is bidirectional, although since the TAPS API is extensible a parameter to
+respesct this can easily be added, although it would likely have to be ignored
+or enforced by the TAPS system itself for TCP and several other protocols.
+A TAPS system is able to receive an unidirectional stream initiated by the peer,
+and can simply mark the incoming connection as closed for sending before presenting
+it to the application.
+
+TAPS Connections also do not let the application control \mono{FINAL_SIZE} values
+of QUIC streams, which is used to control how much data a QUIC stream can send, although
+this will still be reported through sending \mono{FIN} flags, which is supported.
+
+There is also several pieces of lower layer QUIC functionality such as flow control
+through frames such as \mono{MAX_STREAM_DATA} which is in theory able to be
+sent from QUIC, but possible through a TAPS system. \todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
+
+\mono{MAX_STREAMS}
+
+On the server side, TAPS does not expose preferred addresses through its API.
+These are used by QUIC when it wants to accept on a given address but wants
+to migrate it to a new address shortly after the handshake \cite{iyengarQUICUDPBasedMultiplexed2021}.
+Migration is however supported, so future support for preferred addresses can
+easily be added to the API through a flag in a given local endpoint.
+
+Certain features, such as stateless Reset are not exposed through the TAPS
+API directly, but are expected to be handled by the underlying QUIC implementation,
+so that there is no need to expose them in a TAPS system.
+
+In the TAPS API ECN is marked as an UDP-lite specific feature, though this
+is also useful for QUIC \cite{trammellAbstractApplicationProgramming2025}.
+
+Additionally, when closing connections picoquic exposes no way of passing
+an error code to the peer.
+
+TAPS features no standardized way of notifying the connection of migration,
+though connection migration is a key feature of QUIC \todo{Er dette sant?}.
+With an extensible callback system, this could be implemented quite easily by
+an individual TAPS implementation.
 \section{Discussion}
