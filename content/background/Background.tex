@@ -999,3 +999,69 @@ was designed to allow SCTP to be used in environments
 where middleboxes are not aware of SCTP, and therefore
 do not support it \cite{tuexenUDPEncapsulationStream2013}.
 
+\section{Dependencies}
+\subsection{Libuv}
+CTaps is reliant on several
+external libraries, both for testing and for core functionality. The largest
+and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
+event loop which allows CTaps to be asynchronous. It also provides several quality
+of life features, such as built in support for asynchronous interactions with TCP
+and UDP, through the \texttt{uv\_tcp\_t} and \texttt{uv\_udp\_t} handles respectively.
+When adding protocols which libuv does not have native support for, such as QUIC,
+it offers a custom work handle \texttt{uv\_work\_t}, which can be used to define
+a custom piece of work. This can be used to define both a long-lived QUIC-based
+server, or a short interaction with an existing server. Which underlying handle
+is actually used in libuv is naturally abstracted away in CTaps, and for the
+end-user of the library the interaction is the same no matter what. \todo {very informal lol}
+
+\subsection{Glib}
+In order to increase the reliability of internal data structures, as well as
+minimizing the amount of time spent reinventing the wheel, CTaps relies on the
+Glib library. Glib is a low level core library which is used at the core of
+larger libraries such as GTK and GNOME \todo{citation}. Glib provides several
+key data structures used internally in CTaps. Among others, it provides the
+Hash Map used to keep track of received Connections in a Listener, the tree
+used to gather candidates in the Candidate Gathering algorithm, among others.
+While adding an external library, especially in core functionaly such as networking,
+poses a risk, the benefits were deemed to be greater than the costs. Primarily,
+this consideration was made on the basis of Glib being a relatively high-profile
+library used in several large projects already, in addition to the benefits of
+increased development speed, since CTaps would not have to implement its own 
+basic data structures. Using a well-tested external library has the added benefit
+of avoiding bugs, as if CTaps rolled its own data structures, it would have
+to worry not only about bugs in the library logic, but also in the
+data structures themselves.
+
+In order to minimize how much a library consumers would have to
+adhere to Glib, it was decided that the external API should be
+kept free of Glib data structures, and that all external functions
+should only take parameters defined in standard C or in CTaps itself.
+
+\subsection{picoquic} \label{sec:picoquic}
+Because the applicability of running QUIC under a TAPS system is one of
+the main research questions behind CTaps, supporting QUIC was a high
+priority. Because libuv does not feature native QUIC support like it
+does for TCP and UDP, an external library was necessary. Because of
+the exploratory nature of CTaps, picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
+C QUIC implementations such as MsQuic \cite{MsQuic} from Microsoft or XQUIC \cite{XQUIC} from Alibaba 
+because of its relative simplicty.
+
+Picoquic aims to be a minimalist implementation of the QUIC standard
+and features support for several extensions, which have not yet
+been made available to an Application through CTaps. The prime
+functionality of using QUIC as a reliable transport is however
+accessible and serves as a good proof of concept for future TAPS
+implementations.
+
+Picoquic features two modes of operation. Either an Application can
+use the built-in event loop \mono{picoquic_packet_loop} or the
+Application can supply its own timer, checking if picoquic needs
+to perform any I/O at given intervals. These intervals can be fetched
+from picoquic by using the method \mono{picoquic_get_next_wake_delay}.
+A more detailed description of the CTaps' QUIC implementation can be
+seen in \cref{sec:quicImpl}.
+
+
+\subsubsection{log.c}
+Logging
+https://github.com/rxi/log.c

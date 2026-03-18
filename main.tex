@@ -59,16 +59,19 @@
 \addbibresource{references/masterthesis.bib}            %% ... or whatever
 
 \begin{document}
+
 \uiomasterfp[
   supervisor={Michael Welzl},                    %% ... or blank
   long]                                     %% ... or short
+
+\hfuzz=4pt
 
 \frontmatter{}
 
 
 
 %%%     Preface     %%%
-\import{./parts/}{Abstract}
+\import{./}{Abstract}
 
 
 
@@ -77,15 +80,17 @@
 \listoftables{}
 
 
-\import{./parts/}{Preface}
+\import{./}{Preface}
 
 \mainmatter{}
 
-\import{./parts/introductionAndBackground/}{IntroductionAndBackground}
-
-\import{./parts/project/}{Project}
-
-\import{./parts/conclusion/}{Conclusion}
+\import{./content/introduction/}{Introduction}
+\import{./content/background/}{Background}
+\import{./content/related_work/}{RelatedWork}
+\import{./content/design/}{Design}
+\import{./content/implementation/}{Implementation}
+\import{./content/evaluation/}{Evaluation}
+\import{./content/conclusion/}{Conclusion}
 
 \backmatter{}
 \setcounter{biburlnumpenalty}{9000}
@@ -93,6 +98,5 @@
 \setcounter{biburllcpenalty}{9000}
 % If you want to break on URL UPPER CASE letters
 \setcounter{biburlucpenalty}{9000}
-\hfuzz=14pt
 \printbibliography{}
 \end{document}

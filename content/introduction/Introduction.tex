@@ -1,0 +1,18 @@
+\chapter{Introduction}
+
+\section{CTaps Overview}
+\subsection{Choice of implementation language}
+Since a key desire when designing the initial task for
+the master thesis was to reach as many developers as possible,
+especially lower-level developers who normally work with sockets,
+it was decided that the inital implementation should be done in C.
+C forms the backbone of many modern programming libraries, and lack
+many of the quality of life networking features of higher level languages.
+By implementing TAPS in C, it would also be possible to try to integrate it
+into a software library such as glib.
+\todo{What library did michael talk about here?}
+
+Integrating a TAPS implementation into a larger library would be the easiest
+way of making it available to more developers, as they would not have to
+rely on a relatively unknown implementation, in order to gain the benefits
+of transport services.

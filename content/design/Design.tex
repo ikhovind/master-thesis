@@ -1,10 +1,72 @@
-\chapter{Transport System API} \label{transportSystemApi}
+\chapter{API Design} \label{transportSystemApi}
 CTaps is not a complete implementation of the TAPS standard,
 as that would be too large of a scope for a singular thesis.
 \todo{Check in on this later, describe how large of a subset}
 This chapter will describe which parts of the TAPS API that has
 been implemented in CTaps, and what operations that are supported
 in CTaps.
+
+\section{Object Orientation in C}
+The abstract interface described by the TAPS WG is very clearly object
+oriented, C is a procedural programming language, and does not feature
+the concept of classes or objects, which would most neatly map to the
+TAPS interface. Instead, the object orientation and division of responsibility
+featured in an object-oriented language has to be emulated through the use of
+structs, and dedicated functions which operate on them. An example of this
+would be the struct representing remote endpoints, which contains all the
+context related to remote endpoints, which is for example used
+in Connections and Listeners:
+
+\begin{figure}[H]
+\begin{minted}{C}
+typedef struct RemoteEndpoint{
+  RemoteEndpointType type;
+  uint16_t port;
+  union {
+    struct sockaddr_storage address;
+    char* hostname;
+  } data;
+} RemoteEndpoint;
+\end{minted}
+\caption{Remote endpoint type in C}
+\end{figure}
+
+Along with the definition of this struct, the files containing the
+source code for remote endpoints also contain functions to create 
+remote endpoints with different types of data, in ways which might be useful
+to an application programmer, for example for initially clearing the struct
+and building it with an IPv4 address:
+
+\begin{figure}[H]
+\begin{minted}{C}
+void remote_endpoint_build(RemoteEndpoint* remote_endpoint) {
+  remote_endpoint->data.address.ss_family = AF_UNSPEC;
+  memset(&remote_endpoint->data, 0, sizeof(remote_endpoint->data));
+}
+
+void remote_endpoint_with_ipv4(
+    RemoteEndpoint* remote_endpoint, 
+    in_addr_t ipv4_addr) {
+  remote_endpoint->type = REMOTE_ENDPOINT_TYPE_ADDRESS;
+
+  struct sockaddr_in* addr = (struct sockaddr_in*)&remote_endpoint->data.address;
+  addr->sin_family = AF_INET;
+  addr->sin_addr.s_addr = ipv4_addr;
+  addr->sin_port = htons(remote_endpoint->port);
+}
+\end{minted} 
+\caption{Remote endpoint utility functions}
+\end{figure}
+\todo{Update this when the final code is done}
+
+By defining structs and dedicated functions to work on the structs like
+above, we can to a very large degree emulate the encapsulation of responsibilites
+as seen in a object oriented language. By encapsulating the data structures in the
+above way, we can also ensure that the external API which is exposed to the end user,
+is as similar as possible to the API described in RFC9622 \cite{trammellAbstractApplicationProgramming2025}
+
+\todo{Write more about ownership pattern}
+
 
 \section{Basic TAPS Objects}
 The basic TAPS objects:

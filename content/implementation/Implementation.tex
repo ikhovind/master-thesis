@@ -1,4 +1,11 @@
-\chapter{Transport System Implementation}  \label{transportSystemImpl}
+\chapter{Implementation}  \label{transportSystemImpl}
+
+\section{Architecture}
+CTaps follows the standard TAPS architecture as described in RFC 9621 
+and \cref{sec:tapsArch} \cite{paulyArchitectureRequirementsTransport2025}.
+The CTaps implementations of the Transport Services API is described in
+\cref{transportSystemApi} and the CTaps implementation of the
+Transport System Implementation is described in \cref{transportSystemImpl}.
 
 TODO - define transport system in TAPS overview
 
@@ -510,3 +517,146 @@ pointers.
 \caption{Overview of Lines of Code (LoC) on a per-protocol basis}
 \label{fig:protocolLoc}
 \end{figure} \todo{Update lines of code at end of development}
+
+\section{Testing} \label{testing}
+A core tenet since the very start of development was that the library should be
+as robust as possible. This would to a very large degree achieved primarily through
+the use of automated testing, and continious integration. By writing automated tests
+which run on every commit to the repository, it would be easy to see exactly which change
+has lead to a bug, making it far easier to fix. A well-tested library is also an absolute
+necessity when trying to attract external dependents, or to integrate it into a larger software
+library. This is especially important for large libraries such as TAPS, which abstract away
+large amounts of logic away from the application programmer, making it harder to detect bugs
+and know exactly where the problem in their application lies.
+
+Writing tests for an asynchronous networking library is not necessarily straight-forward.
+Both networking and asynchronous programming is not necessarily deterministic, which makes
+it harder to write reliable tests which can verify the library's expected behaviour. Another
+challenge is that there are not very many testing libraries available in pure C. Early on,
+it was therefore decided to write the tests in C++, which allows for interoperability with the C
+library, but would also allow for using a C++ testing library such as Google test. \cite{GoogleTest2025}
+This allows for a richer feature set than a simpler library or manually written tests in C,
+and allows for a richer set of assertions, verifying for example that the library fails in the expected
+manner when given invalid data.
+
+Tests are first separated into type and then into responsibility. When separating
+by type, the main types are integration tests and unit tests. Integration tests perform a larger check on the
+whole library and often actually interact with the network by sending packets or creating
+connections to a local server. \todo{Talk about how this is done, maybe via docker?}
+Unit tests perform a smaller check on individual functions, attempting to verify
+all logic and that differing branches are hit when expected, based on the input data.
+When dividing by responsibility, the testing stack largerly follows the same model
+as the main library, with test files separated by responsibility of the original
+file or struct that it is performing tests on.
+
+A central concept when writing good tests is to isolate the component being tested from
+external libraries. This is important for several reasons. First of all, we are not interested
+in verifying the behavior of our external dependencies, as we have to assume that they
+work well in order to limit the scope of our testing. Secondly, we need to know that if
+an external library \textit{does} fail, we need to know that our library will handle it
+in the correct manner. Therefore we have to simulate that an external library fails and
+verify our applications behaviour in this case. All of these concerns are best met by
+mocking. Mocking is the concept of defining a custom behaviour for an external library
+or dependency when testing, instead of invoking the real library. By using this we can
+simulate the full range of behaviours from the external library and verify that our application
+reacts correctly, while also avoiding time-consuming API calls, making unit tests
+significantly faster. For mocking, CTaps decided on FFF, which is a small open-source
+framework for creating fake C functions when testing. \cite{longFakeFunctionFramework2025}
+FFF can either mock the external library functions, such as \texttt{uv\_getaddrinfo},
+which is the built in support for DNS lookup in libuv, or mock a call to a different
+function, which either contains a call to an external library, or which we are simply
+not interested in testing.
+
+\begin{figure}
+\begin{minted}{Cpp}
+DEFINE_FFF_GLOBALS;
+FAKE_VALUE_FUNC(int, uv_udp_bind, uv_udp_t*, const struct sockaddr*, unsigned int)
+FAKE_VALUE_FUNC(int, uv_udp_recv_start, uv_udp_t*, uv_alloc_cb, uv_udp_recv_cb)
+
+TEST(InitiationTests, respectsLocalEndpoint) {
+    uv_udp_bind_fake.return_val = 0;
+    uv_udp_recv_start_fake.return_val = 0;
+    
+    ... Rest of code which calls uv_udp_bind and uv_udp_recv_start ...
+    
+    // Assert that the mocked functions were invoked with the expected arguments    
+    EXPECT_EQ(1, uv_udp_bind_fake.call_count);
+    EXPECT_EQ(1234, htons(((struct sockaddr_in*)uv_udp_bind_fake.arg1_val)->sin_port));
+    ... Rest of the assertions ...
+}
+
+\end{minted}
+\caption{Example test mocking udp functions, using FFF}
+\end{figure}
+
+\section{Build System}
+CTaps is built using CMake. CMake is used for both building the library
+and all tests.
+CTaps mimics other open source libraries such as libuv as much as possible,
+in order to make the structure as familiar as possible. This includes
+having the API consist of a single header file, \mono{ctaps.h} which
+is included to expose all functionality intended to be used by an Application.
+CTaps is also compiled with visibility of all symbols set to hidden by default,
+with only the symbols marked as \mono{CT_EXTERN} being available in the final
+shared library file. This is done to hide internal state from external Applications,
+making it less complex to make use of CTaps for an external Application.
+
+CTaps is built as a shared library. This means that the library is compiled
+into a single shared object file. When compiling an Application using CTaps,
+this shared object file is not included in the compiled binary, instead the
+compiled binary looks for a shared object file at a given location at
+run time. This means that any Application depending on CTaps will by default
+have to include CTaps in its own binary, leading to a smaller file size. This
+is naturally dependent on the build configuration of the Application. 
+The largest downside of a a dynamically
+linked Application is that it requires its users to have CTaps installed on their
+systems, in order for the Application find the correct symbols at run time.
+
+In addition to the smaller binary size, the largest upside of a dynamically
+linked application is that it is far easier to update its dependencies.
+If a new version of CTaps was released then an Application could update
+its dependency by swapping the local shared object file, without having
+to recompile the entire application. If the Application was statically linked
+then it would have to update its dependency and recompile. This would also mean
+that the entire Application would have to be redistributed, instead of simply
+having users update their CTaps installation whenever needed. This becomes
+very noticable in situations with critical updates, especially if multiple
+applications rely on CTaps. If a criticial security error was found in CTaps
+and it was statically linked
+then every user of downstream Application would have to update every Application
+using CTaps. If it was dynamically linked, then the user could simple update
+a single shared object file.
+
+As a limitation of scope in the original thesis description, CTaps is only
+targeted towards Linux. However, since I/O and other system calls are handled
+by libuv which does support windows, CTaps is likely very close to being
+Windows-compatible, but this has not been tested \cite{Libuv2025}.
+Certain aspects of the build system are Linux-specific, such as GCC's
+\mono{__attribute__((visibility("default")))}, but this could quite
+easily be adapted to a Windows build, as has been done with for example
+libuv.
+
+The library is distributed through GitHub.
+
+\section{Dependencies}
+\subsection{Libuv}
+how CTaps integrates each one, the architectural consequences
+
+\subsection{Glib}
+Glib kept out of public API
+
+\subsection{Picoquic}
+QUIC engine, how it is used, why it was chosen, architectural consequences
+
+\subsection{Dynamically Linked Dependencies?} \todo{Are these actually dynamically linked?}
+
+\subsection{Statically Linked Dependencies}
+Minor software which does not provide a core functionality to CTaps
+is statically linked and is therefore distributed along with the
+compiled executable. \todo{Hvordan blir biblioteket egentlig formatert}
+This is done in order to make installation of
+CTaps as easy as possible. Since the libraries are small, they
+do not bloat the CTaps binary to the same degree as a larger library
+such as libuv would, if it were to be statically linked.
+
+\section{Scope and Limitations}
