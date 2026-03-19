@@ -17,3 +17,4 @@ main.blg
 *.synctex.gz
 _minted-main/
 main.tex.latexmain
+main.auxlock
