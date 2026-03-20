@@ -3,7 +3,19 @@
 \subsection{Methodology}
 
 \subsubsection{Hardware}
-\begin{table}[H]
+In order to get consistent results, all benchmarks were run on a single
+machine which is described in \cref{tab:machine-specs}. This had several
+advantages. The benchmarks could be part of a rapid development iteration since
+they were gathered on the same machine as CTaps was developed. It would also
+give a more realistic of using CTaps in a software development context.
+Local networking was emulated as described in \cref{sec:softwaretools}
+for consistencies sake.
+
+The performance seen in the benchmarks would likely not change much
+on a more performant system, as they are all I/O-bound to a large
+degree.
+
+\begin{table}[tbp]
 \centering
 \begin{tabular}{ll}
 \toprule
@@ -21,37 +33,38 @@ Kernel     & 6.1.0-44-amd64 \\
 \end{table}
 
 
-\subsubsection{Software tools} \label{softwaretools}
+\subsubsection{Software tools} \label{sec:softwaretools}
 Netem is a Linux kernel module which allows users to emulate network conditions such
 as RTT packet loss and bandwidth limitations. For the benchmarks in this thesis, netem
 was used to set RTT times and bandwidth limitations to show TAPS, Picoquic and TCP
 behavior in different network conditions. Netem could be invoked programmatically
-from the Python testing script, which allowed allowed easy creation of sets of benchmarks
-while varying the underlying network conditions, such as the variying RTT times seen
-in the handshake benchmark. Netem was also used to vary the bandwith for the different
-benchmarks, for example setting the bandwidth in the migration test to 5mbps in order to
-ensure that the test had adequate time to reach its steady state transfer speed,
-to block the path and for TAPS and Picoquic to recover after successfully migrating
-paths.
+from the Python testing script, which allowed easy creation of sets of benchmarks
+while varying the underlying network conditions, such as the varying RTT times seen
+in the handshake benchmark. Netem was also used to vary the bandwidth for the different
+benchmarks. For example, in the migration test bandwidth was set to \qty{625}{\kilo\byte\per\second}
+in order to
+ensure that the test had adequate time to reach its steady state transfer speed before the
+path was blocked.
 
 In the migration test, iptables was used in order to block a specific path based on
 source IP, destination IP, protocol and destination port. When a packet matches the
 assigned rule, netfilter rejects it and propagates \mono{-EPERM} back through the network
-stack. Glibc intercepts this error code, sets errno to \mono{EPERM} and returns -1 from
-\mono{sendmsg()} \cite{LinuxKernelNfHookSlow}. 
+stack \cite{LinuxKernelNfHookSlow}. \mono{sendmsg} then returns -1 with
+errno set to \mono{EPERM} according to POSIX conventions.
 
 For CTaps this worked well, as we could
-report any \mono{sendmsg()} failure directly to Picoquic as the path being unavaiable.
+report any \mono{sendmsg()} failure directly to Picoquic as the path being unavailable.
 
 For the Picoquic socket loop client, a small patch had to be applied in order to achieve
-the expected behaviour in this specific benchmark. The Picoquic in packet loop only
-notifies the QUIC engine of a path failure if the \mono{sendmsg()} fails due to a reason which implies
+the expected behavior in this specific benchmark. The Picoquic in packet loop only
+notifies the QUIC engine of a path failure if the \mono{sendmsg()} fails with errno set to a value which implies
 that the remote is unreachable, which means one of the following errors: \mono{EAFNOSUPPORT},
 \mono{ECONNRESET}, \mono{EHOSTUNREACH}, \mono{ENETDOWN} or \mono{ENETUNREACH}
 \cite{PicoquicImpliesUnreachable}. For the simulation, it was desirable for the Picoquic client
 to treat \mono{EPERM} as implying that the remote is unreachable. Picoquic was therefore forked
-for this benchmark and \mono{EPERM} was added to the list of socket errors which implies
-unreacable \cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
+for this benchmark and \mono{EPERM} was added to the list of socket errors which imply that
+the remote is
+unreachable \cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
 for the Picoquic packet loop client when benchmarking, all other instances of Picoquic,
 including the one used in CTaps, were fetched from the main Picoquic repository.
 
@@ -80,7 +93,7 @@ was pure picoquic, using the built in picoquic packet loop. This was done to
 avoid any server-side issues with TAPS affecting the results and giving a
 biased result.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
     \input{./resources/racing_handshake.pgf}
     \caption{Measured handshakes of QUIC, TAPS and TCP}
     \label{fig:racing-handshake}
@@ -108,7 +121,7 @@ $\sum_{n=1}^{4} 1460 \cdot 10 \cdot 2^n = \qty{219}{\kilo\byte}$ would be transf
 The combination of inital file size, the simulated bandwidth and the simluated RTT
 therefore ensures that the small file can be transferred in a single RTT.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
   \input{./resources/bar_chart.pgf}
   \caption{Small file transfer time by implementation and RTT}
   \label{fig:small-file-bar}
@@ -148,35 +161,55 @@ it to probe a new path, and it will start migration if it manages to contact the
 them.
 
 A detailed account on how the iptables behaviour was integrated with the Picoquic packet loop
-used in the Picoquic client can be seen in \cref{softwaretools}.
+used in the Picoquic client can be seen in \cref{sec:softwaretools}.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
     \input{./resources/migration_throughput.pgf}
     \caption{Path recovery of TAPS and Picoquic, while TCP fails}
     \label{fig:migration-throughput}
 \end{figure}
 
 \subsection{Client complexity}
+While the advantages from QUIC made available through TAPS are clear, they
+can also be achieved through using a QUIC library and writing custom fallback
+logic to retreat to TCP on failing to establish a QUIC connection. This does
+however introduce a lot of complexity in the client, and makes the application
+layer responsible for what should be the responsibility of the transport layer.
+One of the goals if TAPS is therefore to reduce complexity presented to the
+application. This is achieved by front-loading complexity in the initialization
+and context setup and abstracting away live connection management from the application.
+This means that even more advanced features such as migration is achieved with
+minimal code changes, simply by stating the intention to migrate if issues
+arise, the application using CTaps get this feature for nearly free. The
+relative complexity of each benchmarking client, measured in lines of code,
+can be seen in \cref{tab:loc_complexity}.
 
-\begin{table}[ht]
+\begin{table}[tbp]
 \centering
-\caption{Client implementation complexity by functional component (lines of code).
-         \textit{Combined} is the sum of the TCP and QUIC client counts.}
-\label{tab:loc_complexity}
 \begin{tabular}{lrrrr}
 \toprule
-\textbf{Component} & \textbf{TCP} & \textbf{QUIC} & \textbf{Combined} & \textbf{CTaps} \\
+\textbf{Component} & \textbf{TCP} & \textbf{QUIC} & \textbf{TCP \& QUIC} & \textbf{CTaps} \\
 \midrule
-Initialization \& context setup  & 35  & 60  & 95  & 28  \\
-Connection establishment         & 40  & 55  & 95  & 22  \\
-Data transfer                    & 50  & 50  & 100 & 45  \\
-Error handling                   & 45  & 50  & 95  & 18  \\
-Teardown                         & 20  & 30  & 50  & 12  \\
+Initialization \& context setup  & 33  &  69 & 102  & 73  \\
+Connection establishment         & 16  &  37 &  53  & 44  \\
+Data transfer                    & 22  &  29 &  51  & 57  \\
+Error handling                   & 63  &  26 &  89  & 57  \\
+Teardown                         & 15  &  27 &  42  & 30  \\
+Migration                        &  0  &  24 &  24  &  3  \\
 \midrule
-\textbf{Total}                   & 190 & 245 & 435 & 125 \\
+\textbf{Total}                   & 149 & 212 & 361 & 264 \\
 \bottomrule
 \end{tabular}
-\end{table} \todo{This is dummy data, fill out}
+\caption{Benchmark client implementations by lines of code.\protect\footnotemark}
+\label{tab:loc_complexity}
+\end{table}
+
+\footnotetext{
+The following counts were achieved by classifying each non-blank,
+non-comment line into one of six categories
+for each of the three clients used for benchmarking.
+Annotated source files used for counting are available at \mono{benchmark/annotations/} in the CTaps repository.}
+
 
 \section{QUIC Under TAPS}
 Things with QUIC that cannot be covered with TAPS:
@@ -184,7 +217,7 @@ Things with QUIC that cannot be covered with TAPS:
     \item Closing a stream without closing the connection. A TAPS connection maps to a stream while a connection group maps to a QUIC connection. However operations are performed on connections, this adds some poorly mapped operations.
     \item TAPS cannot differ between RESET\_STREAM and STOP\_SENDING.?
     \item Close reason code, application cannot provide a reason to peer?
-    \item Undirectional streams?
+    \item Undirectional streams
     \item Relative priority of streams?
     \item Receiver flow control? Is this configurable for a QUIC sender, or is it handled by the engine
     \item Limiting the number of streams from the peer.
@@ -449,7 +482,69 @@ is naturally limited by the single threaded event loop model of libuv and would 
 not be able to fully make use of all the resources available to it on a host system.
 
 % Discuss CTaps client complexity
+The complexity of each benchmarking client as seen in \cref{tab:loc_complexity}
+tells a very clear story. CTaps successfully abstracts away the complexity presented
+to client applications interacting with the network. It does so not only when accessing
+advanced features of QUIC such as connection migration, but also in the protocol
+selection and the error handling itself. This is the primary aspect which sets
+CTaps apart from other networking libraries, especially ones intending to help
+make use of a single protocol such as QUIC. With CTaps, the complexity is moved
+away from the application and presented in a generic way which can be reused
+by any appliaction using the network. This does not only come with the added
+simplicity, but also much easier migration to future protocols.
+
+Several popular libraries exist which has significant feature overlap
+with QUIC such as Valve's GameNetworkingSockets or ENet \cite{ValveGameNetworkingSockets}
+\cite{Enet}. Both of these predate the finalization of the QUIC RFC in 2021 and
+contain overlapping features which are also implemented through QUIC, such as connection
+management over UDP or multistreaming (referred to as "Channels" in Enet). If a project relying on one of
+these networking libraries wants to make use of QUIC features it has to switch
+its entire networking stack to use a QUIC library. This is naturally a large
+refactoring and is a limitation on how fast new networking features can propagate.
+If a production ready TAPS-library had existed when the application was originally
+designed, it could have abstracted away the actual underlying transport library desired
+by the application, making switching to QUIC later essentially free. This comes in
+addition to built-in fallbacks to the previous protocol should connection establishment fail.
+
+This does not mean that CTaps is in a production ready state and should be immediately
+switched to by any library currently utilizin ENet or GameNetworkingSockets. With
+the large amount of complexity which is abstracted away by CTaps, it becomes a very
+heavy dependency in and of itself. Applications may be wise in preffering to handle
+their own networking stacks accepting future refactoring costs should they desire
+to switch transport protocol. CTaps also has an issue of potential refactoring costs.
+With the built in libuv event loop, CTaps forces your software to be written through a
+async model which does its work through callbacks. This means that an application wanting
+to use CTaps for underlying networking operations has to be designed with this in mind,
+creating a very heavy reliancy on a single library and a single point of failure.
 
 % Discuss QUIC under TAPS
+Being an important research question it was important to find out if there
+were large swaths of QUIC features which could not intuitively be presented
+to an application through a TAPS system. While there are features which are
+difficult to map, the absolute unavailable features are of a lesser importance.
+The largest amount of missing features from QUIC in TAPS can be found in the
+transport layer, such as with \mono{MAX_STREAM_DATA}, where this is not a
+decision the application should make, but CTaps should make an informed decision.
+
+The largest issues with creating a common abstraction for several different protocols like
+TAPS is that there ends up being distinct concepts in each protocol which do
+not necessarily map neatly into the shared abstraction layer concepts. This
+is apparent in the differing behaviour of Connections in CTaps depending on
+whether the underlying protocol is QUIC or not. with QUIC the Connection abstration
+becomes the connection group and treating individual streams as connections
+leads to unexpected behaviour, such as one-way closing by default except
+when aborting the stream. This issue would likely be shared with any other
+multistreaming protocol as well. This causes the application to have to interact
+with TAPS in a way which does not reflect how they would interact with TCP,
+for example always closing the entire connection group when done with a logical
+connection to a server, to ensure that if the underlying protocl supports multistreaming
+then the entire connection will be closed. While this is breaks slightly with 
+with the principle of least surprised as described in RFC 9622, it provides
+far greater flexibility and consistent behaviour to the downstream application
+\cite{trammellAbstractApplicationProgramming2025}. It can also be added that
+the only reason for this expectation of how to interact with the network
+exists is due to TCP's long ubiquity as a transport protocol. This is
+purely an appeal to tradition and should not be considered blocking in
+situations where new useful features can be provided.
 
 % Discuss CTaps in general? Architecture and such?
