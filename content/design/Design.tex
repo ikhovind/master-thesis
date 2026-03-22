@@ -286,6 +286,24 @@ in the loop.
 
 \todo{Overview of callbacks here}
 
+\section{\texttt{ct\_preconnection\_t}}
+As described in TAPS, Preconnections are used as sources to both servers
+and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
+where the user can pass local endpoints, remote endpoints, transport properties and
+security parameters which will affect all connections and listeners spawned from
+the given preconnection.
+
+\section{\texttt{ct\_transport\_properties\_t}}
+Whenever the user creates a new Preconnection they have the option of passing
+a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this object consists of Connection
+Properties and Selection Properties. In a slight deviation from RFC 9622
+CTaps does not feature generic setters or getters, instead all selection
+and transport properties are set through dedicated function in the format
+\mono{ct_transport_properties_set_*} \cite{trammellAbstractApplicationProgramming2025}.
+This is a deliberate design choice, made to make it possible to move away from
+the current enum-based properties in the future, and also ensure type safety on
+all \mono{get()} and \mono{set()} operations.
+
 
 \section{Selecting the desired protocol}
 Talk about how the user can use selection properties to select the desired protocol 
