@@ -660,3 +660,20 @@ do not bloat the CTaps binary to the same degree as a larger library
 such as libuv would, if it were to be statically linked.
 
 \section{Scope and Limitations}
+
+\section{Event Loop}
+CTaps is built around a single single-threaded event loop. This event
+loop is powered by libuv \cite{Libuv2025}. 
+This means that if the application invokes \mono{ct_preconnection_initiate},
+then CTaps will attempt to connect to the specified endpoint when the event
+loop is started. If this attempt is successful then an underlying handle
+listening on a Local Endpoint is active. This means that the event loop
+will not stop execution until this connection is closed.
+
+Any behaviour that has to happen after an event loop is created has to be
+specified in the callbacks provided by CTaps. For example, if a Connection
+has to immediately send a message after successfully connection to an endpoint,
+then this behaviour has to be defined in the \mono{ready} callback, which is
+passed to a Preconnection through the \mono{ct_connection_callbacks_s} struct.
+
+\todo{Write more here if we move to per-state config}

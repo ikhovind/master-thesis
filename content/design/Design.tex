@@ -67,55 +67,299 @@ is as similar as possible to the API described in RFC9622 \cite{trammellAbstract
 
 \todo{Write more about ownership pattern}
 
+\section{Library Lifetime}
 
-\section{Basic TAPS Objects}
-The basic TAPS objects:
-\texttt{Preonnection}, \texttt{Connection}, \texttt{Local Endpoint}, \texttt{Remote Endpoint}, 
-\texttt{Listener} and \texttt{Message} are each represented as a type defined
-struct.
+\mono{ct_initialize()}
+
+After initializing CTaps, the event loop can be
+started using \mono{ctaps_start_event_loop()}. This event loop will run until
+there are no more open handles performing work. Any set up of Connections
+which should be used during the lifetime of a given event loop has to
+be performed before starting the event loop. The event loop takes over
+execution of the main thread, and will block until execution of the underlying
+handles completes, as described above.
+
+\mono{ct_close()}
+
+\section{Asynchrony} \label{asynchrony}
+\todo{Can I write some numbers here, how much is I/O bound as a percentage?}
+Most modern interactions with networking applications are asynchronous
+and the TAPS API reflects this. CTaps is therefore callback based. Any
+interactions with the network or other I/O-bound activities are loaded
+performed by the central event loop, which is managed by libuv. Whenever
+a user wants to initiate a Connection, send a message or receive a message,
+they pass a structure containing the relevant function pointers for the given
+functionality. \todo{This struct way is not the current implementation, but perhaps the desired one?}
+This includes function pointers for when a relevant action succeeds or fails.
+If the initiation is successful, then the callback passed to the initiation
+function which is associated with a successful initiation is invoked. \todo{Kronglete lol}
+When invoking this callback, the new Connection is passed as a parameter,
+along with a void pointer consisting of data specified by the user.
+This void pointer allows the user to pass any data desired to the callback.
+
+If initiating a preconnection fails because the endpoint could not be
+reached, then the function pointer associated with the failure of creating
+a connection is invoked. \todo{This is not currently implemented, show code when it has been}
+As parameters to this callback, CTaps passes pointer to the relevant (pre?) connection \todo {sort out uncertainity}
+and a reason for the failure, letting the user know what caused the error,
+so that they can respond accordingly.
+
+Due to the asynchronous nature of the library, users can request to
+receive messages at any time, and the library can receive messages
+over the network and cache them at any time. When a user requests
+to receive a message they pass a callback to the application, if a
+message is available, that is, the library has received a message
+over the network and has cached it, the callback is invoked immediately,
+passing the first cached message as a parameter to the callback.
+If no message has been received by the library, then the callback
+itself is cached. The callback is then invoked the next time a message
+is received over the network. This way, the user does not have to
+spin while waiting for messages and is perform other work while
+waiting for incoming messages. Each invocation only receives
+a single message, and will always receive the first message in
+the message queue.
+
+When sending messages the message is not cached, instead
+immediately passed to the libuv event loop. The message
+may queue here for a while, depending on the number of tasks
+in the loop.
+
+\todo{Overview of callbacks here}
+
+The application using CTaps can register callbacks at
+When it comes to registering callbacks, CTaps has taken
+the design philosophy of registering the callback as close
+to the relevant event as possible. Connection Ready-callbacks 
+are registered when the Preconnection is initiated, listener
+are registered when invoking \mono{ct_preconnection_listen()} etc.
+
+In order to allow the user to pass data into the callback, the structure
+containing callbacks also contains a void pointer. This void pointer
+is then passed as a parameter to the callback. This allows the user
+implementation of the callback to dereference the void pointer
+and pass any data to the callback, to make it accessible in
+the body of the callback itself.
+
+% Follow RFC 9622 ordering:
+\section{Preestablishment Phase}
+\subsection{\texttt{ct\_preconnection\_t}}
+As described in TAPS, Preconnections are used as sources to both servers
+and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
+where the user can pass local endpoints, remote endpoints, transport properties and
+security parameters which will affect all connections and listeners spawned from
+the given preconnection.
+
+\subsection{\texttt{ct\_transport\_properties\_t}}
+Whenever the user creates a new Preconnection they have the option of passing
+a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this object consists of Connection
+Properties and Selection Properties. In a slight deviation from RFC 9622
+CTaps does not feature generic setters or getters, instead all selection
+and transport properties are set through dedicated function in the format
+\mono{ct_transport_properties_set_*} \cite{trammellAbstractApplicationProgramming2025}.
+This is a deliberate design choice, made to make it possible to move away from
+the current enum-based properties in the future, and also ensure type safety on
+all \mono{get()} and \mono{set()} operations.
+
+\subsection{\texttt{ct\_security\_parameters\_t}}
+Required for QUIC TLS.
+
+\subsection{Endpoints}
+
+\subsubsection{\texttt{ct\_local\_endpoint\_t}}
+Required for listener, optional for initiate
+
+\subsubsection{\texttt{ct\_remote\_endpoint\_t}}
+
+\section{Establishing Connections}
+
+Maybe mention rendevouz out of scope
+
+\subsection{\texttt{ct\_connection\_t}}
+Returned through callbacks, etc.
 
 \begin{figure}[H]
-\begin{minted}{C}
-typedef struct Connection {
-  TransportProperties transport_properties;
-  LocalEndpoint local_endpoint;
-  RemoteEndpoint remote_endpoint;
-  // TODO - decide on if this has to be a pointer
-  ProtocolImplementation protocol;
-  uv_handle_t* protocol_uv_handle;
-  ConnectionOpenType open_type;
-  struct SocketManager* socket_manager;
-  // TODO this is shared state and should be locked
-  // Queue for pending receive() calls that arrived before the data
-  GQueue* received_callbacks;
-  GQueue* received_messages;
-} Connection;
-
-\end{minted}
-\caption{Connection typedef structure}
-\end{figure} \todo{Update this when having finalized Connection struct}
-
-Each of these objects has a set of associated functions, in order to encapsulate
-the responsibililty of this structure as best as possible. 
-
-\begin{figure}[H]
-\begin{minted}{C}
-int send_message(Connection* connection, Message* message);
-int receive_message(
-    Connection* connection,
-    ReceiveMessageRequest receive_message_cb
-);
-void connection_build_from_listener(
-    Connection* connection,
-    struct Listener* listener,
-    RemoteEndpoint* remote_endpoint
-);
-void connection_close(Connection* connection);
-\end{minted}
-\caption{Function declarations from connection.h}
+\begin{center}
+\begin{tabular}{ ||l|c|c| } 
+ \hline
+ \textbf{Event}      & \textbf{Class}                    & \textbf{Description} \\ 
+ \hline \hline
+ CloneError          & Connection                        & cell9 \\ 
+ \hline
+ Closed              & Connection                        & cell9 \\ 
+ \hline
+ ConnectionError     & Connection                        & cell9 \\ 
+ \hline
+ EstablishmentError  & Connection                        & cell9 \\ 
+ \hline
+ Expired             & Connection                        & cell9 \\ 
+ \hline
+ PathChange          & Connection                        & cell9 \\ 
+ \hline
+ Ready               & Connection                        & cell6 \\ 
+ \hline
+ ReceiveError        & Connection                        & cell9 \\ 
+ \hline
+ ReceivedPartial     & Connection                        & cell9 \\ 
+ \hline
+ SendError           & Connection                        & cell9 \\ 
+ \hline
+ Sent                & Connection                        & cell9 \\ 
+ \hline
+ SoftError           & Connection                        & cell9 \\ 
+ \hline
+\end{tabular}
+\end{center}
+\caption{Table of events associated with a connection object}
+\label{fig:connectionEvents}
 \end{figure}
 
-\section{Framer}
+\subsection{Active Open}
+Talk about \mono{ct_preconnection_initiate()}
+
+\subsection{Passive Open}
+Talk about \mono{ct_preconnection_listen()}
+
+\subsubsection{\texttt{ct\_listener\_t}}
+Listening, only listens on most highly ranked etc.
+
+\begin{figure}[H]
+\centering
+\begin{minted}{C}
+typedef struct ListenerCallbacks {
+  int (*connection_received)(
+    struct Listener* listener,
+    struct Connection* new_conn,
+    void* udata
+  );
+  int (*establishment_error)(
+    struct Listener* listener,
+    const char* reason,
+    void* udata
+  );
+  int (*stopped)(
+    struct Listener* listener,
+    void* udata
+  );
+  void* user_data;
+} ListenerCallbacks;
+\end{minted}
+\label{fig:listenerCallbackStructure}
+\caption{Event callbacks associated 1-1 with a Listener object}
+\end{figure}
+
+\begin{figure}[H]
+\begin{center}
+\begin{tabular}{ ||l|c|c| } 
+ \hline
+ \textbf{Event}      & \textbf{Class}                    & \textbf{Description} \\ 
+ \hline \hline
+ ConnectionReceived  & Listener                          & cell9 \\ 
+ \hline
+ EstablishmentError  & Listener                          & cell9 \\ 
+ \hline
+ Stopped             & Listener                          & cell9 \\ 
+ \hline
+\end{tabular}
+\end{center}
+\caption{Table of events associated with listener object}
+\label{fig:listenerObjects}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minted}{C}
+typedef struct ConnectionCallbacks {
+  int (*connection_error)(struct Connection* connection, void* udata);
+  int (*establishment_error)(struct Connection* connection, void* udata);
+  int (*expired)(struct Connection* connection, void* udata);
+  int (*path_change)(struct Connection* connection, void* udata);
+  int (*ready)(struct Connection* connection, void* udata);
+  int (*send_error)(struct Connection* connection, void* udata);
+  int (*sent)(struct Connection* connection, void* udata);
+  int (*soft_error)(struct Connection* connection, void* udata);
+  void* user_data;
+} ConnectionCallbacks;
+\end{minted}
+\label{fig:connectionCallbackStructure}
+\caption{Event callbacks associated 1-1 with a Connection object}
+\end{figure}
+
+\section{Managing Connections}
+
+\subsection{Cloning}
+Cloning a Connection in TAPS yields a Connection Group. A Connection Group
+is represented as an array of connections. The client operates on each individual
+Connection, with certain operations, such as aborting/closing all being able
+to operate on all connections in a connection group. For CTaps,
+all Connections
+have an associated Connection Group, with each Connection Group
+only containing a single Connection until the original Connection has been cloned.
+
+Invoking \mono{connection_clone} can lead to either a \mono{Ready} event or
+a \mono{CloneError} event. Connection Cloning is primarily used to create
+multiple logical Connections, and how this maps internally depends on the
+underlying protocol being used. For protocols which support multistreaming,
+such as QUIC, the connection group comes to represent a single overarching
+Connection, while the individual connections in the group represents single
+streams. The overarching connection can either be closed by a single operation
+on the connection group or by closing each Connection individually.
+
+For underlying protocols which do not support multistreaming, each cloned
+Connection becomes functionally independent, while still supporting the
+operations on Connection Groups. For a TCP Connection an independent Connection
+will be established from an ephemeral local port, while UDP connections will
+start listening on an ephemeral local port, immediately generate a \mono{Ready}
+event, being ready to send messages from this ephemeral port.
+
+\subsection{Connection Properties}
+Can be set/read on live connections.
+
+\subsection{Events}
+
+\section{Data Transfer}
+
+\subsection{\texttt{ct\_message\_t}}
+Messages overall
+
+\subsection{\texttt{ct\_message\_properties\_t}}
+Sending messages.
+
+\subsection{\texttt{ct\_message\_context\_t}}
+Receiving messages.
+
+\subsection{Receiving data}
+
+\begin{figure}[H]
+\centering
+\begin{minted}{C}
+typedef struct ReceiveCallbacks {
+  int (*receive_callback)(
+    struct Connection* connection,
+    Message** received_message,
+    MessageContext* ctx,
+    void* user_data
+  );
+  int (*receive_error)(
+    struct Connection* connection,
+    MessageContext* ctx,
+    const char* reason,
+    void* user_data
+  );
+  int (*receive_partial)(
+    struct Connection* connection,
+    Message** received_message,
+    MessageContext* ctx,
+    bool end_of_message, 
+    void* user_data
+  );
+  void* user_data;
+} ReceiveCallbacks;
+\end{minted}
+\label{fig:receiveCallbackStructure}
+\caption{Event callbacks associated with each request to receive a message}
+\end{figure}
+
+\subsection{\texttt{ct\_framer\_impl\_t}}
 In CTaps, the Framer interface consists of a structure of function pointers,
 which are implemented by the application. These are then passed to a preconnection
 and are invoked at appropriate times during the lifetime of the Connection.
@@ -191,284 +435,5 @@ static ct_framer_impl_t length_prepend_framer = {
 \label{fig:framingTestImpl}
 \end{figure}
 
-\section{Connection Cloning}
-Cloning a Connection in TAPS yields a Connection Group. A Connection Group
-is represented as an array of connections. The client operates on each individual
-Connection, with certain operations, such as aborting/closing all being able
-to operate on all connections in a connection group. For CTaps,
-all Connections
-have an associated Connection Group, with each Connection Group
-only containing a single Connection until the original Connection has been cloned.
-
-Invoking \mono{connection_clone} can lead to either a \mono{Ready} event or
-a \mono{CloneError} event. Connection Cloning is primarily used to create
-multiple logical Connections, and how this maps internally depends on the
-underlying protocol being used. For protocols which support multistreaming,
-such as QUIC, the connection group comes to represent a single overarching
-Connection, while the individual connections in the group represents single
-streams. The overarching connection can either be closed by a single operation
-on the connection group or by closing each Connection individually.
-
-For underlying protocols which do not support multistreaming, each cloned
-Connection becomes functionally independent, while still supporting the
-operations on Connection Groups. For a TCP Connection an independent Connection
-will be established from an ephemeral local port, while UDP connections will
-start listening on an ephemeral local port, immediately generate a \mono{Ready}
-event, being ready to send messages from this ephemeral port.
-
-\section{Event Loop}
-CTaps is built around a single single-threaded event loop. This event
-loop is powered by libuv \cite{Libuv2025}. This event loop is intialized
-using \mono{ctaps_initialize()} and can be started using \mono{ctaps_start_event_loop()}.
-Following the default libuv behaviour, this event loop will run until
-there are no more open handles performing work. Any set up of Connections
-which should be used during the lifetime of a given event loop has to
-be performed before starting the event loop. The event loop takes over
-execution of the main thread, and will block until execution of the underlying
-handles completes, as described above.
-
-This means that if the application invokes \mono{ct_preconnection_initiate},
-then CTaps will attempt to connect to the specified endpoint when the event
-loop is started. If this attempt is successful then an underlying handle
-listening on a Local Endpoint is active. This means that the event loop
-will not stop execution until this connection is closed.
-
-Any behaviour that has to happen after an event loop is created has to be
-specified in the callbacks provided by CTaps. For example, if a Connection
-has to immediately send a message after successfully connection to an endpoint,
-then this behaviour has to be defined in the \mono{ready} callback, which is
-passed to a Preconnection through the \mono{ct_connection_callbacks_s} struct.
-
-\todo{Write more here if we move to per-state config}
-
-\section{Asynchrony} \label{asynchrony}
-\todo{Can I write some numbers here, how much is I/O bound as a percentage?}
-Most modern interactions with networking applications are asynchronous
-and the TAPS API reflects this. CTaps is therefore callback based. Any
-interactions with the network or other I/O-bound activities are loaded
-performed by the central event loop, which is managed by libuv. Whenever
-a user wants to initiate a Connection, send a message or receive a message,
-they pass a structure containing the relevant function pointers for the given
-functionality. \todo{This struct way is not the current implementation, but perhaps the desired one?}
-This includes function pointers for when a relevant action succeeds or fails.
-If the initiation is successful, then the callback passed to the initiation
-function which is associated with a successful initiation is invoked. \todo{Kronglete lol}
-When invoking this callback, the new Connection is passed as a parameter,
-along with a void pointer consisting of data specified by the user.
-This void pointer allows the user to pass any data desired to the callback.
-
-If initiating a preconnection fails because the endpoint could not be
-reached, then the function pointer associated with the failure of creating
-a connection is invoked. \todo{This is not currently implemented, show code when it has been}
-As parameters to this callback, CTaps passes pointer to the relevant (pre?) connection \todo {sort out uncertainity}
-and a reason for the failure, letting the user know what caused the error,
-so that they can respond accordingly.
-
-Due to the asynchronous nature of the library, users can request to
-receive messages at any time, and the library can receive messages
-over the network and cache them at any time. When a user requests
-to receive a message they pass a callback to the application, if a
-message is available, that is, the library has received a message
-over the network and has cached it, the callback is invoked immediately,
-passing the first cached message as a parameter to the callback.
-If no message has been received by the library, then the callback
-itself is cached. The callback is then invoked the next time a message
-is received over the network. This way, the user does not have to
-spin while waiting for messages and is perform other work while
-waiting for incoming messages. Each invocation only receives
-a single message, and will always receive the first message in
-the message queue.
-
-When sending messages the message is not cached, instead
-immediately passed to the libuv event loop. The message
-may queue here for a while, depending on the number of tasks
-in the loop.
-
-\todo{Overview of callbacks here}
-
-\section{\texttt{ct\_preconnection\_t}}
-As described in TAPS, Preconnections are used as sources to both servers
-and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
-where the user can pass local endpoints, remote endpoints, transport properties and
-security parameters which will affect all connections and listeners spawned from
-the given preconnection.
-
-\section{\texttt{ct\_transport\_properties\_t}}
-Whenever the user creates a new Preconnection they have the option of passing
-a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this object consists of Connection
-Properties and Selection Properties. In a slight deviation from RFC 9622
-CTaps does not feature generic setters or getters, instead all selection
-and transport properties are set through dedicated function in the format
-\mono{ct_transport_properties_set_*} \cite{trammellAbstractApplicationProgramming2025}.
-This is a deliberate design choice, made to make it possible to move away from
-the current enum-based properties in the future, and also ensure type safety on
-all \mono{get()} and \mono{set()} operations.
-
-
-\section{Selecting the desired protocol}
-Talk about how the user can use selection properties to select the desired protocol 
-
-\section{Control Flow}
-Since the primary functionality of the library is handled
-by the underlying libuv event loop, the control flow has
-to be handed over to the event loop after the primary setup
-of an application has been handled. Further control has
-to be
-handled through the callbacks invoked by the library.
-
-\section{Events}
-As mentioned in \cref{asynchrony}, Taps is an asynchronous library.
-For CTaps, this means that any asynchronous functions take a struct
-containing function pointers as a parameter. In RFC 9622, each
-asynchronous routine finishing invokes an Event \cite{trammellAbstractApplicationProgramming2025}.
-The notation used in TAPS to denote events is shown in \cref{fig:ctapsEventNotation}.
-A full list of events and the objects that spawn them can
-be seen in \cref{fig:tapsEvents}. For each Event, CTaps
-features an associated callback function.
-
-\begin{figure}[H]
-\centering
-\begin{BVerbatim}
-Object -> Event<>
-\end{BVerbatim}
-\caption{TAPS Event notation of Object spawning an Event}
-\label{fig:ctapsEventNotation}
-\end{figure}
-
-This associated callback is set at various times. Mostly,
-they are set when initially building the object associated
-with the Event. For exapmle, the Ready event is set
-when initializing a preconnection. \todo{For listeners as well or?}
-In this case, the callback structure is stored in the
-corresponding object, so the callback can be invoked when
-the given Event occurs.
-However, some Events are passed when inititating an asynchronous action,
-such as CloneError, where the function pointer is passed as a parameter
-to the Connection.clone() function. \todo{Make sure that this is true, will we implement clone?}
-
-In order to allow the user to pass data into the callback, the structure
-containing callbacks also contains a void pointer. This void pointer
-is then passed as a parameter to the callback. This allows the user
-implementation of the callback to dereference the void pointer
-and pass any data to the callback, to make it accessible in
-the body of the callback itself. This is a standard 
-way if passing data to callbacks in C and can be
-seen for example in the libuv library, where the
-\texttt{uv\_handle\_t} struct contains a void pointer which
-can be dereferenced in any callbacks \cite{libuvUv_handle_tDocumentation2025}.
-
-\begin{figure}[H]
-\centering
-\begin{minted}{C}
-typedef struct ConnectionCallbacks {
-  int (*connection_error)(struct Connection* connection, void* udata);
-  int (*establishment_error)(struct Connection* connection, void* udata);
-  int (*expired)(struct Connection* connection, void* udata);
-  int (*path_change)(struct Connection* connection, void* udata);
-  int (*ready)(struct Connection* connection, void* udata);
-  int (*send_error)(struct Connection* connection, void* udata);
-  int (*sent)(struct Connection* connection, void* udata);
-  int (*soft_error)(struct Connection* connection, void* udata);
-  void* user_data;
-} ConnectionCallbacks;
-\end{minted}
-\label{fig:connectionCallbackStructure}
-\caption{Event callbacks associated 1-1 with a Connection object}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{minted}{C}
-typedef struct ReceiveCallbacks {
-  int (*receive_callback)(
-    struct Connection* connection,
-    Message** received_message,
-    MessageContext* ctx,
-    void* user_data
-  );
-  int (*receive_error)(
-    struct Connection* connection,
-    MessageContext* ctx,
-    const char* reason,
-    void* user_data
-  );
-  int (*receive_partial)(
-    struct Connection* connection,
-    Message** received_message,
-    MessageContext* ctx,
-    bool end_of_message, 
-    void* user_data
-  );
-  void* user_data;
-} ReceiveCallbacks;
-\end{minted}
-\label{fig:receiveCallbackStructure}
-\caption{Event callbacks associated with each request to receive a message}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{minted}{C}
-typedef struct ListenerCallbacks {
-  int (*connection_received)(
-    struct Listener* listener,
-    struct Connection* new_conn,
-    void* udata
-  );
-  int (*establishment_error)(
-    struct Listener* listener,
-    const char* reason,
-    void* udata
-  );
-  int (*stopped)(
-    struct Listener* listener,
-    void* udata
-  );
-  void* user_data;
-} ListenerCallbacks;
-\end{minted}
-\label{fig:listenerCallbackStructure}
-\caption{Event callbacks associated 1-1 with a Listener object}
-\end{figure}
-
-\begin{figure}[H]
-\begin{center}
-\begin{tabular}{ ||l|c|c| } 
- \hline
- \textbf{Event}      & \textbf{Class}                    & \textbf{Description} \\ 
- \hline \hline
- CloneError          & Connection                        & cell9 \\ 
- \hline
- Closed              & Connection                        & cell9 \\ 
- \hline
- ConnectionError     & Connection                        & cell9 \\ 
- \hline
- ConnectionReceived  & Listener                          & cell9 \\ 
- \hline
- EstablishmentError  & Connection/Preconnection/Listener & cell9 \\ 
- \hline
- Expired             & Connection                        & cell9 \\ 
- \hline
- PathChange          & Connection                        & cell9 \\ 
- \hline
- Ready               & Connection                        & cell6 \\ 
- \hline
- ReceiveError        & Connection                        & cell9 \\ 
- \hline
- ReceivedPartial     & Connection                        & cell9 \\ 
- \hline
- RendezousDone       & Preconnection                     & cell9 \\ 
- \hline
- SendError           & Connection                        & cell9 \\ 
- \hline
- Sent                & Connection                        & cell9 \\ 
- \hline
- SoftError           & Connection                        & cell9 \\ 
- \hline
- Stopped             & Listener                          & cell9 \\ 
- \hline
-\end{tabular}
-\end{center}
-\caption{Table of events and associated objects}
-\label{fig:tapsEvents}
-\end{figure}
+\section{Connection Termination}
+Closing connections, closing groups.

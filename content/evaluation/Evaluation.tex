@@ -550,7 +550,19 @@ situations where new useful features can be provided.
 %discuss racing with UDP
 When it comes to connection racing, it is a useful feature but can
 be hard to map for non-connection oriented protocols leading to
-unexpected or even undesirable behaviour.
-
+unexpected or even undesirable behaviour. In CTaps this becomes an
+issue with UDP. While the default preferences often lead users to TCP or
+QUIC over UDP, if UDP is preferred but not required then there is no way for
+racing to function properly. CTaps has chosen to assume that a UDP connection
+is established as soon as local endpoint has been set up. This means that
+if the remote is not actually genuinely UDP, the racing will tell the user
+that the connection is ready, but the remote will be unreachable. An alternative
+solution would be to send a test message and to wait for a reply, but
+this relies on knowledge of the remote endpoint and that it will actually reply
+to a ping. This risks designating legitimate endpoints as unresponsive. Since
+the default preferences rank UDP lower than other supported protocols, it was
+deemed that the risk of UDP being ranked higher than other protocols when
+the endpoint does not support it was low enough that the simpler solution
+of assuming an estbalished connection on opening the socket.
 
 % Discuss CTaps in general? Architecture and such?
