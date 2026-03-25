@@ -11,13 +11,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container: texlive/texlive:latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Generate PDF
         run: |
-          sudo apt-get update
-          sudo apt install texlive-full
+          pdflatex -shell-escape -jobname=taps-for-linux main.tex
+          biber taps-for-linux
+          pdflatex -shell-escape -jobname=taps-for-linux main.tex
           pdflatex -shell-escape -jobname=taps-for-linux main.tex
       - uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
