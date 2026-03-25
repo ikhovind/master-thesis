@@ -99,6 +99,18 @@ biased result.
     \label{fig:racing-handshake}
 \end{figure}
 
+\subsubsection{Connection Establishment with slow and fast endpoint}
+This benchmark is intended to show the benefit of racing in CTaps \cref{fig:handshake-kde}.
+n = 200. Talk about how this can emulate a DNS resolution. Both picoquic and CTaps are
+capable of this, but if the slow endpoint is ordered first then the fast endpoint will
+still win for CTaps due to racing.
+
+\begin{figure}[tbp]
+    \input{./resources/handshake_kde.pgf}
+    \caption{Distribution of handshake times when a fast and a slow endpoint are available}
+    \label{fig:handshake-kde}
+\end{figure}
+
 \subsubsection{Small file transfer} \label{smallfiletransfer}
 For this benchmark, the intention was to show that a TAPS system could benefit
 from QUIC multistreaming, with no code change necessary in a generic TAPS client
