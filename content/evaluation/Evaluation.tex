@@ -100,10 +100,27 @@ biased result.
 \end{figure}
 
 \subsubsection{Connection Establishment with slow and fast endpoint}
-This benchmark is intended to show the benefit of racing in CTaps \cref{fig:handshake-kde}.
-n = 200. Talk about how this can emulate a DNS resolution. Both picoquic and CTaps are
-capable of this, but if the slow endpoint is ordered first then the fast endpoint will
-still win for CTaps due to racing.
+In order to show the added benefit of candidate racing, the benchmark in \cref{fig:handshake-kde}
+was created. A ping server was set up and the clients measured the handshake time to
+reach the server. Two possible paths were used, with one slow and one fast endpoint
+reaching the server. The slow endpoint had a delay of 150 \qty{150}{\milli\second}
+while the fast endpoint had a delay of \qty{50}{\milli\second}. Both the Picoquic
+and the CTaps client were given the slow endpoint as a first alternative, with
+CTaps supporting racing and therefore being the second faster endpoint as a second
+alternative. This benchmark is intended to emulate a DNS resolution, where the slower
+endpoint is given first in the list of results. For any library not supporting racing
+this means that the client will have to accept not only slower handshake times but
+significantly higher latency throughout the entire connection lifetime. For a more
+realistic output a jitter of 7 ms and a latency correlation of 25 \% on localhost
+using the \mono{tc} linux utility. The test was run 200 times to gather a distribution
+of handshake times.
+
+The theoretical ideal handshake times for each endpoint are featured
+in the graph, witha 250 ms racing delay accounted for in the fast endpoint.
+With 2 RTTs for a full handshake and delays of 50 and 150 milliseconds this works out to 
+$\qty{50}{\milli\second} \cdot 4 + \qty{250}{\milli\second} = \qty{450}{\milli\second}$
+and
+$\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively. 
 
 \begin{figure}[tbp]
     \input{./resources/handshake_kde.pgf}
@@ -417,6 +434,16 @@ attempts in CTaps can be made the same way as recommended in Happy Eyeballs V2, 
 as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
 to give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
+
+% Discuss candidate racing benchmark
+The stagger delay does not show up only in the raw handshake measurement times,
+but also in the candidate racing benchmark. Here the benchmark itself becomes
+more contrived than needed because it needs to make the faster endpoint
+preferred even with the long 250 ms stagger delay. This means making the
+slow endpoint three times slower than the slow endpoint. While this
+still serves to show the benefit gained on a suboptimal ordering from
+a DNS resolution, it would become even more apparent if the delay
+was lower.
 
 % Discuss the small file transfer
 While the above benchmarks show that CTaps achieves performance parity

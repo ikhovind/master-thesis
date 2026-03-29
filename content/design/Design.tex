@@ -1,4 +1,4 @@
-\chapter{API Design} \label{transportSystemApi}
+\chapter{API Design} \label{cTapsApiDesign}
 CTaps is not a complete implementation of the TAPS standard,
 as that would be too large of a scope for a singular thesis.
 \todo{Check in on this later, describe how large of a subset}
@@ -229,7 +229,6 @@ While RFC 9622 features information on how to establish rendevouz
 connections this has been deemed to be out of scope for CTaps.
 
 \subsection{\texttt{ct\_connection\_t}}
-Returned through callbacks, etc.
 Unlike previously mentioned objects Connections cannot be created directly by the
 application. Instead they are returned to the user upon establishment through
 the callbacks seen in \cref{lst:preconnection-initiate-callbacks}.

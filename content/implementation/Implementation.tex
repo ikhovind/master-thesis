@@ -1,37 +1,39 @@
 \chapter{Implementation}  \label{transportSystemImpl}
 
 \section{Architecture}
-CTaps follows the standard TAPS architecture as described in RFC 9621 
-and \cref{sec:tapsArch} \cite{paulyArchitectureRequirementsTransport2025}.
-The CTaps implementations of the Transport Services API is described in
-\cref{transportSystemApi} and the CTaps implementation of the
-Transport System Implementation is described in \cref{transportSystemImpl}.
-
-TODO - define transport system in TAPS overview
-
-Maybe this is defined somewhere else, do something like "as mentioned in section..."
+Internally, CTaps follows the TAPS architecture as described in
+RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.
+This divides a TAPS system into two distinct sections, a public
+Transport Services API described in \cref{cTapsApiDesign} and the
+Transport System Implementation which is described in this chapter.
 
 \section{Candidate Gathering} \label{sec:candidateGathering}
-CTaps follows the recommended procedure for Candidate Gathering from RFC 9623
+Before a Connection can be established, a list of possible Local and Remote
+need to be generated based on the data passed to the associated preconnection.
+In CTaps this candidate gathering follows the procedure described in RFC 9623
 very closely. CTaps represents the candidates in a tree, using a GNode struct from
-GLib to represent a N-ary tree. CTaps first builds the entire tree, resolving
-all possible local interfaces, all protocols and all possible resolutions of
-remote hostnames respectively. If the client has specified multiple remote endpoints,
-then they are treated the same way as each invidvidual resolution from a hostname
-endpoint. After the entire tree has been built, CTaps prunes the branches which
+GLib to represent a N-ary tree.
+
+CTaps first builds the entire tree, resolving
+all possible local interfaces, all protocols, specified ALPNs and all possible resolutions of
+remote hostnames respectively. For each combination if these criteria,
+CTaps generated a single candidate node.
+
+After the entire tree has been built, CTaps prunes the branches which
 are not compatible with the required or prohibited selection properties. After pruning,
 the tree is sorted according to the stated selection properties, as described in RFC 9623 
 \cite{brunstromImplementingInterfacesTransport2025}.
 
 \section{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered when initiating a preconnection, CTaps
-will race them according to the specification from RFC 9623 \cite{brunstromImplementingInterfacesTransport2025}.
+will race them according to the specification from RFC 9623
+\cite{brunstromImplementingInterfacesTransport2025}.
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
 system follows the same procedure as specified in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017},
 which was originally designed to increase IPv6 adoption, see \cref{happyEyeballs}.
 TAPS takes racing a step further by not only racing IP-address families, but also
-racing potential protocols and endpoints. A TAPS system primarily follows a staggered
+racing potential protocol configurations and endpoints. CTaps primarily follows a staggered
 approach, first sorting the gathered candidates by preference and performing a connection
 attempt for each, with a delay between each candidate. All outstanding racing attempts
 are cancelled upon the first success.
@@ -39,82 +41,108 @@ are cancelled upon the first success.
 \section{Protocol Implementations}
 
 \subsection{Protocol Interface}
-In order to make the CTaps design as modular as possible and ease the
-process of adding more protocols, CTaps uses an internal interface for a protocol,
-which abstracts away the implementation details. This interface consists of
-a struct containing the name of the protocols, and function pointers for
-the necessary functions for the wider CTaps library to interact with the protocol.
-Each protocol implementation is this way kept as small as possible, and is
-isolated from the rest of the library.
+In order to make the CTaps design as modular as possible,
+CTaps uses an internal interface to interact with the underlying protocol.
+This interface abstracts away the implementation details of the individual
+protocols and allows the upper layers to interact with the network in an
+asynchronous way. This interface consists of
 
-Implementations of the interface also register
-a list of the applicable selection properties, allowing the library
-to later prune and sort the Candidate Tree protocols, when selecting
-candidates.
+A single protocol is implemented as a single implementation of the interface.
+Together with providing implementations of the interface protocols, it also
+has to register a list of settings for each selection protocol. These settings
+indicate which properties the given protocol can fulfill, which is used 
+when filtering candidates during candidate gathering.
 
 \begin{figure}[H]
 \begin{minted}{C}
-typedef struct ProtocolImplementation {
-  const char* name;
-  SelectionProperties selection_properties;
-  int (*init)(struct Connection* connection, InitDoneCb init_done_cb);
-  int (*send)(struct Connection*, Message*);
-  int (*receive)(struct Connection*, ReceiveMessageRequest receive_cb);
-  int (*listen)(struct SocketManager* socket_manager);
-  int (*stop_listen)(struct SocketManager*);
-  int (*close)(const struct Connection*);
-} ProtocolImplementation;
+typedef struct ct_protocol_impl_s {
+    const char* name;                               ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
+    ct_protocol_enum_t protocol_enum;               ///< Protocol enumeration value
+    bool supports_alpn;                             ///< True if protocol supports ALPN negotiation
+    ct_selection_properties_t selection_properties; ///< Properties supported by this protocol
+    /** @brief Initialize a new connection using this protocol. */
+    int (*init)(ct_connection_t* connection);
+    /** @brief Initialize a new connection using this protocol and attempt 0-rtt. */
+    int (*init_with_send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+    /** @brief Send a message over the protocol. */
+    int (*send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+
+    /** @brief Start listening for incoming connections. */
+    int (*listen)(struct ct_socket_manager_s* socket_manager);
+
+    /** @brief Stop listening for incoming connections. */
+    void (*close_listener)(struct ct_socket_manager_s*);
+
+    /** @brief Close a connection. */
+    int (*close_connection)(ct_connection_t*);
+
+    /** @brief Close the underlying socket for a socket manager. */
+    void (*close_socket)(struct ct_socket_manager_s*);
+
+    /** @brief Forcefully abort a connection without graceful shutdown. */
+    void (*abort)(ct_connection_t* connection);
+
+    /** @brief Clone a connection's protocol specific state. */
+    int (*clone_connection)(const ct_connection_t* source_connection,
+                            ct_connection_t* target_connection);
+
+    /** @brief Free protocol-specific state in a connection. */
+    void (*free_connection_state)(ct_connection_t* connection);
+
+    /** @brief Free socket-specific state in a connection. */
+    void (*free_socket_state)(struct ct_socket_manager_s* socket_manager);
+
+    void (*close_connection_group)(ct_connection_group_t* connection_group);
+
+    int (*set_connection_priority)(ct_connection_t* connection, uint8_t priority);
+
+    /** @brief Free protocol-specific shared state in a connection group, useful for multiplexing */
+    void (*free_connection_group_state)(ct_connection_group_t* connection_group);
+
+} ct_protocol_impl_t;
 \end{minted}
 \caption{Protocol Implementation interface}
-\end{figure} \todo{Update this when having finalized the code}
-
-Each protocol supported instantiates a single instance of the
-protocol interface, and adds this to a global variable keeping
-track of the supported protocols: 
-
-\begin{figure}[H]
-  \begin{minted}{C}
-int ctaps_initialize(const char *cert_file_name, const char *key_file_name) {
-  ctaps_event_loop = malloc(sizeof(uv_loop_t));
-  uv_loop_init(ctaps_event_loop);
-
-  register_protocol(&udp_protocol_interface);
-  register_protocol(&tcp_protocol_interface);
-  register_protocol(&quic_protocol_interface);
-
-  ctaps_global_config.cert_file_name = cert_file_name ? strdup(cert_file_name) : NULL;
-  ctaps_global_config.key_file_name = key_file_name ? strdup(key_file_name) : NULL;
-  return 0;
-}
-  \end{minted}
-  \caption{Example of adding protocol support}
 \end{figure}
 
-Adding the protocols is done at runtime in order to allow any
-application using CTaps to add support for custom protocols if
-desired. Because all Connections using the same protocol are associated
-with the same protocol structure, the protocol structure itself
-is naturally stateless, providing only read-only values and function
-pointers where the necessary state has to be passed in as paramaters.
-How a client can add custom protocols is discussed further in \cref{sec:addingNewProtocols}.
+\subsection{Socket Manager} \label{sec:socketManager}
+In order to manage sockets, CTaps uses a structure it refers to as a Socket Manager
+internally. This is done to maintain the lifetime of the socket and to
+own its internal state. Since a single socket can feature many connections
+depending on the associated protocol, the socket may need to remain valid
+for the entire lifetime of its most long-lived Connection or Listener.
+In order to achieve this the Socket Manager contains a counter for the
+number of objects still using it. This counter is decremented when the
+memory associated with one of the objects using the Socket Manager is
+freed. If this counter reaches 0, then the entire Socket Manager structure
+is freed, as can be seen in \cref{fig:socketManagerRefCount}.
 
+Socket Managers
+are also responsible for closing sockets when the final associated Connection
+or Listener has been closed. This is done through a separete functionality from
+the reference counting. Instead, a Socket Manager maintains a list of Connections
+and Listeners using its socket, only closing the socket when the last of these
+Connections or the last Listener is closed. Freeing the internal state and closing
+of the socket are implemented as two separate operations so that the application
+can still query for internal state, such as the underlying protocol, after
+a Connection or Listener has been closed.
 
-Each Connection is associated with a single protocol, which
-is selected through the process of candidate gathering and candidate
-racing as described in \cref{sec:candidateGathering} and \cref{sec:candidateRacing}.
-This means, that whenever a Connection wants to interact with the network, it
-will invoke a function pointer from its associated protocol:
-
-\begin{figure}[H]
+\begin{figure}[tbp]
   \begin{minted}{C}
-int send_message(Connection* connection, Message* message) {
-  return connection->protocol.send(connection, message, NULL);
+void socket_manager_decrement_ref(SocketManager* socket_manager) {
+  socket_manager->ref_count--;
+  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
+  if (socket_manager->ref_count == 0) {
+    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
+    if (rc < 0) {
+      log_error("Error stopping socket manager listen: %d", rc);
+    }
+    free(socket_manager);
+  }
 }
   \end{minted}
-  \caption{Example usage of interface when sending Message with Connection}
+  \caption{Internal Socket Manager counter decrementation}
+  \label{fig:socketManagerRefCount}
 \end{figure}
-
-
 
 
 \subsection{Supported protocols}
@@ -138,52 +166,69 @@ fewest lines of code to implement, as seen in \cref{fig:protocolLoc}.
 
 \begin{figure}[H]
 \begin{minted}{C}
-int udp_init(Connection* connection, InitDoneCb init_done_cb);
-int udp_close(const Connection* connection);
-int udp_send(Connection* connection, Message* message);
-int udp_receive(Connection* connection, ReceiveMessageRequest receive_message_cb);
-int udp_listen(struct SocketManager* socket_manager);
-int udp_stop_listen(struct SocketManager* listener);
-
-static ProtocolImplementation udp_protocol_interface = {
-    .name = "UDP",
-    .selection_properties = {
-      .selection_property = {
-        get_selection_property_list(create_property_initializer)
-        [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
-      }
-    },
-    .send = udp_send,
-    .init = udp_init,
-    .receive = udp_receive,
-    .close = udp_close,
-    .listen = udp_listen,
-    .stop_listen = udp_stop_listen
+const ct_protocol_impl_t
+    udp_protocol_interface =
+        {
+            .name = "UDP",
+            .protocol_enum = CT_PROTOCOL_UDP,
+            .supports_alpn = false,
+            .selection_properties =
+                {.list =
+                     {
+                         [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+                         [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = REQUIRE}},
+                         [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+                         [PRESERVE_ORDER] = {.value = {.simple_preference = PROHIBIT}},
+                         [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+                         [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+                         [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+                         [CONGESTION_CONTROL] = {.value = {.simple_preference = PROHIBIT}},
+                         [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
+                                                                        NO_PREFERENCE}},
+                         [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
+                                                                    NO_PREFERENCE}},
+                     }},
+            .init = udp_init,
+            .init_with_send = udp_init_with_send,
+            .send = udp_send,
+            .listen = udp_listen,
+            .close_listener = udp_close_listener,
+            .close_connection = udp_close,
+            .close_socket = udp_close_socket,
+            .abort = udp_abort,
+            .clone_connection = udp_clone_connection,
+            .free_connection_state = udp_free_state,
+            .free_socket_state = udp_free_socket_state,
+            .close_connection_group = udp_close_connection_group,
+            .free_connection_group_state = udp_free_connection_group_state,
 };
 \end{minted}
 \caption{UDP protocol implementation struct}
-\end{figure} \todo{Update this when having finalized the code}
+\end{figure}
 
 UDP does however not fit perfectly into the model assumed by
 TAPS, which is that of a Connection-based system. There is therefore
 several pieces of logic in the CTaps UDP implementation which adapt
-the underlying UDP layer to this assumption. Opening a client is
+the underlying UDP to fit into a TAPS model. Opening a client is
 fairly simple, as this simply creates a new UDP handle through
 libuv, binds it to either the local endpoint required or an ephemeral one
 before finally starting to receive data over that handle, and
-invoking the \texttt{Ready}-callback for the associated Connection.
+invoking the \texttt{ready}-callback for the associated Connection.
 This does not actually transfer any data to the remote endpoint
-before the clients sends its first message, and any data received
-on the local handle has to be filtered based on remote endpoint,
-before being passed to the associated Connection. \todo{Write
-about how this filtering happens after impelmenting it}
-A \texttt{Ready}-callback does therefore not necessarily
-mean that the remote endpoint is actually reachable.
-\todo{Or does it, what implications does candidate racing have here?}
+and CTaps can therefore not actually guarantee that the remote endpoint
+is reachable after invoking \mono{ready()}.
 
 Another piece of logic required to adapt UDP to the structure
 of a TAPS library is that surrounding the Listener. A Listener
-listens on a single \todo{correct?} port, creating a new 
+listens on a single Local Endpoint, creating a new 
 Connection each time a new client connects. With UDP not
 featuring a handshake, the Listener instead has to keep track
 of which remote endpoints it has received messages from, creating
@@ -200,52 +245,10 @@ for this connection is invoked, if registered by the client.
 When sending data from a Connection created by a Listener, the
 Connection itself contains the destination remote endpoint,
 meaning that the Listener does not have to look up any state
-in this case. \todo{Listeners should receive on seeveral protocols according to RFC9623}
+in this case.
 
-For a TAPS system, Listeners are only responsible for receiving new
-Connections, while the created Connections are independent
-of the listener. This means that the created Connections should
-remain active, even if the Listener is stopped. In order to ensure
-the validity of the underlying UDP handles and other data structures
-used, even if the Listener is stopped and freed by the client, CTaps
-uses an underlying structure called a Socket Manager to actually
-handle contain the libuv handle and to handle the demultiplexing of
-messages. The Socket Manager contains everything necessary for keeping
-track of the received Connections and for transferring data, while the
-Listener contains all state necessary for spawning new Connections.
-When a Listener is closed and freed, the Socket Manager remains active,
-still receiving messages and passing them along to the associated Connection.
-If a message from a new remote endpoint is received after closing a
-Listener, the associated Socket Manager will simply discard it. The
-Socket Manager needs to remain active as long as there is at least
-one active associated Connection. It therefore has an internal counter,
-keeping track of the associated Listener and the number of active Connections.
-When a Connection is closed, it checks whether or not it was created from a Listener
-and if it was, then it informs its associated Socket Manager,
-which then internally checks whether there are any remaining associated
-objects. If there are none, the socket manager closes the associated socket
-through the associated protocol, and then finally frees itself.
-\todo{Maybe separate this out into its own Socket Manager Section}
+% TODO - kom hit
 
-\begin{figure}[H]
-  \begin{minted}{C}
-void socket_manager_decrement_ref(SocketManager* socket_manager) {
-  socket_manager->ref_count--;
-  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
-  if (socket_manager->ref_count == 0) {
-    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
-    if (rc < 0) {
-      log_error("Error stopping socket manager listen: %d", rc);
-    }
-    free(socket_manager);
-  }
-}
-  \end{minted}
-  \caption{Internal Socket Manager counter decrementation}
-\end{figure}
-
-
- 
 \subsubsection{TCP}
 TCP is a connection-oriented, stream-based reliable protocol first designed
 in the 1970s \cite{cerfSpecificationInternetTransmission1974}. TCP forms the
