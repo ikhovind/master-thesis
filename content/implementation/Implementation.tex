@@ -161,10 +161,10 @@ in 1980 \cite{postelUserDatagramProtocol1980}. It has since become one
 of the two primary transport layer protocols used today and has native
 support in libuv through the libuv \texttt{udp\_udp\_t} handle \cite{libuvLibuvUDPHandle}.
 Due to its simplicity, there is fairly little logic required to integrate
-UDP into CTaps, which can be seen by it being the protocol requiring the
-fewest lines of code to implement, as seen in \cref{fig:protocolLoc}.
+UDP into CTaps. The relative protocol complexity is discussed further in
+in \cref{sec:protocolComplexity}.
 
-\begin{figure}[H]
+\begin{listing}[tbp]
 \begin{minted}{C}
 const ct_protocol_impl_t
     udp_protocol_interface =
@@ -212,7 +212,8 @@ const ct_protocol_impl_t
 };
 \end{minted}
 \caption{UDP protocol implementation struct}
-\end{figure}
+\label{lst:udp-protocol-impl-struct}
+\end{listing}
 
 UDP does however not fit perfectly into the model assumed by
 TAPS, which is that of a Connection-based system. There is therefore
@@ -247,279 +248,313 @@ Connection itself contains the destination remote endpoint,
 meaning that the Listener does not have to look up any state
 in this case.
 
-% TODO - kom hit
+The implementation of the UDP protocol implementation struct can be seen in
+\cref{lst:udp-protocol-impl-struct}.
 
 \subsubsection{TCP}
-TCP is a connection-oriented, stream-based reliable protocol first designed
-in the 1970s \cite{cerfSpecificationInternetTransmission1974}. TCP forms the
-basis of much of the modern internet and is the most commonly used transport
-layer protocol. TCP is therefore naturally a requirement for any networking
-library and is supported in CTaps. TCP has native support in libuv through the
+TCP is one of the three potocols currently supported by CTaps, and has native
+support in libuv through the
 \mono{uv_tcp_t} handle \cite{libuvLibuvTCPHandle}.
 
-The TAPS API aims to reflect the most common ways of interacting with the network,
-providing the defaults which have the broadest applicability and are least
-dangerous in terms of what a normal client expects from the network. Since
-most modern applications which use the network are built on top of TCP,
-this naturally refelcts in how most moern applications actually use the
-network, for example expecting a reliable transfer of data. This is however
-not the case with every aspect of TCP, as most application level protocols
-are not stream-based, but build their own custom framing logic on top
-of TCP.
+Overall, TCP fits relatively well into the external model and objects
+provided by a TAPS API. TCP is conenection-oriented by default, and
+therefore maps well to the Connection objects provided by a TAPS.
+TAPS does however provide a message-based API, while TCP is stream-based.
+For CTaps this means that every time libuv notifies CTaps of having
+received new data over a TCP socket, this data is wrapped into a
+single message and passed to the application. While the application
+can be using a framer to wrap or unwrap received messages, this currently
+functions as a proof of concept and does not have an internal buffer
+to support combining multiple TCP packets into a single Message
+using framers.
 
-Apart from the stream-based logic, TCP maps relatively well to the concepts
-provided by TAPS. When creating a Connection, a socket is created and
-a handshake is initiated. If this handshake succeeds, then the
-\mono{ready} callback associated with the Connection is invoked and
-the Connection is ready to send or receive data. If the handshake fails
-then the Connection could not be created and the client can be alerted
-of this immediately, without trying to send data itself.
-\todo{Candidate racing might mean that this kinda doesn't matter}
-
-When listening, the demultiplexing required in UDP, as discussed in
-\cref{sec:udpImpl}, is handled by the kernel TCP stack itself.
-Since TCP is also connection-based, there are also expectations
-that you have to listen for and spawn new connections from a given
-endpoint on a server, instead of purely receiving data as with UDP.
-This means that there is already built-in logic to handle the creation
-of new connections in this case, which can be utilized in order to spawn
-new Connection objects for the sake of a TAPS system. For example, libuv
+Since TCP is also connection-based, listening and creating new sockets
+for incoming connections is handled by the TCP stack itself and there is
+therefore far less CTaps-specific logic for listening on TCP than there is
+on listening over UDP. For example, libuv
 has the built-in function \mono{uv_listen}, which invokes a callback whenever
 a new connection is received. Since the whole protocol is connection-oriented,
 it also means that the logic of only closing the receiving socket when
 the last connection closes is built-in, and does not have to be implemented
 by CTaps. CTaps still uses a Socket Manager to keep track of the open TCP
-handle, however, for TCP this only tracks the single listener, and can be
+handle. For TCP this only tracks the single listener, and can be
 closed immediately when the listener is closed. The new TCP handles which
-have been spawned from this handle will not be closed, as this logic is handled
-by libuv.
+have been spawned from this Listener will have received their own separate
+Socket Managers, since they are connected to separate sockets.
 
-\begin{figure}[H]
+The implementation of the TCP protocol implementation struct can be seen in
+\cref{lst:tcp-protocol-impl-struct}.
+
+\begin{listing}[tbp]
   \begin{minted}{C}
-static ProtocolImplementation tcp_protocol_interface = {
-    .name = "TCP",
-    .selection_properties = {
-      .selection_property = {
-        get_selection_property_list(create_property_initializer)
-        [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
-        [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
-        [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
-      }
-    },
-    .send = tcp_send,
-    .init = tcp_init,
-    .receive = tcp_receive,
-    .close = tcp_close,
-    .listen = tcp_listen,
-    .stop_listen = tcp_stop_listen,
-    .remote_endpoint_from_peer = tcp_remote_endpoint_from_peer
+const ct_protocol_impl_t
+    tcp_protocol_interface =
+        {
+            .name = "TCP",
+            .protocol_enum = CT_PROTOCOL_TCP,
+            .supports_alpn = false,
+            .selection_properties =
+                {.list =
+                     {
+                         [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
+                         [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = PROHIBIT}},
+                         [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+                         [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+                         [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+                         [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+                         [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+                         [CONGESTION_CONTROL] = {.value = {.simple_preference = REQUIRE}},
+                         [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
+                                                                        NO_PREFERENCE}},
+                         [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+                         [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
+                                                                    NO_PREFERENCE}},
+                     }},
+            .init = tcp_init,
+            .init_with_send = tcp_init_with_send,
+            .send = tcp_send,
+            .listen = tcp_listen,
+            .close_listener = tcp_close_listener,
+            .close_connection = tcp_close,
+            .close_socket = tcp_close_socket,
+            .abort = tcp_abort,
+            .clone_connection = tcp_clone_connection,
+            .free_connection_state = tcp_free_state,
+            .free_socket_state = tcp_free_socket_state,
+            .close_connection_group = tcp_close_connection_group,
+            .free_connection_group_state = tcp_free_connection_group_state,
 };
   \end{minted}
   \caption{TCP protocol implementation struct}
-\end{figure}
+  \label{lst:tcp-protocol-impl-struct}
+\end{listing}
 
 \subsubsection{QUIC} \label{sec:quicImpl}
-Out of the protocols natively supported by CTaps, the logic related to QUIC 
-is by far the most complex, which can for example be seen by the required
-number of lines of code in \cref{fig:protocolLoc}. QUIC is a relatively
-new protocol, with RFC 9000 being published in 2021 \cite{iyengarQUICUDPBasedMultiplexed2021}. As QUIC and TAPS was developed relatively concurrently, the TAPS
+While providing access to QUIC is one of the most important selling points
+of CTaps, QUIC is also by far the most complex of the supported protocols
+which can be seen through the required number of lines of code in 
+\cref{sec:protocolComplexity}. QUIC also features several features which
+do not map cleanly into TAPS, which is discussed further in \cref{sec:quicUnderTaps}.
+
+As QUIC and TAPS was developed relatively concurrently, the TAPS
 RFCs feature no protocol considerations or implementations hints like is featured
 for several other protocols, despite access to QUIC being one of the
 major value propositions of a TAPS system \cite{brunstromImplementingInterfacesTransport2025}. 
-\todo{Cite the WIP from the github?}
-With the recent publication of the QUIC RFCs, this also means that
+There exists a draft for mapping Transport Services to QUIC, but this has
+not made it into the official RFC \cite{transportServicesMappingForQuic}.
+
+With the standardization of QUIC being fairly recent,
 none of the current implementations of TAPS found during research for this
 thesis, such as NEAT or PyTaps, feature QUIC as one of the underlying protocols
 \cite{khademiNEATPlatformProtocolIndependent2017}\cite{frankePythonasynciotaps2025}.
 As mentioned previously, this is one of the key motivations behind devloping CTaps,
-and is the biggest value proposition behind CTaps.
+and is a key value proposition.
 
 QUIC is a large protocol and is very configurable. In the development of CTaps,
 effort has been made to make this configurability as available as possible to
 a client using CTaps, however, since CTaps aims to be a implementation of the
-TAPS API, the decision has been made to not expose to many QUIC-specific configuration 
-options. \todo{List some of the options not exposed}
-For these configurations options, CTaps has tried to follow the principle of
-least surprise, choosing the sanest defaults as possible. Other configuration
-options are available through the TAPS Transport Properties, Security Parameters,
-other configuration options, or can be inferred by a combination of properties.
+TAPS API, there are ome QUIC-specific configurations which are not available.
+These features are discussed further in \cref{sec:quicUnderTaps}.
+
+In the cases where the TAPS API do not map perfectly to QUIC configuration options,
+CTaps has tried to follow the principle of least surprise, since the ideal
+is that the application should not have to consider which underlying protocol
+CTaps has chosen.
+
+Most QUIC configurations are however available through the TAPS API in one of
+several ways. 
 For example, Application-Layer Protocol Negitiation (ALPN), which is mandatory for QUIC,
-is available through a dedicated ALPN Security Parameter. Some custom configuration
-was found to be necessary, for example the key and certificate files, which are required
-for creating a QUIC server and are set globally for each QUIC context have to be
-set through a global state, and are passed to when first initializing the CTaps
-context \todo{Rephrase after refactoring from global to per-instance}.
+is available through a dedicated ALPN Security Parameter.
 
 Since libuv does not feature native QUIC support like it does with TCP and UDP,
 CTaps uses Picoquic as an external library, working as a "QUIC engine",
-while performing the actual transfer of data over an UDP socket provided by libuv.
+while performing the actual transfer of data over a raw network socket managed
+by libuv. 
+CTaps is responsible for handling reading and writing data to the network, while picoquic
+formats outgoing QUIC packets and handles incoming data.
+Picoquic specifies when the application needs to query it next through the
+\mono{picoquic_get_next_wake_delay} function. This wakeup time is then passed
+to a libuv timer, which queries picoquic on wakeup.
+A model of the data flow between CTaps, picoquic and the network can be
+seen in \cref{fig:ctaps-quic-loop}.
 More details on why exactly picoquic was chosen over other QUIC implementations
 can be seen in \cref{sec:picoquic}.
 
-Picoquic features two primary types of state used within CTaps. The global picoquic
-context is contained within a \mono{picoquic_quic_t} structure, and the per-connection
-context is contained within a \mono{picoquic_cnx_t} context \cite{huitemachristianPicoquicInternalStructures2020}.
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[
+    box/.style={draw, thick, rounded corners, minimum width=2.8cm, minimum height=1cm, align=center},
+    arr/.style={->, >=stealth, thick},
+    lbl/.style={font=\footnotesize, align=center},
+]
 
-Picoquic has two modes of operation, either it can provide the entire networking
-stack, providing its own event loop and socket handling by invoking the \mono{picoquic_packet_loop},
-or it can serve as a "QUIC engine", with the client being responsible with reading
-data from and sending data to the networking, with picoquic formatting the QUIC packets
-to send over UDP. Simple clients of picoquic which only need to use QUIC can use the
-built-in event loop, while more complex use cases such as CTaps can use the second
-use case, supplying their own event loop. Data which is read over the socket associated
-with QUIC is passed to picoquic through the \mono{picoquic_incoming_packet_ex} function
-and new QUIC packets to send over the network can be fetched through \mono{picoquic_prepare_next_packet}.
-When functioning as a "QUIC engine" \todo{Figure out better term for quic engine lol}
-all the data received over the UDP socket is passed directly to picoquic, and picoquic
-is polled at regular intervals for new messages which are ready to send.
-The maximum time until the next mandatory polling
-can be fetched using the \mono{picoquic_get_next_wake_delay} function. This function needs
-to be reset every time picoquic receives new data, as there may be a need to respond
-within a set time interval. This function returns wakeup times common to a whole QUIC Context,
-so a single
-timer will work across several QUIC connections. Internally in CTaps, the timer
-functionality is handled by a single instance of a libuv \mono{uv_timer_t} handle \cite{libuvLibuvTimerHandle}.
+\node[box] (app)      at ( 0,  4) {Application};
+\node[box] (ctaps)    at ( 0,  0) {CTaps};
+\node[box] (picoquic) at ( 5,  0) {picoquic};
+\node[box] (libuv)    at ( 0, -4) {libuv};
 
-Initiating a Connection over QUIC is fairly straight-forward, as QUIC is connection-oriented
-by default \todo{But it can be connection-less??}. First, a single UDP socket is created
-for the desired local endpoint or an ephemeral one, as with a normal UDP socket, see \cref{sec:udpImpl},
-then, \mono{picoquic_create_cnx} is invoked. This makes picoquic start to create a connection
-and generate the necessary packets for performing a handshake and when the timer fires,
-the generated data is transferred. Picoquic informs the client about the state of the
-connection through a callback supplied when first building the QUIC context. In this
-callback, CTaps can see when a given Connection is ready, and invoke its own client's
-callbacks. Data can be transferred as by the CTaps client as normal, and CTaps will
-add it to a given QUIC stream using \mono{picoquic_add_to_stream}, causing picoquic
-to build a new message with the given data.
+% Application <-> CTaps
+\draw[arr] ([xshift=-0.3cm]app.south)   -- ([xshift=-0.3cm]ctaps.north)
+    node[lbl, left, midway] {Application data};
+\draw[arr] ([xshift= 0.3cm]ctaps.north) -- ([xshift= 0.3cm]app.south)
+    node[lbl, right, midway] {received data};
 
-Opening a Listener is even simpler. All CTaps has to do is open a UDP socket listening
-on the desired local endpoint or an ephemeral one, and when data is received is is passed
-to picoquic through \mono{picoquic_incoming_packet_ex}. If picoquic has not seen the
-given endpoint before, it will create a new picoquic connection and pass this to CTaps.
-CTaps can then use this picoquic connection to create an inernal Connection, and invoke
-the \mono{ConnectionReady} callback from the Listener. CTaps keeps track of the created
-Connections according to their associated remote endpoints \todo{implement this, or is it in socket manager?}.
-This is
-needed because as with UDP, when closing the listener CTaps cannot automatically close the
-receiving UDP handle, since the created Connections remain active and they all receive and
-transfer data over the same UDP socket. When closing a Connection, picoquic is informed
-through \mono{picoquic_close} and it will wind down the connection. When all the created
-connections have been closed, the UDP socket will be closed as well.
+% CTaps <-> picoquic
+\draw[arr] ([yshift= 0.3cm]ctaps.east)    -- ([yshift= 0.3cm]picoquic.west)
+    node[lbl, above, midway, yshift=0.2cm] {Application data,\\data from socket};
+\draw[arr] ([yshift=-0.3cm]picoquic.west) -- ([yshift=-0.3cm]ctaps.east)
+    node[lbl, below, midway,  yshift=-0.0cm] {QUIC packets,\\received data};
+
+% CTaps <-> libuv
+\draw[arr] ([xshift=-0.3cm]ctaps.south)   -- ([xshift=-0.3cm]libuv.north)
+    node[lbl, left, midway] {Send QUIC packet\\via socket};
+\draw[arr] ([xshift= 0.3cm]libuv.north) -- ([xshift= 0.3cm]ctaps.south)
+    node[lbl, right, midway] {Data received from socket};
+
+\end{tikzpicture}
+\caption{CTaps QUIC event loop: picoquic handles protocol logic and drives scheduling,
+         while libuv manages the raw socket and timer.}
+\label{fig:ctaps-quic-loop}
+\end{figure}
+
+
+Picoquic features two primary types of state, the picoquic
+context contained in a \mono{picoquic_quic_t} and the per QUIC connection
+context contained within a \mono{picoquic_cnx_t}  \cite{huitemachristianPicoquicInternalStructures2020}.
+In CTaps, the picoquic context
+maps to a single Socket Manager, and can be shared among several QUIC Connections
+if they are created from the same Listener. The most important state contained
+in the picoquic context is the key files used for the connection and the available
+ALPN values. The picoquic connection context is per QUIC connection and therefore
+maps to a single Connection Group in CTaps.
+
+When initiating a CTaps Connection over QUIC, CTaps only needs to open a socket on
+the required local endpoint. This socket has to be a raw socket, since the libuv
+UDP abstraction does not give access to the from and to fields when sending and
+receiving data as required by picoquic. CTaps then informs picoquic that it wants
+to inititate a new QUIC connection. Picoquic then starts to generate handshake
+packets which it passes to CTaps to send over the network. When the QUIC connection
+is ready picoquic informs CTaps through a callback, and this callback is then translated
+to the appropriate application callback by CTaps.
+
+When opening a Listener, CTaps opens a socket and whenever data is received it is passed
+to picoquic. If the received data contains an attempt at creating a QUIC connection
+then picoquic will handle the setup and pass the resulting QUIC connection to CTaps.
+CTaps can then use this QUIC connection to create an inernal Connection, and invoke
+the \mono{ConnectionReady} callback from the Listener.
+When closing a Connection, picoquic is informed
+through \mono{picoquic_close} and it will wind down the connection, invoking a
+callback to CTaps when teardown has completed.
 
 As mentioned previously ALPN is mandatory for QUIC and is supplied to picoquic
 by CTaps through a configurable Security Parameter. ALPN is a negotiation
 between a QUIC server and client, therefore, both a Listener using QUIC and
-a client using QUIC has to take this parameter into account. For a client this
-is fairly straight forward, CTaps creates a picoquic connection and when
-necessary picoquic requests a list of protocols for ALPN through a callback
-to CTaps. However, for a Listener the ALPN implementation in picoquic does
-not perfectly line up with the expected behaviour of CTaps. Since each Listener
-represents a server, each Listener has a unique set of Security Parameters and
-can therefore potentially supports varying protocols for ALPN. However, for
-picoquic the ALPN negotiation of an incoming connection to a server while
-picoquic is in the process of building the connection. Picoquic lets the
-client supply a ALPN selection callback through the function
-\mono{picoquic_set_alpn_select_fn}. This callback is only supplied the
-global picoquic context and picoquic offers no functionality for fetching
-the connection which is currently being created or to which local endpoint
-the conneciton currently undergoing ALPN is trying to connect to. There is
-therefore no way of associating an incoming connection with a Listener
-and therefore way of knowing exactly which protocols are supported.
-ALPN therefore becomes more complicated and CTaps has to make a sacrifice
-in order to be able to perform it successfully. During development three
-primary alternatives were considered, creating a global context per-Listener
-instead of a single global one, accept any ALPNs supported by at least one
-Listener and redirect if it does not match the desired endpoint, or finally
-to dissalow different ALPNs between listener associated with a single
-context. \todo{Is this actually true, maybe the second option is the expected handling}
+a client using QUIC has to take this parameter into account. When initiating
+a connection, ALPNs are used as protocol options, and are therefore treated
+used to generate new combinations when gathering candidates. This is done
+because picoquic does not support multiple ALPNs when initiating a connection
+with 0-rtt, as the \mono{picoquic_create()} function only takes a single possible
+ALPN. If ALPN negotiation happens later through the \mono{picoquic_set_alpn_select_fn_v2}
+functionality, then it has to happen after a single RTT has already passed.
 
-The first option was rejected as it does not match the expected usage
-of picoquic, and degrades performance while introducing unecessary complexity.
-While the second option of redirecting would be the most client-friendly
-in terms that it would lead to the largest number of successfull connections
-to a server created by CTaps, the third option was chosen for several reasons.
-First of all, third option follows the principles of failing early and offering
-the least surprise to a server implemented in CTaps and to the client trying to
-connect. If a client has requested a specific endpoint, it would be both surprising
-and difficult to debug exactly why it was redirected if it knows that a server
-is running on a given endpoint. It would also be possible that the client
-supports more ALPN protocols than the server it is trying to connect to. If
-one of the protocols supported by another Listener is selected on connection,
-the client could be redirected even if it would accept an ALPN protocol which
-is supported by the Listener on the endpoint it is trying to connect to.
-By failing during setup of the server, this limitation of picoquic becomes
-immediately apparent to a developer setting up a Listener in CTaps, and
-necessary workarounds can be made of this is truly a problem.
-\todo{Write about how different CTaps contexts can be created to achieve
-differnet ALPN for servers of really desired}
+The implementation of the QUIC protocol implementation struct can be seen in
+\cref{lst:quic-protocol-impl-struct}.
 
-\begin{figure}[H]
+
+\begin{listing}[tbp]
 \begin{minted}{C}
-static ProtocolImplementation quic_protocol_interface = {
-    .name = "QUIC",
-    .selection_properties = {
-      .selection_property = {
-        get_selection_property_list(create_property_initializer)
-        [RELIABILITY] = {.value = {.simple_preference = NO_PREFERENCE}},
-        [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
-        [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = NO_PREFERENCE}},
-        [MULTISTREAMING] = {.value = {.simple_preference = NO_PREFERENCE}},
-        [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference = PROHIBIT}}, // Temporary - to make it easy to ban quic
-      }
-    },
-    .send = quic_send,
-    .init = quic_init,
-    .receive = quic_receive,
-    .close = quic_close,
-    .listen = quic_listen,
-    .stop_listen = quic_stop_listen,
-    .remote_endpoint_from_peer = quic_remote_endpoint_from_peer
+const ct_protocol_impl_t
+    quic_protocol_interface =
+        {.name = "QUIC",
+         .protocol_enum = CT_PROTOCOL_QUIC,
+         .supports_alpn = true,
+         .selection_properties =
+             {.list =
+                  {
+                      [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
+                      [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = REQUIRE}},
+                      [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PREFER}},
+                      [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+                      [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [MULTISTREAMING] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+                      [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+                      [CONGESTION_CONTROL] = {.value = {.simple_preference = REQUIRE}},
+                      [KEEP_ALIVE] =
+                          {.value = {.simple_preference = NO_PREFERENCE}},
+                      [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
+                                                                     NO_PREFERENCE}},
+                      [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
+                      [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+                  }},
+         .init = quic_init,
+         .send = quic_send,
+         .init_with_send = quic_init_with_send,
+         .listen = quic_listen,
+         .close_listener = quic_close_listener,
+         .close_connection = quic_close_connection,
+         .close_socket = quic_close_socket,
+         .abort = quic_abort,
+         .clone_connection = quic_clone_connection,
+         .free_socket_state = quic_free_socket_state,
+         .close_connection_group = quic_close_connection_group,
+         .set_connection_priority = quic_set_connection_priority,
+         .free_connection_state = quic_free_state,
+         .free_connection_group_state = ct_free_quic_connection_group_state
 };
 \end{minted}
 \caption{QUIC protocol implementation struct}
-\end{figure} \todo{Update on final code}
+\label{lst:quic-protocol-impl-struct}
+\end{listing}
 
 
-\subsection{Adding new protocols} \label{sec:addingNewProtocols}
+\subsection{Protocol complexity} \label{sec:protocolComplexity}
+As mentioned previously, the protocol implementations in CTaps differ
+greatly in complexity. This can be easily seen in the number of lines
+of code required to implement the protocol interface for each protocol,
+as seen in \cref{fig:protocolLoc}. In addition to the interface implementation
+of QUIC being \textasciitilde2.6 larger than that of TCP, QUIC support also requires a fairly
+complex external dependency to handle incoming and outgoing data instead of
+relying on built-in libuv support.
 
-When implementing a new protocol, all that is needed is an
-implementation of the struct, filling out the function pointers
-with custom behaviour for the given protocol. Libuv features
-designated handles for TCP and UDP support, while generic
-handles can be used for other protocols. 
-With the abstraction of the protocol interface, adding new protocols
-becomes fairly simple, depending on the complexity of the protocol
-itself.
+This increased complexity reflects primarily two things, lower degrees of toolchain
+support and an increase in the number of features provided.
+For the first point, the complexity to integrate QUIC into CTaps
+could likely be greatly reduced if if libuv integrated QUIC support into a custom handle
+like it has with UDP and TCP, but with the relative recent development of QUIC,
+this has not happened yet. For the second point it naturally follows that since
+QUIC offers several features not available through UDP or TCP such as multistreaming
+and connection migration, CTaps has to implement logic to make these features available
+to the application.
 
-New protocols can naturally be added to the core CTaps library,
-making the underlying protocol available to all consumers of CTaps
-when updating to the next release. However, new protoocls can also
-be added by run-time by consumers of the library \todo{Verify that this is actually true}.
-By writing a custom impelmentation of the protocol interface featured
-in CTaps and supplying a pointer to the interface through the CTaps
-function \mono{register_protocol}, then the protocol is added
-to the list of supported protocols, and it is featured in protocol
-selection, candidate gathering and candidate racing through the supplied
-selection properties and implementations of the protocol interface function
-pointers.
-
-\begin{figure}[H]
+\begin{figure}[tbp]
 \begin{center}
 \begin{tabular}{ ||l|l|c| } 
  \hline
  \textbf{Protocol}   & \textbf{Source files}             & \textbf{Lines of Code} \\ 
  \hline \hline
- UDP                 & \texttt{udp.h \& udp.c}                    & 263 \\ 
+ UDP                 & \texttt{udp.h \& udp.c}                    & 478 \\ 
  \hline
- TCP                 & \texttt{tcp.h \& tcp.c}                    & 344 \\ 
+ TCP                 & \texttt{tcp.h \& tcp.c}                    & 739 \\ 
  \hline
- QUIC                & \texttt{quic.h \& quic.c}                  & 743 \\
+ QUIC                & \texttt{quic.h \& quic.c}                  & 1904 \\
  \hline
 \end{tabular}
 \end{center}
 \caption{Overview of Lines of Code (LoC) on a per-protocol basis}
 \label{fig:protocolLoc}
-\end{figure} \todo{Update lines of code at end of development}
+\end{figure}
 
 \section{Testing} \label{testing}
 A core tenet since the very start of development was that the library should be
@@ -528,49 +563,53 @@ the use of automated testing, and continious integration. By writing automated t
 which run on every commit to the repository, it would be easy to see exactly which change
 has lead to a bug, making it far easier to fix. A well-tested library is also an absolute
 necessity when trying to attract external dependents, or to integrate it into a larger software
-library. This is especially important for large libraries such as TAPS, which abstract away
-large amounts of logic away from the application programmer, making it harder to detect bugs
-and know exactly where the problem in their application lies.
-
-Writing tests for an asynchronous networking library is not necessarily straight-forward.
-Both networking and asynchronous programming is not necessarily deterministic, which makes
-it harder to write reliable tests which can verify the library's expected behaviour. Another
-challenge is that there are not very many testing libraries available in pure C. Early on,
-it was therefore decided to write the tests in C++, which allows for interoperability with the C
-library, but would also allow for using a C++ testing library such as Google test. \cite{GoogleTest2025}
-This allows for a richer feature set than a simpler library or manually written tests in C,
-and allows for a richer set of assertions, verifying for example that the library fails in the expected
-manner when given invalid data.
+library. This is especially important for large libraries such as CTaps, which abstract away
+large amounts of logic away from the application, making it harder to detect bugs
+and know exactly where unexpected behaviour stems from.
 
 Tests are first separated into type and then into responsibility. When separating
 by type, the main types are integration tests and unit tests. Integration tests perform a larger check on the
-whole library and often actually interact with the network by sending packets or creating
-connections to a local server. \todo{Talk about how this is done, maybe via docker?}
+whole library and often only mock the system calls, or interact with with a real
+server over localhost.
+
 Unit tests perform a smaller check on individual functions, attempting to verify
 all logic and that differing branches are hit when expected, based on the input data.
 When dividing by responsibility, the testing stack largerly follows the same model
 as the main library, with test files separated by responsibility of the original
 file or struct that it is performing tests on.
 
+CTaps uses Google Test to make writing tests as easy as possible \cite{GoogleTest2025}.
+This is a C++ library which can easily be integrated with a C codebase using 
+\mono{extern "C"} linkage. Google Test makes a rich set of features such as
+test fixtures for standardizing behaviour for groups of tests. This is especially
+useful for CTaps integration tests where a single test fixture can be used to
+standardize how to start and teardown servers on localhost, which are
+required for several tests.
+
 A central concept when writing good tests is to isolate the component being tested from
-external libraries. This is important for several reasons. First of all, we are not interested
-in verifying the behavior of our external dependencies, as we have to assume that they
-work well in order to limit the scope of our testing. Secondly, we need to know that if
-an external library \textit{does} fail, we need to know that our library will handle it
-in the correct manner. Therefore we have to simulate that an external library fails and
-verify our applications behaviour in this case. All of these concerns are best met by
+external libraries. Both to limit the scope of our testing, but also to potentially
+simulate a failure to 
+check that CTaps handles an external library failure properly.
+All of these concerns are best met by
 mocking. Mocking is the concept of defining a custom behaviour for an external library
 or dependency when testing, instead of invoking the real library. By using this we can
 simulate the full range of behaviours from the external library and verify that our application
 reacts correctly, while also avoiding time-consuming API calls, making unit tests
-significantly faster. For mocking, CTaps decided on FFF, which is a small open-source
-framework for creating fake C functions when testing. \cite{longFakeFunctionFramework2025}
+significantly faster. For mocking, CTaps uses FFF, which is a small open-source
+framework for creating fake C functions when testing \cite{longFakeFunctionFramework2025}.
 FFF can either mock the external library functions, such as \texttt{uv\_getaddrinfo},
 which is the built in support for DNS lookup in libuv, or mock a call to a different
 function, which either contains a call to an external library, or which we are simply
 not interested in testing.
 
-\begin{figure}
+Mocking with FFF is especially useful when combined with wrapping
+symbols in the linker \cite{gnuLinkerManual}. This can be used to redirect all invocations of a funciton
+to a mock at link time, greatly simplifying the building of tests since symbol
+ambiguity no longer is an issue.
+
+An example of function mocking using FFF can be seen in \cref{lst:example-fff-mocking}.
+
+\begin{listing}[tbp]
 \begin{minted}{Cpp}
 DEFINE_FFF_GLOBALS;
 FAKE_VALUE_FUNC(int, uv_udp_bind, uv_udp_t*, const struct sockaddr*, unsigned int)
@@ -590,93 +629,97 @@ TEST(InitiationTests, respectsLocalEndpoint) {
 
 \end{minted}
 \caption{Example test mocking udp functions, using FFF}
-\end{figure}
+\label{lst:example-fff-mocking}
+\end{listing}
 
-\section{Build System}
-CTaps is built using CMake. CMake is used for both building the library
-and all tests.
-CTaps mimics other open source libraries such as libuv as much as possible,
+\section{Build System} \label{sec:build-system}
+CTaps is built using CMake and follows conventions around build
+and structure used by libuv
 in order to make the structure as familiar as possible. This includes
 having the API consist of a single header file, \mono{ctaps.h} which
-is included to expose all functionality intended to be used by an Application.
+is included to expose all functionality intended to be used by an application.
 CTaps is also compiled with visibility of all symbols set to hidden by default,
 with only the symbols marked as \mono{CT_EXTERN} being available in the final
-shared library file. This is done to hide internal state from external Applications,
-making it less complex to make use of CTaps for an external Application.
+shared library file. This is done to hide internal state from applications,
+making it clear which parts of the compiled object file are part of the
+external API and not.
 
-CTaps is built as a shared library. This means that the library is compiled
+By default CTaps is built as a shared library. This means that the library is compiled
 into a single shared object file. When compiling an Application using CTaps,
 this shared object file is not included in the compiled binary, instead the
 compiled binary looks for a shared object file at a given location at
 run time. This means that any Application depending on CTaps will by default
-have to include CTaps in its own binary, leading to a smaller file size. This
-is naturally dependent on the build configuration of the Application. 
+not include CTaps in its own binary, leading to a smaller file size, although this 
+is naturally dependent on the build configuration of the application. 
 The largest downside of a a dynamically
 linked Application is that it requires its users to have CTaps installed on their
 systems, in order for the Application find the correct symbols at run time.
 
 In addition to the smaller binary size, the largest upside of a dynamically
 linked application is that it is far easier to update its dependencies.
-If a new version of CTaps was released then an Application could update
-its dependency by swapping the local shared object file, without having
-to recompile the entire application. If the Application was statically linked
+If a new version of CTaps was released then an application could update
+its dependency by swapping the local shared object file without having
+to recompile the entire application.
+
+If the Application was statically linked
 then it would have to update its dependency and recompile. This would also mean
-that the entire Application would have to be redistributed, instead of simply
-having users update their CTaps installation whenever needed. This becomes
-very noticable in situations with critical updates, especially if multiple
-applications rely on CTaps. If a criticial security error was found in CTaps
+that the entire application would have to be redistributed instead of simply
+having users update their CTaps installation whenever needed.
+
+This is especially relevant for networking applications where security
+is a large concern. If a criticial security error was found in CTaps
 and it was statically linked
-then every user of downstream Application would have to update every Application
-using CTaps. If it was dynamically linked, then the user could simple update
+then every user of downstream application would have to update every application
+using CTaps. If it was dynamically linked, then each user would only have to update
 a single shared object file.
 
 As a limitation of scope in the original thesis description, CTaps is only
 targeted towards Linux. However, since I/O and other system calls are handled
 by libuv which does support windows, CTaps is likely very close to being
 Windows-compatible, but this has not been tested \cite{Libuv2025}.
-Certain aspects of the build system are Linux-specific, such as GCC's
-\mono{__attribute__((visibility("default")))}, but this could quite
-easily be adapted to a Windows build, as has been done with for example
-libuv.
 
-The library is distributed through GitHub.
+The library is distributed through GitHub \cite{cTaps}. No binaries
+are compiled by default, but the project can be downloaded directly
+in CMake using FetchContent, as exemplified in the CTaps example project
+\cite{ctaps-example-project}.
 
 \section{Dependencies}
-\subsection{Libuv}
-how CTaps integrates each one, the architectural consequences
+As with most libraries, CTaps has several external dependencies
+used to simplify the logic required to be implemented within CTaps itself.
+These are again divided into statically and dynamically linked dependencies.
+A description of the difference between statically linked and dynamically linked
+dependencies can be found in \cref{sec:build-system}. CTaps statically links against
+picoquic since it is a library very specific to CTaps, while it uses dynamic linking for
+more general dependencies which it expects application developers to have present
+on their machine. This includes GLib and libuv.
 
-\subsection{Glib}
-Glib kept out of public API
+Care has been taken to keep dependencies away from the external API. This means
+that when compiling CTaps, dependencies are required to be present on the compiling
+system, while downstream applications only require the runtime libraries  to be present.
+For dynamically linked dependencies such as
+libuv and GLib, this means the shared libraries must be installed on any system
+running an application built against CTaps.
 
-\subsection{Picoquic}
-QUIC engine, how it is used, why it was chosen, architectural consequences
-
-\subsection{Dynamically Linked Dependencies?} \todo{Are these actually dynamically linked?}
-
-\subsection{Statically Linked Dependencies}
-Minor software which does not provide a core functionality to CTaps
-is statically linked and is therefore distributed along with the
-compiled executable. \todo{Hvordan blir biblioteket egentlig formatert}
-This is done in order to make installation of
-CTaps as easy as possible. Since the libraries are small, they
-do not bloat the CTaps binary to the same degree as a larger library
-such as libuv would, if it were to be statically linked.
-
-\section{Scope and Limitations}
+\subsection{GLib}
+CTaps uses GLib implementations internally to avoid re-implementing generic
+data structures. This includes the candidate tree when performing candidate gathering
+and hash tables keeping track of Connections associated with a Connection Group.
+GLib could be avoided as a dependency altoghether by using simpler data structures or by
+implementing them internally in CTaps, but it was decided that to ensure correctness it
+was better to use an established library, avoiding the risk of introducing bugs
+by writing custom data structures.
 
 \section{Event Loop}
 CTaps is built around a single single-threaded event loop. This event
-loop is powered by libuv \cite{Libuv2025}. 
+loop is powered by libuv \cite{Libuv2025}. This event loop has to be
+started by the application thorugh a single blocking call to \mono{ct_start_event_loop();}
+which returns when the final libuv handle has been closed.
+
 This means that if the application invokes \mono{ct_preconnection_initiate},
-then CTaps will attempt to connect to the specified endpoint when the event
-loop is started. If this attempt is successful then an underlying handle
-listening on a Local Endpoint is active. This means that the event loop
-will not stop execution until this connection is closed.
+then CTaps will attempt to connect to the specified endpoint only when the event
+loop is started.
 
 Any behaviour that has to happen after an event loop is created has to be
 specified in the callbacks provided by CTaps. For example, if a Connection
-has to immediately send a message after successfully connection to an endpoint,
-then this behaviour has to be defined in the \mono{ready} callback, which is
-passed to a Preconnection through the \mono{ct_connection_callbacks_s} struct.
-
-\todo{Write more here if we move to per-state config}
+has to immediately send a message after successfully connecting to an endpoint,
+then this behaviour has to be defined in the \mono{ready()} callback.
