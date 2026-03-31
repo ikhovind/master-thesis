@@ -1,12 +1,9 @@
 \chapter{Background} \label{chap:background}
-\section{What are network sockets}
-Anyone perfoming any kind of low-level network programming in a UNIX
-environment are bound to have encountered sockets as they are by
-far the most prominent abstraction for network communication today.
-Sockets exist
+\section{Network sockets}
+Socket programming today exists in several forms and can
 in several forms, and can be used for both inter-process communication
-and network communication. 
-In its bost basic definition, a network sockets is an abstraction
+and network communication. When it comes to network programming,
+the network socket in its bost basic definition is an abstraction
 for a network connection, through which an application can send
 and receive data \cite[p. 8]{donahooTCPIPSockets2009}. 
 First mentioned in 1970 in relation to ARPANET, the
@@ -17,7 +14,8 @@ programming \cite{crockerNewHostHostProtocol1970}\cite[p. 502]{tanenbaumComputer
 
 Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
-the socket API primarily through the \texttt{sys/socket.h} header file.
+the socket API primarily through the \texttt{sys/socket.h} header file
+\cite{posix:2024:socket}.
 
 When creating a socket on an UNIX-like system, the application
 invokes the \texttt{socket} system call. This system call
@@ -30,21 +28,22 @@ addressing which will be used, for example \texttt{AF\_UNIX}
 for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
 example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
-for a reliable stream of bytes, the type usually corresponds to a
-single transport layer protocol, such as UDP or TCP.
+for a reliable stream of bytes. The type usually corresponds to a
+single transport layer protocol, usually UDP and TCP respectively.
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
 The fact that the application has to specify both the domain
 and the type of the socket means that both the
 underlying addressing and the protocol are bound at compile time.
-This means that the underlying transport protocol is very tightly
+The underlying transport protocol is therefore tightly
 coupled to the design of the application, and barring fairly
 advanced logic when setting up
 the necessary sockets, the application will be bound to a single 
-protocol and addressing scheme. Therefore, updating
-the underlying protocol will require a recompilation of the application. 
-Naturally, this makes adopting new protocols difficult, even
+protocol and addressing scheme. Updating
+the underlying protocol therefore requires at least recompilation and 
+probably a fairly large refactoring of the application. 
+This naturally makes adopting new protocols difficult, even
 if the new protocol is better suited to the application's requirements.
 
 Another challenge with new transport-layer protocols apart
@@ -112,10 +111,11 @@ require that both endpoints of a connection use TAPS, and TAPS
 can communicate with any endpoint which supports the underlying
 transport protocol being used.
 
-The following figure explains the API model when using
-sockets: \todo{Should these be here? If yes, recreate in tikz}
+The difference in API models for socket and for TAPS can be
+seen in \cref{fig:socket-programming-api-model} and
+\cref{fig:taps-api-model}.
 
-\begin{figure}[H]
+\begin{figure}[tbp]
     \centering
     \begin{lstlisting}
         +-----------------------------------------------------+
@@ -136,9 +136,10 @@ sockets: \todo{Should these be here? If yes, recreate in tikz}
         +-----------------------------------------------------+
     \end{lstlisting}
     \caption{API model for socket programming \cite{trammellAbstractApplicationProgramming2025}}
+    \label{fig:socket-programming-api-model}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[tbp]
     \centering
     \begin{lstlisting}
         +-----------------------------------------------------+
@@ -159,6 +160,7 @@ sockets: \todo{Should these be here? If yes, recreate in tikz}
         +-----------------------------------------------------+
     \end{lstlisting}
     \caption{API model for TAPS \cite{trammellAbstractApplicationProgramming2025}}
+    \label{fig:taps-api-model}
 \end{figure}
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
@@ -181,7 +183,7 @@ of a TAPS API in order to be in line with the TAPS specification,
 however these are not mandatory, and any TAPS system is therefore
 free to implement its internal workings as it sees fit.
 
-\begin{figure}[p]
+\begin{figure}[tbp]
     \centering
     \begin{lstlisting}
      +-----------------------------------------------------+
@@ -760,10 +762,10 @@ happens on a per-stream basis, so when multiplexing multiple
 streams over a single connection, the streams are independent of
 each other and we avoid head-of-line blocking.
 
-A given stream frame has the following format, as describted in
-RFC 9000:
+The format of a QUIC stream frame as described in RFC 9000 can
+be seen in \cref{lst:stream-frame-format}.
 
-\begin{figure}[H]
+\begin{listing}[tbp]
 	\centering
 	\begin{lstlisting}
         STREAM Frame {
@@ -775,8 +777,8 @@ RFC 9000:
         }
     \end{lstlisting}
 	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
-	\label{fig:stream_frame_format}
-\end{figure}
+	\label{lst:stream-frame-format}
+\end{listing}
 
 A given stream can exist in several different states.
 These states differ whether the stream is sending or receiving
@@ -794,7 +796,10 @@ A bidirectional stream consists of both sending and receiving parts,
 and can therefore exist in states belonging to both sending and
 receiving streams as described previously.
 
-\begin{figure}[H]
+A flow chart describing the QUIC stream state machine can be
+seen in \cref{fig:stream_states}.
+
+\begin{figure}[tbp]
     \centering
     \begin{lstlisting}
        o
@@ -1061,7 +1066,7 @@ from picoquic by using the method \mono{picoquic_get_next_wake_delay}.
 A more detailed description of the CTaps' QUIC implementation can be
 seen in \cref{sec:quicImpl}.
 
-
-\subsubsection{log.c}
-Logging
-https://github.com/rxi/log.c
+\subsection{log.c}
+Log.c is a small logging library which provides a simple API for
+formatting log messages of different levels of severity, either to
+stdout or to a dedicated logging file \cite{logc}.

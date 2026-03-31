@@ -45,7 +45,12 @@ In order to make the CTaps design as modular as possible,
 CTaps uses an internal interface to interact with the underlying protocol.
 This interface abstracts away the implementation details of the individual
 protocols and allows the upper layers to interact with the network in an
-asynchronous way. This interface consists of
+asynchronous way. This interface consists of the protocol name and certain
+protocol properties, a list of selection properties which is used
+when filtering candidates during Candidate Gathering, as well as
+a list of function pointers invoked when interacting with the protocol.
+The full defintion of the protocol interface struct can be seen in
+\cref{lst:protocol-impl-struct}.
 
 A single protocol is implemented as a single implementation of the interface.
 Together with providing implementations of the interface protocols, it also
@@ -53,7 +58,7 @@ has to register a list of settings for each selection protocol. These settings
 indicate which properties the given protocol can fulfill, which is used 
 when filtering candidates during candidate gathering.
 
-\begin{figure}[H]
+\begin{listing}[tbp]
 \begin{minted}{C}
 typedef struct ct_protocol_impl_s {
     const char* name;                               ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
@@ -102,7 +107,8 @@ typedef struct ct_protocol_impl_s {
 } ct_protocol_impl_t;
 \end{minted}
 \caption{Protocol Implementation interface}
-\end{figure}
+\label{lst:protocol-impl-struct}
+\end{listing}
 
 \subsection{Socket Manager} \label{sec:socketManager}
 In order to manage sockets, CTaps uses a structure it refers to as a Socket Manager
@@ -114,7 +120,7 @@ In order to achieve this the Socket Manager contains a counter for the
 number of objects still using it. This counter is decremented when the
 memory associated with one of the objects using the Socket Manager is
 freed. If this counter reaches 0, then the entire Socket Manager structure
-is freed, as can be seen in \cref{fig:socketManagerRefCount}.
+is freed, as can be seen in \cref{lst:socketManagerRefCount}.
 
 Socket Managers
 are also responsible for closing sockets when the final associated Connection
@@ -126,7 +132,7 @@ of the socket are implemented as two separate operations so that the application
 can still query for internal state, such as the underlying protocol, after
 a Connection or Listener has been closed.
 
-\begin{figure}[tbp]
+\begin{listing}[tbp]
   \begin{minted}{C}
 void socket_manager_decrement_ref(SocketManager* socket_manager) {
   socket_manager->ref_count--;
@@ -141,8 +147,8 @@ void socket_manager_decrement_ref(SocketManager* socket_manager) {
 }
   \end{minted}
   \caption{Internal Socket Manager counter decrementation}
-  \label{fig:socketManagerRefCount}
-\end{figure}
+  \label{lst:socketManagerRefCount}
+\end{listing}
 
 
 \subsection{Supported protocols}
@@ -419,8 +425,7 @@ can be seen in \cref{sec:picoquic}.
     node[lbl, right, midway] {Data received from socket};
 
 \end{tikzpicture}
-\caption{CTaps QUIC event loop: picoquic handles protocol logic and drives scheduling,
-         while libuv manages the raw socket and timer.}
+\caption{Flow of data between CTaps, libuv and picoquic.}
 \label{fig:ctaps-quic-loop}
 \end{figure}
 
@@ -523,7 +528,7 @@ const ct_protocol_impl_t
 As mentioned previously, the protocol implementations in CTaps differ
 greatly in complexity. This can be easily seen in the number of lines
 of code required to implement the protocol interface for each protocol,
-as seen in \cref{fig:protocolLoc}. In addition to the interface implementation
+as seen in \cref{tab:protocolLoc}. In addition to the interface implementation
 of QUIC being \textasciitilde2.6 larger than that of TCP, QUIC support also requires a fairly
 complex external dependency to handle incoming and outgoing data instead of
 relying on built-in libuv support.
@@ -538,7 +543,7 @@ QUIC offers several features not available through UDP or TCP such as multistrea
 and connection migration, CTaps has to implement logic to make these features available
 to the application.
 
-\begin{figure}[tbp]
+\begin{table}[tbp]
 \begin{center}
 \begin{tabular}{ ||l|l|c| } 
  \hline
@@ -553,8 +558,8 @@ to the application.
 \end{tabular}
 \end{center}
 \caption{Overview of Lines of Code (LoC) on a per-protocol basis}
-\label{fig:protocolLoc}
-\end{figure}
+\label{tab:protocolLoc}
+\end{table}
 
 \section{Testing} \label{testing}
 A core tenet since the very start of development was that the library should be
@@ -708,6 +713,14 @@ GLib could be avoided as a dependency altoghether by using simpler data structur
 implementing them internally in CTaps, but it was decided that to ensure correctness it
 was better to use an established library, avoiding the risk of introducing bugs
 by writing custom data structures.
+
+\subsection{log.c}
+CTaps uses a small logging library, log.c, in order to create structured logs
+which can be easily filtered by level \cite{logc}. CTaps wraps the internal
+functionality of this library through the \mono{ct_set_log_level()} and
+\mono{ct_add_log_file()} which allows an application to control the logs
+output by CTaps. Since log.c is a very small library, the source files are simply included
+in the CTaps repository and compiled along with the CTaps library for simplicities sake.
 
 \section{Event Loop}
 CTaps is built around a single single-threaded event loop. This event

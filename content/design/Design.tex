@@ -453,19 +453,19 @@ a callback. If a callback is registered on a Connection which has not received
 any messages, the Connection will queue the callback and invoke it the next
 time a message is received. If the Connection already has received a message,
 then the callback will be invoked immediately. The function signature for
-receiving messages on a connection can be seen in \cref{fig:connection-queue-receive}
-and the structure of the passed callbacks can be seen in \cref{fig:connection-receive-callback}.
+receiving messages on a connection can be seen in \cref{lst:connection-queue-receive}
+and the structure of the passed callbacks can be seen in \cref{lst:connection-receive-callback}.
 
-\begin{figure}[tbp]
+\begin{listing}[tbp]
   \begin{minted}{C}
 int ct_receive_message(ct_connection_t* connection,
                        const ct_receive_callbacks_t* receive_callbacks);
   \end{minted}
   \caption{Function signature for queueing a receive on a connection}
-  \label{fig:connection-queue-receive}
-\end{figure}
+  \label{lst:connection-queue-receive}
+\end{listing}
 
-\begin{figure}[tbp]
+\begin{listing}[tbp]
   \begin{minted}{C}
 typedef struct ct_receive_callbacks_s {
   /** @brief Called when a complete message is received. */
@@ -481,8 +481,8 @@ typedef struct ct_receive_callbacks_s {
 } ct_receive_callbacks_t;
   \end{minted}
   \caption{Callback structure passed when receiving on a connection}
-  \label{fig:connection-receive-callback}
-\end{figure}
+  \label{lst:connection-receive-callback}
+\end{listing}
 
 \subsection{\texttt{ct\_framer\_impl\_t}}
 In CTaps, the Framer interface consists of a structure of function pointers,
@@ -495,10 +495,10 @@ Message data itself is owned by the protocol stack. This means that the
 framer can modify the message in place and does not have to allocate new
 memory, unless it is extending the length of the message.
 
-An example
-implementation from the CTaps framing tests can be seen in \cref{fig:framingTestImpl}.
+The framer interface as defined in CTaps can be seen in \cref{lst:framer-struct-def},
+while an example implementation from the CTaps framing tests can be seen in \cref{lst:framingTestImpl}.
 
-\begin{figure}[tbp]
+\begin{listing}[tbp]
 \begin{minted}{C}
 // Message Framer Implementation Interface
 struct ct_framer_impl_s {
@@ -518,9 +518,10 @@ struct ct_framer_impl_s {
 };
 \end{minted}
 \caption{Framer structure definition from ctaps.h}
-\end{figure}
+\label{lst:framer-struct-def}
+\end{listing}
 
-\begin{figure}[p]
+\begin{listing}[tbp]
   \begin{minted}{C}
 static void length_prepend_encode(ct_connection_t* connection,
                                    ct_message_t* message,
@@ -557,8 +558,8 @@ static ct_framer_impl_t length_prepend_framer = {
 
   \end{minted}
 \caption{Example Framer implementation structure from the CTaps framing tests}
-\label{fig:framingTestImpl}
-\end{figure}
+\label{lst:framingTestImpl}
+\end{listing}
 
 \section{Connection Termination}
 Since both aborting and closing Connections may involve over-the-wire teardown,
