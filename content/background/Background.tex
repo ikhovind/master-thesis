@@ -54,14 +54,16 @@ Network middleboxes have have been
 optimized to support TCP and UDP, and may sometimes
 even drop packets if they contain another transport layer protocol.
 The resulting difficulty in innovating on the transport-layer
-due to network growing accustomed to the current state of things
-is known as network ossification. Due to this network ossification,
-most new protocols are built on top of UDP.
+is known as network ossification. Several new protocols such
+as UDP-lite and QUIC are built on top of UDP in order to combat
+this ossification.
 
-Due to UDP's simplicity, it presents very little overhead
-and applications can themselves implement needed features
+While using UDP as a substrate does present some overhead,
+it is fairly minimal with only an 8 bytes.
+
+Applications can themselves implement needed features
 such as reliability and congestion control.
-This has become so common that
+This way of designing new protocols has become so common that
 it has prompted an official RFC from the IETF, describing
 the best practices for implementing congestion control on top of UDP 
 \cite{eggertUnicastUDPUsage2008}.
@@ -72,44 +74,46 @@ services to an upper-layer protocol or application. In the context of
 networking, these services encompass transporting data from one endpoint
 to another, with the individual features of a transport service deciding the behavior of
 this service, for example when experiencing packet loss, packet reordering
-or other issues. Which transport services are provided by which transport
+or other issues. For example, TCP provides a guarantee of reliable
+delivery, while UDP provides no such guarantee.
+
+At their core, transport layer protocols are chosen based
+on the services provided to the application, not because of the
+protocols themselves. If an application requires that the
+transferred data is received as an in-order stream, then
+any protocol offering that as a service to the application layer
+could function as a transport layer protocol, and swapping the
+underlying transport layer protocol should in theory be simple.
+
+This concept of exactly which services each transport layer protocol
+provides to the application layer is known as Transport Services.
+Exactly which Transport Services are provided by which transport
 protocols has been mapped by the IETF in RFC8095, as part of the
 TAPS working group \cite{fairhurstServicesProvidedIETF2017}.
 
 \section{What is TAPS}
-Solving the problem with the strong coupling between application
-level code and the underlying transport protocol
-is one of the key goals of TAPS. This will allow faster adaptation
+The TAPS WG is an IETF working group which aims to solve the strong
+coupling between application
+level code and the underlying transport protocol through
+focusing on Transport Services. This is intended to allow faster adaptation
 of new protocols and abstract away network-layer details from the
 application layer. From the application's point of view, this
 means that it will be able to gain access to new protocols, such
 as QUIC, without having to implement its own fallback logic
-in cases where QUIC is not available. It will also simplify
-the networking logic, tying it more closely to how modern
-applications actually use the network.
+in cases where the new protocl is not supported by the remote.
+It will also simplify the required networking logic by
+tying it more closely to how modern applications actually interact the network.
 
 Despite being implemented in user-space, TAPS conceptually resides
 in the transport layer. TAPS provides convenience to the application
 layer by expanding the responsiblity of the transport layer. Instead
-of the application layer being responsible for resolving addresses,
-for example through DNS, or being responsible for chosing the specific
-transport layer API to use, TAPS provides a unified interface, which
-both handles simple interactions with the network for resolving hostnames,
+of the application layer being responsible for resolving addresses and
+for chosing the specific transport layer API to use,
+TAPS provides a unified interface which
+both handles simple interactions with the network for resolving hostnames
 in addition to unifying the transport protocol APIs. This minimizes
 how much the application layer has to adapt to the underlying transport
 layer, and minimizes the coupling between the two layers.
-\todo{Michael hadde en presentasjon om "problemene" med transportlaget i IN4230, sjekk om den har noe relevant}
-
-Transport Services (TAPS) is a \say{application Programming Interface 
-(API) to the transport layer that enables the selection of 
-transport protocols and network paths dynamically at runtime}
-\cite{trammellAbstractApplicationProgramming2025}. TAPS is
-designed to remove the compile-time binding to transport layer
-protocols, enabling updates to underlying transport protocols
-without having to rewrite application logic. TAPS does not
-require that both endpoints of a connection use TAPS, and TAPS
-can communicate with any endpoint which supports the underlying
-transport protocol being used.
 
 The difference in API models for socket and for TAPS can be
 seen in \cref{fig:socket-programming-api-model} and
@@ -164,16 +168,15 @@ seen in \cref{fig:socket-programming-api-model} and
 \end{figure}
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
-RFC 9621 describes the architecture of and a set of requirements
-for TAPS. \cite{paulyArchitectureRequirementsTransport2025}
-A diagram of this architecture can be seen in \cref{fig:tapsArch}.
+RFC 9621 describes the underlying architecture of and a set of requirements
+for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch} \cite{paulyArchitectureRequirementsTransport2025}.
 A TAPS system consists of two primary parts, the Transport Services
 API and the Transport System Implementation. The Transport Services
 API is the public facing API used by the Application. This contains
 concepts defined in RFC 9622 such as a Preconnection, a Connection
 Messages or Events being transferred between TAPS and the Application.
 
-The Transport System Implementation consists of the internal workings
+The Transport System Implementation is the internal workings
 of a TAPS system. This consists of services which are provided to the
 public API, such as data transfer or Candidate Racing. The TAPS RFCs
 do not prescribe an actual detailed implementation of the Transport
@@ -253,7 +256,7 @@ Each of these phases are associated
 with one or more of the \textit{groups of actions} that an application can perform,
 as described above. 
 
-After the desired transport properties and cryptographic parameters have
+After the desired Transport Properties and cryptographic parameters have
 been set during the preestablishment phase, a connection can be established. 
 When a Connection is in the established phase the Connection can be used to
 transfer data. 
@@ -264,11 +267,12 @@ establishing a connection: \textit{initiate}, \textit{listen} and
 
 \textit{Initiate} is used to establish a connection to a remote endpoint which
 is assumed to be listening for incoming connections. How this connection
-is established under the hood, is dependent on the underlying transport
-protocol, which has been selected based on the specified transport properties.
+is established internally is dependent on the underlying transport
+protocol, which has been selected based on the specified Transport Properties.
+The Created Connection object is passed to the application through a callback.
 
 \textit{Listen} is used to passively open a connection. This is done in order to
-wait for connections from remote endpoints. Listen returns a listener
+wait for connections from remote endpoints. Listen creates a Listener
 object. When a remote endpoint connects to this listener, a \texttt{ConnectionReceived}
 event occurs. This event contains a Connection object for the 
 established connection.
@@ -280,18 +284,16 @@ After a Connection has been established, it can either
 be closed or aborted, with closing being associated with normal termination,
 and aborting being abnormal termination associated with errors.
 
-If a single application has multiple connections, these can be organized
-into connection groups. Connection groups represent a set of connections
-which shared connection properties and state generated by the underlying
-transport protocols. Connections in the same connection group can be
-multiplexed together, in order to more efficiently utilize the available
-bandwith.
+One or more Connection can be organized into a Connection Group. THese
+are used to group related connections together, which have been created
+by cloning. Connections in the same connection group can be
+multiplexed together if this is supported by the underlying protocol.
 
 In addition to the Connection, TAPS also provides several other objects
 abstracting key elements. For example Endpoint objects and Message objects.
 
-\subsubsection{Framers}
-In TAPS, a Framer is a concept responsible for briding the TAPS concept
+\subsection{Framer}
+A Framer is another key concept within TAPS. A Framer is responsible for briding the TAPS concept
 of a Message, with the underlying protocols concept of either a data stream
 or a datagram. In their simplest form, a Framer is responsible for encoding
 or decoding outgoing and incoming data, as well as sending any data necessary
@@ -315,7 +317,8 @@ delimeter-separated formats, where the beginning and end of a piece of
 data is separated by delimeters. \cite{brunstromImplementingInterfacesTransport2025}
 Examples of the two categories are HTTP/1.1 for a delimeter-separated format
 and DHCP for TLV, specifying the length of the given hardware address, allowing
-parsers which are unfamiliar with the type to skip it, since the length is known. \cite{dromsDynamicHostConfiguration1997}
+parsers which are unfamiliar with the type to skip it, since the length is known
+\cite{dromsDynamicHostConfiguration1997}.
 
 For a TAPS system, where the appliaction layer should not need to take into
 account which application layer protocol it is running on top of, Framers become
@@ -327,7 +330,7 @@ datagram by using the same formatting as it would for a stream-based protocol.
 Conceptually, a framer resides on a separate layer between a Connection and the
 underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
 
-\begin{figure}[p]
+\begin{figure}[tbp]
   \begin{lstlisting}
      Initiate()   Send()   Receive()   Close()
        |          |         ^          |
@@ -356,47 +359,29 @@ underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
 \label{fig:tpsStack}
 \end{figure}
 
-A TAPS system should also support adding multiple framers to a preconnection.
-In this case, the framers run as a stack, with the last one added running first
-for outgoing messages and last for incoming ones. Conceptually, this would
-simply introduce more layers into the stack, as shown in \cref{fig:tpsStack}.
-
 Framers can also be configured on a per-message basis using a MessageContext.
 This MessageContext can for example be used to pass the type of a message
 to a Framer if the framer needs it to follow a TLV format.
 
-\subsection{Selecting the transport protocol}
-TAPS selects the underlying transport protocol by
-letting the application specify a set of requirements
-and preferences for the Connection behavior. This set of requirements
-and preferences are known as \textit{Transport Properties}. These transport
-properties can again be divided into three categories: \textit{selection
-properties}, \textit{connection properties} and \textit{message properties}. 
+\subsection{Transport Properties}
+Transport Properties are properties which are set in TAPS in order to either
+influence which transport protocol should be used, or how the select transport
+protocol should behave during the lifetime of the Connection.
 
-\begin{itemize}
-    \item \textit{Selection
-properties} are properties used to select the path and protocol stack
-to use for a given connection. 
+\subsubsection{Selection Properties}
+Selection properties are the subset of Transport Properties which
+used to select the protocol stack
+to use for a given connection when performing candidate gathering as described
+in \cref{sec:candidate-gathering}.
 
-    \item \textit{Connection properties} are used
-during Connection establishment and to define the behavior of the
-established Connection. 
-
-    \item \textit{Message properties} are settings set on an
-individual message. 
-\end{itemize}
-
-Typical transport properties are specified as
+Typical Selection Properties are specified as
 a \textit{preference}, with the possible values being \textit{require},
 \textit{prefer}, \textit{no preference}, \textit{avoid} and \textit{prohibit}.
 \textit{Require} means that the Connection establishment will fail if the property cannot
 be satisfied, while \textit{prefer} will allow the application to continue.
 This distinction is mirrored in the difference between \textit{prohibit} and \textit{avoid}.
-Not all transport properties are set as a preference, and are
+Not all Selection Properties are set as a preference,
 instead specified for example as a boolean, an integer or an enum value.
-A full list of transport properties can be found in the Architecture and Requirements for
-Transport Services RFC
-\cite{paulyArchitectureRequirementsTransport2025}.
 
 An example of a selection property is Reliable Data Transfer.
 This property is used to specify whether or not the application
@@ -407,79 +392,38 @@ which guarantees this, such as TCP or QUIC. Setting this as
 \textit{prohibit} will force TAPS to use a protocol which does not
 guarantee this, such as UDP.
 
+\subsubsection{Connection Properties}
+Connection Properties are the subset of Transport Properties which
+are used to control the behavior of the underlying protocol after
+a Connection has been established.
 
 An example of a connection property is Timeout for Aborting Connection.
 This property is used to specify the how long to wait before deciding that an
 active connection has failed when trying to reliably deliver data to the Remote Endpoint.
 This naturally can only take effect if the underlying protocol supports reliability.
 
-An example of a message property is \texttt{priority}. This property specifies
-the prority of a given message relative to other messages over the same connection.
-Lower priority message will yield in favor of higher priority messages.
+\subsection{Message Properties}
+Message properties are settings set on an
+individual message. These are used to set the behavior
+of a single message when transferring data, but does
+not affect any other messages transferred by the Connection.
 
-TAPS is designed to provide an interface which more accurately
-reflects how a typical application uses the network. Socket programming
-is for example blocking by default, while most modern applications
-tinteract with the network in an asynchronous way 
-\cite{trammellAbstractApplicationProgramming2025}.
-
-An additional
-example of how TAPS is designed to reflect how applications
-use the network is that TAPS is message-oriented. 
-Being stream-oriented or message-oriented has to do with how the
-transferred data is represented. In a stream oriented protocol
-such as TCP, the data is represented as a stream of bytes. From
-the application's point of view, the data arrives continuously
-and not in discrete chunks. This means that the application
-cannot easily differentiate between different messages. 
-
-TCP has to
-handle  data arriving in discrete IP packets and glue them together into
-a stream of bytes. This also includes handling messages arriving
-out of order, which has to be handled before they can be
-presented as a stream in order.
-Since most applications
-use the network in a message-oriented way, they
-have to include delimiters and other logic to separate TCP 
-data into discrete messages. For example, several protocols
-such as HTTP contain length fields, which are used to delimit
-transferred data. 
-
-This is the reason why TAPS is designed to be message-oriented,
-as it simplifies the logic needed for most applications to
-use the network in the desired way. Despite being message-oriented,
-TAPS can still support applications reliant on 
-streaming through the use of \textit{framers}.
-
-A framer is a data translation layer, which is used to define
-how encapsulate or encode outbound message, and how to decapsulate
-or decode inbound messages. This for example allows applications
-to receive a byte stream as input if needed.
-
-TAPS is backwards compatible with existing protocols as it does not
-define how these underlying protocols should transfer data over
-the network. TAPS is also designed to coexist with existing
-socket programming APIs, allowing a gradual transition from
-socket programming to TAPS.
-
-Another key feature difference between TAPS and sockets is that socket
-APIs are commonly limited to communicating with a single address over 
-a single interface. TAPS is deisgned to handle multiple endpoints,
-protocols and paths.
-
+An example of a Message Property is \mono{Safely Replayable}.
+This property is used to let TAPS know that a message is idempotent
+and does not pose a risk if it is replayed to the endpoint. This
+is for example a requirement for QUIC 0-RTT, in order to mitigate
+the risk of replay attacks.
 
 \subsection{TAPS configurations explained}
-
 As mentioned above, TAPS allows the application to control
 both the behavior and selection of the underlying transport
 protocol through the use of \textit{Transport Properties}.
 
-In addition to the basic transport properties such as reliability
+In addition to the basic Transport Properties such as reliability
 or timeout, TAPS also exposes several more advanced
-transport properties. These are still useful to understand,
-and a selection of the more advanced properties are explained below:
+Transport Properties and these are explained below.
 
-The \texttt{Multistream Connections in Group} selection property
+The \texttt{Multistream Connections in Group} Selection Property
 allows the application to select whether the
 application would prefer multiple Connections within a
 Connection Group to be provided by streams of a single
@@ -495,19 +439,20 @@ window already achieved, without having to wait for slow start
 to ramp up. This is especially useful for applications with many
 small streams of data, such as web browsers.
 
-The \texttt{Full Checksum Coverage on Sending} and \texttt{Full
-	Checksum Coverage on Re\-ceiving} selection properties specify
+The \mono{Full Checksum Coverage on Sending} and equivalent
+Selection Property for receiving,
+\mono{Full Checksum Coverage on Receiving}, specify
 the application's need for protection against corruption for all
 data transmitted or received on a given connection. This is used
 to specify how many bytes of the message which needs to be
 protected by a checksum. This checksum is used to protect the
 data from corruption caused by lower-layer protocols. The
-setting \texttt{Full coverage} means that the entire message is
-protected, while \texttt{0} specifies no checksum is required.
-If any other value than \texttt{Full coverage} is specified, the
-connection may still fall back to \texttt{Full coverage}.
+setting \mono{Full coverage} means that the entire message is
+protected, while \mono{0} specifies no checksum is required.
+If any other value than \mono{Full coverage} is specified, the
+connection may still fall back to \mono{Full coverage}.
 
-The \texttt{Provisioning Domain Instance or Type} selection
+The \mono{Provisioning Domain Instance or Type} selection
 property allows the application
 to control path selection by selecting for specific Provisioning
 Domain or categories of domains
@@ -566,40 +511,30 @@ transport protocol supports switching between ordered and
 unordered delivery of messages. This can for example be
 supported by an implementaiton of QUIC, but it is not mandatory.
 
-\subsection{Candidate Gathering}
+\subsection{Candidate Gathering} \label{sec:candidate-gathering}
 When initiating a preconnection, a TAPS system will gather a
-set of candidates for establishing a connection. This process
-is known as Candidate Gethering. The candidates are based on
+list of candidates for establishing a connection. This process
+is known as Candidate Gathering. The candidates are based on
 the specified local and remote endpoints of the preconnection,
 as well as the protocols which are available to use. 
-One of the key tenets of TAPS is to support multiple protocols,
-it also allows the user to specify both several local and remote endpoints,
-in addition to specifying remote endpoints by hostname, which
-may resolve into several IP addresses, a single preconnection
-can have many possible combinations of protocol, local and 
-remote endpoints. Therefore, when intitating a preconnection,
-a TAPS implementation needs a way of representing these various
-combinations.
 
 RFC9623 conceptualises these combinations as a tree,
-with a root node representing the final connection, the
-first level of child nodes representing the possible network paths,
-which is represented by the possible interfaces given by
-any local endpoints specified \cite{brunstromImplementingInterfacesTransport2025}.
-\todo{Ask Michael if this is true}
-The second level of child nodes represent the possible protocols
-which can be used.
+with the first level of child nodes representing the
+possible Local Endpoints, which are resolved to possible local IP
+addresses when building the tree \cite{brunstromImplementingInterfacesTransport2025}.
+The second level of the candidate tree represent the possible protocol
+options which can be used. This includes not only the protocol
+itself, but also any combination of options for this protocol which
+influence connection establishment, such as ALPN values.
+
 The third and final level of child nodes represent any resolved
-endpoints. as mentioned before, a single hostname can resolve 
-into multiple addresses, both IPv4 and IPv6.
-Each leaf node in this tree represents a single candidate
-which can be used to establish a connection.
+Remote Endpoints, which have been resolved into specific IP addresses.
 
 Which branches are possible at each level can be restricted
-by the use of selection properties. For example, if the
-selection property for reliability is set as "require",
-then no branch representing UDP will be featured in the
-second level of the final tree. The possible types of interfaces
+While the primary use of Selection Properties are to restrict
+which protocols are selected, they can also be used to affect
+other layers in the Candidate Gathering tree.
+For example the possible types of interfaces
 in the first level can be restricted via the "interface" selection
 property and the possible addresses resolved in the third level can
 for example be restricted by requiring the use of temporary local
@@ -620,15 +555,16 @@ After all the candidates have been gathered and sorted, a single candidate
 needs to be selected to be used for this connection. This is done
 through Candidate Racing.
 
-
 \subsection{Candidate Racing} \label{candidateRacing}
 When a tree or other representation of the candidates has
 been constructed, a single candidate needs to be selected for use
-by the final application. This is done through a process known as
-Candidate Racing. Candidate Racing is the process of negotiating
+by the final application. This is done through
+Candidate Racing. Candidate Racing is the process of establishing
 a connection using a single protocol over a single path with
 a single endpoint as quickly as possible, optimizing for the
-user requirements while minimizing the network load \cite{brunstromImplementingInterfacesTransport2025}.
+user requirements while minimizing the network load
+\cite{brunstromImplementingInterfacesTransport2025}.
+
 This is achieved by trying to establish connections with
 the various candidates and finally selecting one of them.
 The exact process of racing the candidates and selecting
@@ -649,9 +585,11 @@ network load.
 Staggered racing is the process of trying to establish connections
 with several candidates at once, but with a delay between the start
 of each candidate. This delay is configurable, but should be based
-on the expected amount of time for the handshake \cite{brunstromImplementingInterfacesTransport2025}. 
+on the expected handshake time
+\cite{brunstromImplementingInterfacesTransport2025}. 
 Since the most desirable candidate will be raced first, it
-can be chosen if it connects successfully, limiting the amount
+can be chosen if it connects successfully thereby limiting the
+number
 of needed attempts to find a connection. When racing IP addresses,
 TAPS implementations should follow the algorithm described
 in RFC 8305 \cite{schinaziHappyEyeballsVersion2017}. The relevance
@@ -667,41 +605,21 @@ has successfully established a connection with a remote endpoint, or
 when all candidates have failed. 
 
 \section{Happy Eyeballs} \label{happyEyeballs}
-Happy Eyeballs, which is described in RFC 86305 is named after the
-goal of the algorithm, which is to "reduce user-visible delays on dual-stack hosts"
+Happy Eyeballs, which is described in RFC 86305 is an algorithm
+for racing IPv4 and  IPv6 addresses on dual-stack hosts
 \cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering
 and Candidate Racing algorithm found in TAPS is based on Happy Eyeballs,
-so they share a lot of central features, however, Happy Eyeballs is
-primarily concerned with racing IPv4 and IPv6 addresses.
+so they share a lot of central features.
 Happy Eyeballs implements a staggered racing algorithm with a preference for
 IPv6, but uses interleaved IPv6 and IPv4 addresses in order to maximize
 IPv6 usage but minimize latency due to IPv6 brokenness.
 
-While there are many reasons to try to adopt IPv6 as broadly as
-possible, there are however still several problems, meaning that fallback to
-IPv4 still has to be an option. While clients and servers should prefer using
-IPv6, adoption has been slow, and the failure has historically been
-observed to be higher than for Ipv4 %\cite{hustongeoffISPColumn}.
-This potential brokenness of IPv6 and the consideration that in certain
-situations IPv4 can provide a better user experience than IPv6
-has led to the development of the Happy Eyeballs algorithm.
-There exists several versions of Happy Eyeballs, with the
-first version being published in 2012 and describes an algorithm
+The first version of Happy Eyeballs was published in 2012 and describes an algorithm
 for racing an IPv4 and IPv6 connection to a server, giving a preferential
 head start to the IPv6 connection \cite{wingHappyEyeballsSuccess2012}.
 Happy Eyeballs version 2 improves
 upon problems within Happy Eyeballs version 1 by also racing the
 IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking \cite{schinaziHappyEyeballsVersion2017}.
-
-Happy Eyeballs is named after the goal of the algorithm, which
-is to improve the experience of the end user of the network.
-The basic concept is the same for every version, it
-starts two staggered connections, with a slight head start for the IPv6
-version, and then uses the connections which first succeeds.
-This can also be implemented to race several IP addresses of the
-same version in cases where the DNS results contain more than one
-result for each version. In this case, IPv6 and IPv4 are interlaced,
-avoiding issues with long delays in cases where IPv6 may not work at all.
 
 This concept of racing is a central concept of TAPS, where it is
 taken one step further to also races all combinations of local interface,
@@ -728,39 +646,28 @@ or if it has to made by TCP for example. This will not only lead to
 an improved user experience, but also handle fallback-logic which otherwise
 would have to be written on a per-application basis.
 
-The details of the impelmentation of Candidate Racing in CTaps
-is discussed in \cref{sec:candidateRacing}
-
-
-\section{What is quic}
-
-QUIC is a internet protocol developed by Google, released to the
+\section{What is QUIC}
+One of the key elements of TAPS is to make new transport protocols
+easier to adopt, and one of the most important recent innovations on the
+transport layer is QUIC.
+QUIC is a protocol developed by Google released to the
 public in 2013 described in RFC 9000
 \cite{iyengarQUICUDPBasedMultiplexed2021}. QUIC is a transport
 layer protocol which is designed to be a replacement for TCP.
 QUIC is a connection-oriented protocol which is built on top of
-UDP. QUIC enables 0-RTT connection establishment and integrates
-encryption as a mandatory feature of the protocol.
+UDP. QUIC enables 0-RTT connection establishment, multistreaming
+and integrates encryption as a mandatory feature of the protocol.
 
-The abstraction presented to an application for communication
-via QUIC is called a stream. A stream is an either either
+While QUIC does present an overarching connection, the
+abstraction for each actual data transfer is called a stream
+A stream is an either either
 unidirectional or biderectional ordered stream of data, much
 like what an application sees when using TCP. Streams can be created and
 closed by either endpoint, and multple streams can exist over a
-single QUIC connection. This is an example of the concept of
-multiplexed connections. Individual pieces of data sent over a
-stream are encapsulated as stream frames. The stream frame boundaries
-are not expected to be preserved, and are therefore not visible
-to the application.
-
-By using the stream ID and the byte offset of the stream frame,
-the receiving endpoint reassembles the data into the correct
-order. All implementations must support in-order delivery of
-data, they may choose to allow out-of-order delivery of data as
-well, but this is not a requirement of the protocol This only
-happens on a per-stream basis, so when multiplexing multiple
-streams over a single connection, the streams are independent of
-each other and we avoid head-of-line blocking.
+single QUIC connection. QUIC mandates support for in-order deliver within a single
+stream, but not between streams. This way, a new straem can be
+used for each object transferred, solving the issue of
+head-of-line blocking which is present in TCP.
 
 The format of a QUIC stream frame as described in RFC 9000 can
 be seen in \cref{lst:stream-frame-format}.
@@ -795,6 +702,8 @@ receiving stream are:
 A bidirectional stream consists of both sending and receiving parts,
 and can therefore exist in states belonging to both sending and
 receiving streams as described previously.
+
+% TODO GOT HERE ? 
 
 A flow chart describing the QUIC stream state machine can be
 seen in \cref{fig:stream_states}.
