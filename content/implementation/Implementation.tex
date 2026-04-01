@@ -7,6 +7,103 @@ This divides a TAPS system into two distinct sections, a public
 Transport Services API described in \cref{cTapsApiDesign} and the
 Transport System Implementation which is described in this chapter.
 
+The architecture of CTaps has been designed to fit the restrictions
+placed on socket lifetimes by the underlying protocols of TCP, UDP
+and QUIC. Because the application can close and free connections
+at any point, CTaps has to ensure that all required memory remains
+valid until the final external resource using it has been freed.
+
+CTaps therefore makes use of an internal structure called a
+Socket Manager which is described in detail in \cref{sec:socketManager}.
+
+Because UDP mandates that multiple unrelated Connections must
+be able to share a socket, TCP mandates that Connections in the
+same Connection Group must be able to have different sockets Socket
+Managers are referenced on the Connection level. The application
+interacts only with the connection
+which in turn interacts with the Socket Manager. The Socket Manager
+owns the protocol implementation and invokes one or more of the interface
+function pointers, according to the will of the application.
+
+Since several functions within the various protocol implementations
+are asynchronous, communication between the protocol implementation
+and the socket manager has to be asynchronous as well. The Socket
+Manager has a structure with internal callbacks which are invoked by the protocol
+implementation at appropriate times, for example to notify
+the Socket Manager that a Connection has been closed when teardown
+has completed.
+
+This closed-layer model only applies to memory-critical paths, in order
+to mitigate
+potential memory leaks. Some remaining flows, such as messages being passed
+from Connection to protocol do not currently flow through a dedicted
+function in the Socket Manager. 
+
+An example of the internal flow in CTaps can be seen in
+\cref{fig:async-close-flow}, showing the asynchronous flow of
+graceful connection teardown for a Connection using a shared
+Socket Manager.
+
+\definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
+\begin{figure}[tbp]
+\centering
+\begin{tikzpicture}[font=\sffamily,
+    block/.style={rectangle, draw, text centered, rounded corners, fill=white, font=\bfseries},
+    client/.style={rectangle, draw, text centered, fill=white, font=\small},
+    arrow/.style={-Stealth, thick},
+    asyncArrow/.style={arrow, dashed, red!70!black},
+    label/.style={font=\scriptsize\itshape}
+    ]
+
+% Place connections first
+\node[client] (Conn1) at (0,0) {Connection 1};
+\node[client, below=0.3cm of Conn1] (Conn2) {Connection 2};
+\node[client, below=1.2cm of Conn2] (ConnN) {Connection N};
+
+% SM centred vertically on the connections group
+\node[block, align=center] (SM) at
+    ($(Conn1.north east)!0.5!(ConnN.south east) + (4,0)$)
+    {Socket Manager};
+
+\node[block, right=of SM] (Prot) {Protocol Impl};
+
+\draw[arrow] (Conn1.north east) -- node[above, sloped, label, yshift=3pt] {close()} (SM.north west);
+\draw[arrow] (Conn2.east) -- (SM.west);
+\draw[arrow] (ConnN.east) -- (SM.south west);
+
+\node[font=\Huge, text=gray] at ($(Conn2.south)!0.4!(ConnN.north)$) {$\vdots$};
+
+\begin{scope}[on background layer]
+    \draw[rounded corners, fill=blue!5!white, draw=blue!20]
+        ($(Conn1.north west)+(-0.3, 0.4)$) rectangle ($(ConnN.south east)+(0.3,-0.3)$);
+    \node[font=\normalsize\bfseries, above=0.4cm of Conn1, blue!70!black, align=center]
+        {Connections};
+    \node[fit=(Conn1)(Conn2), rounded corners, fill=green!5!white,
+          draw=green!20, inner sep=0.13cm] (GreenBox1) {};
+    \node[fit=(ConnN), rounded corners, fill=green!5!white,
+          draw=green!20, inner sep=0.13cm] (GreenBoxN) {};
+\end{scope}
+\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBox1] {Connection Group 1};
+\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBoxN] {Connection Group N};
+
+% Request Flow
+\draw[arrow]
+    ([yshift=-0.5mm]SM.north east)
+    -- node[above, sloped, label, align=center] {Close connection}
+    ([yshift=-0.5mm]Prot.north west);
+\draw[asyncArrow] 
+    ([yshift=0.5mm]Prot.south west)
+    -- node[below, label, text=red!70!black, align=center] {Socket Manager cb}
+    ([yshift=0.5mm]SM.south east);
+\draw[asyncArrow]
+    ([yshift=4pt]SM.west)
+    -- node[below, sloped, label, text=red!70!black, align=center] {User cb}
+    ([yshift=3pt]Conn1.east);
+\end{tikzpicture}
+\caption{Flow of asynchronous close() through CTaps}
+\label{fig:async-close-flow}
+\end{figure}
+
 \section{Candidate Gathering} \label{sec:candidateGathering}
 Before a Connection can be established, a list of possible Local and Remote
 need to be generated based on the data passed to the associated preconnection.
@@ -706,33 +803,8 @@ libuv and GLib, this means the shared libraries must be installed on any system
 running an application built against CTaps.
 
 \subsection{GLib}
-CTaps uses GLib implementations internally to avoid re-implementing generic
-data structures. This includes the candidate tree when performing candidate gathering
+As mentioned in \cref{sec:glib-design-reason}, CTaps uses GLib 
+for certain internal data structures to avoid having to re-implement them
+internally.
+This includes the candidate tree when performing candidate gathering
 and hash tables keeping track of Connections associated with a Connection Group.
-GLib could be avoided as a dependency altoghether by using simpler data structures or by
-implementing them internally in CTaps, but it was decided that to ensure correctness it
-was better to use an established library, avoiding the risk of introducing bugs
-by writing custom data structures.
-
-\subsection{log.c}
-CTaps uses a small logging library, log.c, in order to create structured logs
-which can be easily filtered by level \cite{logc}. CTaps wraps the internal
-functionality of this library through the \mono{ct_set_log_level()} and
-\mono{ct_add_log_file()} which allows an application to control the logs
-output by CTaps. Since log.c is a very small library, the source files are simply included
-in the CTaps repository and compiled along with the CTaps library for simplicities sake.
-
-\section{Event Loop}
-CTaps is built around a single single-threaded event loop. This event
-loop is powered by libuv \cite{Libuv2025}. This event loop has to be
-started by the application thorugh a single blocking call to \mono{ct_start_event_loop();}
-which returns when the final libuv handle has been closed.
-
-This means that if the application invokes \mono{ct_preconnection_initiate},
-then CTaps will attempt to connect to the specified endpoint only when the event
-loop is started.
-
-Any behaviour that has to happen after an event loop is created has to be
-specified in the callbacks provided by CTaps. For example, if a Connection
-has to immediately send a message after successfully connecting to an endpoint,
-then this behaviour has to be defined in the \mono{ready()} callback.

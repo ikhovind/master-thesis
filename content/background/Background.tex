@@ -669,6 +669,13 @@ stream, but not between streams. This way, a new straem can be
 used for each object transferred, solving the issue of
 head-of-line blocking which is present in TCP.
 
+For QUIC, a single connection can exist over several paths and
+congestion control is done on a per-path basis. Multiple streams
+can be transmitted over a single connection and data from
+multiple stream frames can be transmitted in a single packet.
+If a packet is lost, only applications using the streams contained
+in that packet will be affected.
+
 The format of a QUIC stream frame as described in RFC 9000 can
 be seen in \cref{lst:stream-frame-format}.
 
@@ -702,8 +709,6 @@ receiving stream are:
 A bidirectional stream consists of both sending and receiving parts,
 and can therefore exist in states belonging to both sending and
 receiving streams as described previously.
-
-% TODO GOT HERE ? 
 
 A flow chart describing the QUIC stream state machine can be
 seen in \cref{fig:stream_states}.
@@ -748,11 +753,11 @@ seen in \cref{fig:stream_states}.
 
 Another important abstraction presented by QUIC is the connection.
 A QUIC connection is a shared state between a client and a server 
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
-A connection is established through a handshake, with support
-for 0-RTT handshakes as mentioned previously. The connection
+\cite{iyengarQUICUDPBasedMultiplexed2021}
+and is established through a handshake.
+The connection
 is identified by a connection ID, which is selected by each
-endpoint's peer. Packets sent to this peer are identified as
+peer. Packets sent to this peer are identified as
 belonging to a given connection, by a destination connection ID
 field. Connection IDs make addressing in QUIC independent of addressing in lower layer
 protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
@@ -760,10 +765,9 @@ has a unique connection ID, making sure that external observers cannot
 identify that the two endpoints are communicating with each
 other by looking at the connection ID.
 
-Using a connection ID allows the connectoin to survive a change
+Using a connection ID allows the connection to survive a change
 in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
-This functionality is enabled by default, but can be disbled by
-one of the peers. When an address is changed, each endpoint has to
+When an address is changed, each endpoint has to
 independently verify that they can communicate using the new address.
 Path validation happens using a special type of stream frame
 known as \texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE}
@@ -801,69 +805,22 @@ This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
 of retransmissions, making RTT measurements in these cases more accurate
-\cite{iyengarQUICUDPBasedMultiplexed2021}. Another key difference
-is that instead of TCP algorithms such as retransmission timeout (RTO)
-and tail-loss probe (TLP), QUIC uses probe timeout (PTO).
-PTO is an algorithm which is used to detect lost packets. Every
-time a packet requiring an acknowledgement is sent, a timer is started. If
-the timer expires, QUIC sends a probe packet and the PTO period is
-set to twice its previous value. When an acknowledgement is received,
-the PTO period is reset to its previous value, as long as the
-connection has moved out of the Initial space. This is beneficial
-as it can mitigate lost acknowledgements, and does not rely on
-duplicate acknowledgements, making it beneficial in several cases
-such as tail-loss. \todo{Make sure this is correct}
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
 
-For QUIC a single connection can exist over several paths and
-congestion control is done on a per-path basis. Multiple streams
-can be transmitted over a single connection and data from
-multiple stream frames can be transmitted in a single packet.
-If a packet is lost, only applications using the streams contained
-in that packet will be affected. This is a key difference from TCP,
-where a single lost packet will block all other streams of data
-over the same connection. This is called head-of-line blocking.
-This problem is avoided by QUIC, since QUIC only guarantees
-in-order delivery of data on a per-stream basis. This leads
-to a better utilization of the available bandwidth, when
-compared to multiplexing streams over a single TCP connection.
-
-Future network ossification related to QUIC is also avoided
-since QUIC mandates TLS 1.3 as part of the protocol.
-By encrypting as much of the packet as possible, QUIC is able to
-obscure details about the protocol from middleboxes, and
-they cannot grow to depend on the contents of the packet.
-
-As mentioned previously, one of many reasons behind the success
-of TCP is
-the universal support of sockets, which are implemented in kernel space.
-There is no equivalent API for QUIC, and with a relatively
-advanced implementation, users have to settle for one of the
-existing libraries.
-
-
-Currently, few applications can be built exclusively on top of
-QUIC, as it requires support from both the client and the
-server. This means that a client wanting to use QUIC, also
-has to have support for fallback code, in case the server
-it wants to connect to, does not have the required support.
-As mentioned previously, making the adoption of new protocols
-such as QUIC is one of the key selling points of TAPS. With TAPS,
-the client would be able to specify the requirements for the
-connection, and TAPS could select QUIC if it was supported, otherwise
-falling back to TCP. This would require no change in logic for
-the client, and would not require TAPS to be supported both
-by the client and the server.
+Future network ossification related to QUIC is also mitigated 
+by mandating TLS 1.3 and by encrypting the header.
+Unlike TLS which does not encrypt the TCP header, QUIC obscures
+as many details as possible from middleboxes, ensuring that they
+cannot grow reliant on the contents of the packet.
 
 \section{ALPN}
 Application layer protocol negotiation is a feature in
 TLS where the application layer protocol which will be
-used is negotiated between the server and the client.
-transport layer negotitates which application layer protocol
-will be used between the server and the client. ALPN is featured
-in several encryption protocols such as TLS, and is mandatory
-in QUIC. ALPN is defined in RFC 7301 and has become necessary
-as more and more application level protocls encrypt their
-contents with TLS over port 443 \cite{friedlTransportLayerSecurity2014}.
+used is negotiated between the server and the client on
+the transport layer.
+ALPN is featured
+in in TLS, and is therefore mandatory
+in QUIC.
 ALPN allows the client and server to negotiate a common protocol
 without adding network round trips. The client features
 a list of supported protocols in its client hello message
@@ -872,110 +829,42 @@ its server hello message. If the server does not support any
 protocols that the client supports, then it responds with an
 error notifying the client of this.
 
-The implementation of ALPN of picoquic caused some issues
-between picoquic and CTaps, as discussed in \cref{sec:quicImpl}.
-
 \section{SCTP}
-Another transport protocol which could be adopted easier
-when using TAPS is Stream Control Transmission Protocol (SCTP).
-SCTP provides a reliable, message-oriented transport protocol.
-SCTP also provides congestion avoidance and flow control like TCP.
-It also has support for multihoming, which helps provide a more
-reliabale service than traditional TCP connections \cite{leungMultihomedCommunicationSCTP2013}.
-By provdiding a message-oriented transport protocol, SCTP provides
-a more realistic abstractoin for how applications actually interact
-with the network, as mentioned with TAPS. 
+QUIC is not the first transport layer protocol to feature
+multistreaming. SCTP was introduced in 2000 and
+is both message based and features multi-streaming like QUIC. 
+\cite{leungMultihomedCommunicationSCTP2013}.
 However, since SCTP is a transport layer protocol traditionally
-built on top of IP, it provides a good case study of how network
-ossification can prevent the adoption of new protocols. Even
-SCTP/UDP, which is a version of SCTP built on top of UDP, has
+built on top of IP, its adoption has struggled likely due
+to network ossification.
+
+SCTP over UDP has
 struggled with adoption, showing that not only network ossification
 prevents the adoption of new protocols, but also that
-the design-time binding of an application to a specific
-transport protocol also presents a large obstacle to adoption.
+the backing of major actors, such as Google backing QUIC,
+is required for major innovations on the transport layer.
 
-Like TCP, SCTP is connection-oriented, but unlike TCP,
-\say{the SCTP association is a broader concept than the TCP connection} \cite{leungMultihomedCommunicationSCTP2013}.
-SCTP associations can consist of multiple transport addresses,
-which consists of a IP address and SCTP port, each of which
-can be used to reach the given endpoint. This allows SCTP to
-support multihoming, allowing the communication to migrate
-in case one connection becomes unavailable.
+\section{Libuv}
+Libuv \cite{Libuv2025} is an multi-platform event loop library focused on asynchronous I/O,
+primarily developed for Node.js.
+Libuv features built in support for TCP and UDP, while providing generic
+poll handles through \mono{uv_poll_t} if more granular control is needed. In addition to
+this it provides several useful features when interacting with the network, such
+as asynchronous DNS resolution.
 
-Originally designed to support telephony signaling, but
-adoption in other areas has been limited. Part of
-this reason is the lack of support, for example Windows does
-not have native SCTP support \cite{hoggWhatStreamControl}.
-Another challenge with SCTP adoption is the same as with
-many other transport protocols, network ossification.
-As a mitigation for this, SCTP can be used over UDP, which
-was designed to allow SCTP to be used in environments
-where middleboxes are not aware of SCTP, and therefore
-do not support it \cite{tuexenUDPEncapsulationStream2013}.
+\section{Glib}
+GLib \cite{GLibGitLab} is a genreral purpose utility library which provides several key
+data structures among other features. GLib is used at the core of
+several other larger libraries, such as GTK and GNOME.
 
-\section{Dependencies}
-\subsection{Libuv}
-CTaps is reliant on several
-external libraries, both for testing and for core functionality. The largest
-and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
-event loop which allows CTaps to be asynchronous. It also provides several quality
-of life features, such as built in support for asynchronous interactions with TCP
-and UDP, through the \texttt{uv\_tcp\_t} and \texttt{uv\_udp\_t} handles respectively.
-When adding protocols which libuv does not have native support for, such as QUIC,
-it offers a custom work handle \texttt{uv\_work\_t}, which can be used to define
-a custom piece of work. This can be used to define both a long-lived QUIC-based
-server, or a short interaction with an existing server. Which underlying handle
-is actually used in libuv is naturally abstracted away in CTaps, and for the
-end-user of the library the interaction is the same no matter what. \todo {very informal lol}
+\section{picoquic} \label{sec:picoquic}
+Picoquic \cite{christianhuitemaPicoquic} is a C library which aims to be a minimalist implementation of the QUIC standard.
 
-\subsection{Glib}
-In order to increase the reliability of internal data structures, as well as
-minimizing the amount of time spent reinventing the wheel, CTaps relies on the
-Glib library. Glib is a low level core library which is used at the core of
-larger libraries such as GTK and GNOME \todo{citation}. Glib provides several
-key data structures used internally in CTaps. Among others, it provides the
-Hash Map used to keep track of received Connections in a Listener, the tree
-used to gather candidates in the Candidate Gathering algorithm, among others.
-While adding an external library, especially in core functionaly such as networking,
-poses a risk, the benefits were deemed to be greater than the costs. Primarily,
-this consideration was made on the basis of Glib being a relatively high-profile
-library used in several large projects already, in addition to the benefits of
-increased development speed, since CTaps would not have to implement its own 
-basic data structures. Using a well-tested external library has the added benefit
-of avoiding bugs, as if CTaps rolled its own data structures, it would have
-to worry not only about bugs in the library logic, but also in the
-data structures themselves.
+Picoquic features a built-in event loop, but applications can also intergrate it with their
+own event loops,
+querying for picoquic for new data to send through \mono{picoquic_prepare_next_packet}.
 
-In order to minimize how much a library consumers would have to
-adhere to Glib, it was decided that the external API should be
-kept free of Glib data structures, and that all external functions
-should only take parameters defined in standard C or in CTaps itself.
-
-\subsection{picoquic} \label{sec:picoquic}
-Because the applicability of running QUIC under a TAPS system is one of
-the main research questions behind CTaps, supporting QUIC was a high
-priority. Because libuv does not feature native QUIC support like it
-does for TCP and UDP, an external library was necessary. Because of
-the exploratory nature of CTaps, picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
-C QUIC implementations such as MsQuic \cite{MsQuic} from Microsoft or XQUIC \cite{XQUIC} from Alibaba 
-because of its relative simplicty.
-
-Picoquic aims to be a minimalist implementation of the QUIC standard
-and features support for several extensions, which have not yet
-been made available to an Application through CTaps. The prime
-functionality of using QUIC as a reliable transport is however
-accessible and serves as a good proof of concept for future TAPS
-implementations.
-
-Picoquic features two modes of operation. Either an Application can
-use the built-in event loop \mono{picoquic_packet_loop} or the
-Application can supply its own timer, checking if picoquic needs
-to perform any I/O at given intervals. These intervals can be fetched
-from picoquic by using the method \mono{picoquic_get_next_wake_delay}.
-A more detailed description of the CTaps' QUIC implementation can be
-seen in \cref{sec:quicImpl}.
-
-\subsection{log.c}
-Log.c is a small logging library which provides a simple API for
+\section{log.c}
+Log.c \cite{logc} is a small logging library which provides a simple API for
 formatting log messages of different levels of severity, either to
-stdout or to a dedicated logging file \cite{logc}.
+stdout or to a dedicated logging file.

@@ -1,12 +1,53 @@
-\chapter{API Design} \label{cTapsApiDesign}
+\chapter{Design} \label{cTapsApiDesign}
+
+\section{Choice of dependencies}
+
+\subsection{libuv}
+CTaps is reliant on several
+external libraries. The
+and most essential of these are libuv \cite{Libuv2025}. Libuv provides the central
+event loop which allows CTaps to be asynchronous. Libuv was chosen
+to drive the event loop within CTaps because it is a well-established
+and mature library, which offers both an event loop and networking
+utility functionality, which allows CTaps to avoid having to write
+custom epoll listeners. Libuv is also the event loop engine behind
+NEAT, which also influenced the decision of CTaps \cite{neatCode}.
+
+\subsection{Picoquic}
+Since QUIC is not currently supported by libuv or by the Linux kernel
+an additional external library was needed in order to add QUIC support
+to CTaps. Since CTaps is primarily a thesis project and is not
+designed to be production ready, picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
+C QUIC implementations, such as MsQuic \cite{MsQuic} from Microsoft or XQUIC \cite{XQUIC} from Alibaba,
+because of its relative simplicty. Picoquic also features the benefit
+of allowing the use of a built in event loop in benchmarking code,
+making the QUIC comparisons when benchmarking completely independent of CTaps.
+
+\subsection{GLib} \label{sec:glib-design-reason}
+CTaps uses GLib for internal data structures. This was chosen over
+re-implementing the necessary data structures internally in order
+to limit the scope of CTaps, as well as to avoid risking introducing
+bugs, which are more likely in custom implementation than in a mature
+library such as GLib.
+
+\subsection{log.c}
+CTaps uses log.c, in order to create structured logs
+which can be easily filtered by level \cite{logc}.
+This library was chosen because of its simplicity
+and pure C implementation, making it easy to integrate
+with CTaps.
+
+\section{API Design}
 CTaps is not a complete implementation of the TAPS standard,
-as that would be too large of a scope for a singular thesis.
+instead aiming to present the core of a TAPS system and show
+how the most important functionality of QUIC and other protocols
+can be exposed through TAPS.
 \todo{Check in on this later, describe how large of a subset}
 This chapter will describe which parts of the TAPS API that has
 been implemented in CTaps, and what operations that are supported
 in CTaps.
 
-\section{Object Orientation in C}
+\subsection{Object Orientation in C}
 The abstract interface described by the TAPS WG is very clearly object
 oriented, C is a procedural programming language, and does not feature
 the concept of classes or objects, which would most neatly map to the
@@ -76,8 +117,8 @@ responsible for freeing its own copy. This also means that if the application
 knows that the allocated object will not be used again, it can be freed as the last
 function taking it as a parameters returns.
 
-\section{Library Lifetime}
-Internally the library uses a global event loop, which has to be initialized
+\subsection{Library Lifetime}
+Internally, CTaps uses a global event loop, which has to be initialized
 before operation can be performed. The application has to do this through the
 setup function \mono{ct_initialize()}. This allocates memory for the event loop,
 initiates it and sets a default log level.
@@ -90,23 +131,30 @@ be performed before starting the event loop. The event loop takes over
 execution of the main thread, and will block until execution of the underlying
 handles completes, as described above.
 
+This means that if the application invokes \mono{ct_preconnection_initiate()},
+then CTaps will attempt to connect to the specified endpoint only when the event
+loop is started.
+
+Any behaviour that has to happen after an event loop is created has to be
+specified in the callbacks provided by CTaps. For example, if a Connection
+has to immediately send a message after successfully connecting to an endpoint,
+then this behaviour has to be defined in the \mono{ready()} callback.
+
 Because CTaps allocates memory for the global event loop this also has to
 be freed in order to prevent memory leaks. This is done through the
 CTaps teardown function \mono{ct_close()}. This closes the event loop
-and frees is synchronously.
+and frees it synchronously.
 
-\section{Asynchrony} \label{asynchrony} \todo{Can I write some numbers here, how much is I/O bound as a percentage?}
-Most modern interactions with networking applications are asynchronous
-and the TAPS API reflects this. CTaps is therefore callback based. Any
-interactions with the network or other I/O-bound activities are loaded
-performed by the central event loop, which is managed by libuv. 
-Any asynchronous interaction with CTaps is handled via callbacks.
+\subsection{Asynchrony} \label{asynchrony} \todo{Can I write some numbers here, how much is I/O bound as a percentage?}
+Because CTaps uses libuv to interact with the network, the external API
+of CTaps also has to be callback-based. The application can register callbacks
+with CTaps at key locations in the API.
 
-When it comes to registering callbacks, CTaps has taken
-the design philosophy of registering the callback as close
-to the relevant event as possible. Connection Ready-callbacks 
-are registered when the Preconnection is initiated, listener
-are registered when invoking \mono{ct_preconnection_listen()} etc.
+When registering callbacks in CTaps this is done
+as close
+to the relevant event as possible. Connection callbacks 
+are registered when the Preconnection is initiated, Listener
+callbacks are registered when invoking \mono{ct_preconnection_listen()} etc.
 
 In order to allow the user to pass data into the callback, all callback structures
 contain a void pointer which can be set by the user. This void pointer
@@ -116,15 +164,15 @@ and pass any data to the callback, to make it accessible in
 the body of the callback itself.
 
 % Follow RFC 9622 ordering:
-\section{Preestablishment Phase}
-\subsection{\texttt{ct\_preconnection\_t}}
+\subsection{Preestablishment Phase}
+\subsubsection{\texttt{ct\_preconnection\_t}}
 As described in TAPS, Preconnections are used as sources to both servers
 and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
 where the user can pass local endpoints, remote endpoints, transport properties and
 security parameters which will affect all connections and listeners spawned from
 the given preconnection.
 
-\subsection{\texttt{ct\_transport\_properties\_t}}
+\subsubsection{\texttt{ct\_transport\_properties\_t}}
 Whenever the user creates a new Preconnection they have the option of passing
 a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this object consists of Connection
 Properties and Selection Properties. In a slight deviation from RFC 9622
@@ -135,7 +183,7 @@ This is a deliberate design choice, made to make it possible to move away from
 the current enum-based properties in the future, and also ensure type safety on
 all \mono{get()} and \mono{set()} operations.
 
-\subsection{\texttt{ct\_security\_parameters\_t}}
+\subsubsection{\texttt{ct\_security\_parameters\_t}}
 When setting up a connection using QUIC, TLS is required. The application
 therefore has to pass one or more ALPN values as well as a set of certificates for a connection.
 An example of setting up security parameters for a client can be seen in \cref{lst:using-sec-params-client}.
@@ -161,7 +209,7 @@ An example of setting up security parameters for a client can be seen in \cref{l
 \end{listing}
 
 
-\subsection{Endpoints}
+\subsubsection{Endpoints}
 In CTaps endpoints are divided into remote endpoints and local endpoints.
 Remote endpoints are required when initiating a preconnection, while
 local endpoints are required when initiating a listener. Both can either
@@ -170,7 +218,7 @@ or remote hostnames. The addresses will then be resolved when invoking
 \mono{ct_preconnection_initiate()} to create a client connection or
 \mono{ct_preconnection_listen()} to create a server.
 
-\subsubsection{\texttt{ct\_local\_endpoint\_t}}
+\paragraph{\texttt{ct\_local\_endpoint\_t}}
 As mentioned, local endpoints are required for listeners
 while they are optional for client connections. If unspecified
 then the client connection will bind to an ephemeral local socket.
@@ -196,7 +244,7 @@ void ct_local_endpoint_free(ct_local_endpoint_t* local_endpoint);
 \label{lst:local-endpoint-api-functions}
 \end{listing}
 
-\subsubsection{\texttt{ct\_remote\_endpoint\_t}}
+\paragraph{\texttt{ct\_remote\_endpoint\_t}}
 As mentioned, remote endpoints are optional for listeners
 while they are required for client connections. If unspecified
 then the listener will accept all remote connections to the given
@@ -224,11 +272,11 @@ void ct_remote_endpoint_free(ct_remote_endpoint_t* remote_endpoint);
 \label{lst:remote-endpoint-api-functions}
 \end{listing}
 
-\section{Establishing Connections}
+\subsection{Establishing Connections}
 While RFC 9622 features information on how to establish rendevouz
 connections this has been deemed to be out of scope for CTaps.
 
-\subsection{\texttt{ct\_connection\_t}}
+\subsubsection{\texttt{ct\_connection\_t}}
 Unlike previously mentioned objects Connections cannot be created directly by the
 application. Instead they are returned to the user upon establishment through
 the callbacks seen in \cref{lst:preconnection-initiate-callbacks}.
@@ -237,7 +285,7 @@ Upon receiving a Connection the application takes ownership over it,
 and must make sure to close it and free it using the appropriate functions
 provided by CTaps when needed.
 
-\subsection{Active Open}
+\subsubsection{Active Open}
 In order to establish a connection, the application has to initiate
 a preconnection. The CTaps function signature for doing this be
 seen in \cref{lst:preconnection-initiate}. When initiating a
@@ -307,7 +355,7 @@ typedef struct ct_connection_callbacks_s {
   \label{lst:preconnection-initiate-callbacks}
 \end{listing}
 
-\subsection{Passive Open}
+\subsubsection{Passive Open}
 To listen on a local endpoint the application must first
 intiate a Preconnection and then listen. The signature
 of the listen function can be seen in \cref{lst:preconnection-listen-signature}.
@@ -360,16 +408,16 @@ typedef struct ct_listener_callbacks_s {
   \label{lst:preconnection-listen-callbacks}
 \end{listing}
 
-\subsubsection{\texttt{ct\_listener\_t}}
+\paragraph{\texttt{ct\_listener\_t}}
 Like Connections, Listeners cannot be created directly by the application,
 but is instead created through callback after invoking \mono{ct_preconnection_listen()}.
 Upon receiving a Listener the application takes ownership of it and must make sure to
 close it and free the structure using the appropriate functions when needed.
 
 
-\section{Managing Connections}
+\subsection{Managing Connections}
 
-\subsection{Cloning}
+\subsubsection{Cloning}
 Cloning a Connection in TAPS yields a Connection Group. A Connection Group
 is represented as an array of connections. The client operates on each individual
 Connection, with certain operations, such as aborting/closing all being able
@@ -394,7 +442,7 @@ will be established from an ephemeral local port, while UDP connections will
 start listening on an ephemeral local port, immediately generate a \mono{Ready}
 event, being ready to send messages from this ephemeral port.
 
-\subsection{Connection Properties}
+\subsubsection{Connection Properties}
 In a full feature TAPS system the application would be able to
 dynamically set Connection Properties on Connections. This would
 involve for example setting the capacity profile in order to
@@ -406,7 +454,7 @@ if applicable, the relative priority of Connections within a Connection
 Group, and is only applicable if the underlying protocol is QUIC and
 the application is using mulistreaming.
 
-\section{Data Transfer}
+\subsection{Data Transfer}
 Due to the asynchronous nature of the library, users can request to
 receive messages at any time, and the library can receive messages
 over the network and cache them at any time. When a user requests
@@ -427,26 +475,26 @@ immediately passed to the libuv event loop. The message
 may queue here for a while, depending on the number of tasks
 in the loop.
 
-\subsection{\texttt{ct\_message\_t}}
+\subsubsection{\texttt{ct\_message\_t}}
 Messages are created using constructors following the same pattern as other
 CTaps objects. Here too does the application keep ownership over the created
 Message object, even after passing it to CTaps. The message must therefore
 be freed, and can be freed immediately after \mono{send_message()} returns.
 
-\subsection{\texttt{ct\_message\_properties\_t}}
+\subsubsection{\texttt{ct\_message\_properties\_t}}
 Message properties can be passed when sending a message to influence the
 underlying behaviour of the mssage. Several API functions are available
 through CTaps, but currently only \mono{final} and \mono{safely_replayable}
 are supported, where final is used to close sending on a connection and
 safely replayable is required for 0-rtt.
 
-\subsection{\texttt{ct\_message\_context\_t}}
+\subsubsection{\texttt{ct\_message\_context\_t}}
 In TAPS Message Context is additional information which is passed alongside
 the received message when receiving data. This can be used to fetch the
 Local and Remote Endpoint associated with the message as well as read the Message Properites
 of the incoming message.
 
-\subsection{Receiving data}
+\subsubsection{Receiving data}
 In order to stop the client from being overwhelmed on receiving data, TAPS
 requires the application to register a callbacks every time it want to receive
 a callback. If a callback is registered on a Connection which has not received
@@ -484,7 +532,7 @@ typedef struct ct_receive_callbacks_s {
   \label{lst:connection-receive-callback}
 \end{listing}
 
-\subsection{\texttt{ct\_framer\_impl\_t}}
+\subsubsection{\texttt{ct\_framer\_impl\_t}}
 In CTaps, the Framer interface consists of a structure of function pointers,
 which are implemented by the application. These are then passed to a preconnection
 and are invoked at appropriate times during the lifetime of the Connection.
@@ -561,7 +609,7 @@ static ct_framer_impl_t length_prepend_framer = {
 \label{lst:framingTestImpl}
 \end{listing}
 
-\section{Connection Termination}
+\subsection{Connection Termination}
 Since both aborting and closing Connections may involve over-the-wire teardown,
 all Connection termination is treated asynchronously by CTaps, even when it only involves
 closing a socket synchrnously as with UDP. Since the application has ownership over
@@ -571,14 +619,14 @@ which is indicated through the application through the \mono{closed()} callback.
 It is recommended that applications register this callback at all times, freeing
 the Connection passed to it to avoid memory leaks. It would be possible for CTaps
 to automatically free the closed Connections when the \mono{closed()} callback
-has not ben registered as a quality of life improvement, but this has not been
+has not been registered as a quality of life improvement, but this has not been
 implemented at this time.
 
 Connection data and any waiting messages can still be read from a connection after it has
 closed, but the data is invalidated on free.
 
 
-\subsection{Closing QUIC connections}
+\subsubsection{Closing QUIC connections}
 Since a QUIC Connection maps onto a TAPS Connection Group, the underlying
 behavior when closing a Connection which uses QUIC as its underlying protocol
 may be surprising to some users. QUIC does not have functionality to gracefully
@@ -591,3 +639,9 @@ If the application wants to avoid having unique Connection handling based on the
 underlying protocol then it can rely on using only \mono{ct_connection_close_group()}
 in all situations. This differing behavior and the reasoning behind it is discussed
 in more detail in \cref{sec:quicUnderTaps}.
+
+\subsection{logging}
+For the external API, CTaps wraps the internal functionality of log.c
+through the \mono{ct_set_log_level()} and
+\mono{ct_add_log_file()} which allows an application to control the logs
+output by CTaps.
