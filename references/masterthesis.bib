@@ -41,6 +41,13 @@
   urldate = {2025-11-21}
 }
 
+@software{networkFramework,
+  title = {Network},
+  author = {{Apple}},
+  url = {https://developer.apple.com/documentation/network},
+  urldate = {2026-04-02}
+}
+
 @report{crockerNewHostHostProtocol1970,
   title = {New {{Host-Host Protocol}}},
   author = {Crocker, S.D.},
@@ -749,4 +756,38 @@
   version      = {1.0.0},
   url          = {https://github.com/NEAT-project/neat},
   abstract     = {The NEAT library offers a new, evolutive API and transport-layer architecture for the Internet, allowing applications to use transport protocols dynamically.}
+}
+
+@misc{neatFunding,
+  title        = {A New, Evolutive API and Transport-Layer Architecture for the Internet},
+  author       = {{European Commission}},
+  year         = {2015},
+  howpublished = {CORDIS Project Database},
+  note         = {Grant agreement ID: 644334},
+  doi          = {10.3030/644334},
+  url          = {https://doi.org/10.3030/644334}
+}
+
+@techreport{ietf-taps-interface-05,
+    number =    {draft-ietf-taps-interface-05},
+    type =      {Internet-Draft},
+    institution =   {Internet Engineering Task Force},
+    publisher = {Internet Engineering Task Force},
+    note =      {Work in Progress},
+    url =       {https://datatracker.ietf.org/doc/draft-ietf-taps-interface/05/},
+    author =    {Brian Trammell and Michael Welzl and Reese Enghardt and Gorry Fairhurst and Mirja Kühlewind and Colin Perkins and Philipp S. Tiesel and Christopher A. Wood and Tommy Pauly},
+    year = {2019},
+    title =     {{An Abstract Application Layer Interface to Transport Services}},
+    pagetotal = 64,
+    urldate = {2026-04-02},
+    abstract =  {This document describes an abstract programming interface to the transport layer, following the Transport Services Architecture. It supports the asynchronous, atomic transmission of messages over transport protocols and network paths dynamically selected at runtime. It is intended to replace the traditional BSD sockets API as the lowest common denominator interface to the transport layer, in an environment where endpoints have multiple interfaces and potential transport protocols to select from.},
+}
+
+@misc{wwdc2018,
+  author       = {Josh Graessley and Tommy Pauly},
+  title        = {Introducing {Network.framework}: A modern alternative to {Sockets}},
+  howpublished = {WWDC 2018, Session 715},
+  year         = {2018},
+  url          = {https://developer.apple.com/videos/play/wwdc2018/715/},
+  note         = {Apple Worldwide Developers Conference (WWDC)},
 }

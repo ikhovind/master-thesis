@@ -1,34 +1,24 @@
-\chapter{Past work}
+\chapter{Related work}
 
 \section{NEAT}
 One of the first open source implementations of TAPS is 
-NEAT (A New, Evolutive API and Transport-Layer Architecture for the Internet) 
-\cite{khademiNEATPlatformProtocolIndependent2017}. NEAT was funded alongside the 
-TAPS project from 2015 to 2018.
+NEAT, whose development was funded by the EU horizon 2020 project
+from 2015 to 2018 \cite{khademiNEATPlatformProtocolIndependent2017} \cite{neatCode} \cite{neatFunding}.
 Developed alongside TAPS, the development of TAPS and NEAT naturally
-affected each other. However, while NEAT halted development in 2018,
+affected each other, however, while NEAT halted development in 2018,
 the TAPS API has continued to evolve, and the final TAPS RFC was published
 in 2025 \cite{trammellAbstractApplicationProgramming2025}.
 
-The equivalent of the TAPS Connection for NEAT is the flow. A flow can
-be first created without specifying
-which transport protocol to use. Much like TAPS, NEAT is also asynchronous,
+Much like TAPS, NEAT is also asynchronous,
 using an event loop and allowing for users to add their own callbacks.
-An example of where a user may add their own callback is the
-\texttt{on\_connect} callback, which allows the user to specify
-what to do when a conneciton is first established.
 
-Multiple flows can exist in a single "Context", which are used
-to group flows and services for these flows together.
-
-Much like TAPS, NEAT uses properties, which consists of key-value pairs,
-in order to specify requirements for the underlying transport protocol.
-Unlike TAPS, properties in NEAT are not given as transport property
-objects, but rather as JSON objects. 
+The core architecture of TAPS and NEAT are similar, with both being
+asynchronous, event-driven APIs, where the underlying connections
+can be configured through properties.
 
 Within the documented properties, NEAT has a different approach
-to central concepts than TAPS. For example with the \say{transport} property,
-the application can specify \say{reliable}, but also directly
+to central concepts than TAPS. For example with the transport property,
+the application can specify reliable, but also directly
 specify one or more potential transport protocols to use. This
 is in contrast to TAPS, where the application only interfaces
 with the protocol through selection properties.
@@ -40,10 +30,11 @@ RFC was finalized.
 
 \section{NEATPy}
 NEATPy \cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
-is a Python implementation and further development of the NEAT project.
-It was undertaken as a master thesis at the department of informatics
-at the University of Oslo. It was undertaken as an attempt to create a
-Python layer to bridge the growing gap between NEAT and TAPS.
+is a Python library developed as part of a master's thesis at UiO in 2020.
+It was developed as an attempt to create a
+Python layer to bridge the growing gap between NEAT and TAPS. Among
+the goals was to move away from specifiying the protocol at design time
+instead using Selection Properties as specified by TAPS.
 
 Because NEATPy is a Python shim on top of NEAT, certain parts of it is
 limited by NEAT itself. For example,
@@ -61,12 +52,11 @@ published as an proposed standard in January 2025
 \cite{trammellAbstractApplicationProgramming2025}.
 
 Since the finalization of NEATPy, several new features have been added
-to TAPS.
+to TAPS since version 5 of the TAPS draft \cite{ietf-taps-interface-05}.
 For example, the support for giving more than one local and remote
-endpoint when creating a PreConnection. This is done when the application
+endpoint when creating a Preconnection. This is done when the application
 wants to indicate that several endpoints are eligible for the connection
-or provide the same service. Another key change is the support for
-multicast.
+or provide the same service.
 
 In addition, there are severeal new selection properties that have been added
 to TAPS. These are:
@@ -99,8 +89,18 @@ since the development of NEATPy, NEATPy is an implementation with
 limited usability for real-world applications wanting to use TAPS.
 
 \section{Network.framework}
-The current most complete implementation of TAPS is Apple's
-Network.Framework. \todo{Is this true, expand}
+Apple's Network.framework \cite{networkFramework} follows some of the same concepts
+laid out by TAPS, although it is not a complete implementation. It
+features several of the same abstraction objects
+such as Connections and Listeners and presents itself as an alternative 
+to using sockets directly \cite{wwdc2018}. There are however several key differences between
+Network.framework and a fully fledged TAPS system, with the most important
+being the lack of Selection Properties and racing of protocol candidates.
+
+With Network.framework, the underlying transport protocol is specified in
+the constructor of the Connection object, and while it does support
+Happy Eyeballs-style racing of IPv4/IPv6 addresses, it does not support
+racing across multiple remote endpoints or across different transport protocols, as TAPS describes.
 
 \section{PyTAPS}
 PyTAPS \cite{frankePythonasynciotaps2025} is a Python library aiming
@@ -116,5 +116,3 @@ dynamic-taps is a C implementation of TAPS, developed by the
 American technology company F5 \cite{dukeDynamictaps2025}. It
 is in the very early stages of development and has not had
 active development since 2021.
-
-
