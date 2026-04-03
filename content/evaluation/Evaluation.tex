@@ -69,6 +69,16 @@ for the Picoquic packet loop client when benchmarking, all other instances of Pi
 including the one used in CTaps, were fetched from the main Picoquic repository.
 
 \subsubsection{Measurement Approach}
+All benchmarks were gathered through a Python script and the specific invocation
+of the Python script for each benchmark was stored as four separate shell scripts,
+in 
+
+Benchmarking data was gathered through a common benchmark runner Python script.
+This script is invoked with a specfic set of command line arguments for each
+benchmark. These invocations were stored in dedicated per-benchmark shell
+ scripts for reproducibilities sake \footnote{The associated shell scripts
+ can be found in the \mono{benchmark/scripts/} folder of the main CTaps repository,
+together with a README on how to reproduce the benchmarks.}.
 
 \subsection{Results}
 
@@ -124,7 +134,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 
 \begin{figure}[tbp]
     \input{./resources/handshake_kde.pgf}
-    \caption{Distribution of handshake times when a fast and a slow endpoint are available, n = 200}
+    \caption{Distribution of handshake times when a fast and a slow endpoint are available, n~=~200}
     \label{fig:handshake-kde}
 \end{figure}
 
@@ -151,7 +161,7 @@ The combination of inital file size, the simulated bandwidth and the simluated R
 therefore ensures that the small file can be transferred in a single RTT.
 
 \begin{figure}[tbp]
-  \input{./resources/bar_chart.pgf}
+  \input{./resources/small_file.pgf}
   \caption{Small file transfer time by implementation and RTT}
   \label{fig:small-file-bar}
 \end{figure}
@@ -241,19 +251,6 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 
 
 \section{QUIC Under TAPS} \label{sec:quicUnderTaps}
-Things with QUIC that cannot be covered with TAPS:
-\begin{itemize}
-    \item Closing a stream without closing the connection. A TAPS connection maps to a stream while a connection group maps to a QUIC connection. However operations are performed on connections, this adds some poorly mapped operations.
-    \item TAPS cannot differ between RESET\_STREAM and STOP\_SENDING.?
-    \item Close reason code, application cannot provide a reason to peer?
-    \item Undirectional streams
-    \item Relative priority of streams?
-    \item Receiver flow control? Is this configurable for a QUIC sender, or is it handled by the engine
-    \item Limiting the number of streams from the peer.
-    \item kommet til kapittel 5 i rfc 9000
-\item \mono{disable_active_migration}
-\end{itemize}
-
 TAPS has been designed with QUIC in mind from the very start,
 but there are several aspects of QUIC which do not map directly
 to a control flow presented to the application via the standardized

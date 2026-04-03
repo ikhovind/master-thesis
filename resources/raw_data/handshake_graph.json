@@ -1,0 +1,350 @@
+{
+  "benchmark_suite": "CTaps Connection Migration",
+  "run_timestamp": "2026-04-03T10:04:41.276133Z",
+  "bin_dir": "/home/ikhovind/Documents/Skole/taps/benchmark/scripts/../../out/Release/benchmark",
+  "runs_per_rtt": 1,
+  "bandwidth_mbit": 50,
+  "path_change_ms": null,
+  "rtt_results": [
+    {
+      "rtt_ms": 50,
+      "tests": [
+        {
+          "implementation": "TCP native",
+          "large_file": {
+            "handshake_time_ms": 51.08,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "tcp_handshake_test",
+          "description": "TCP socket implementation",
+          "timestamp": "2026-04-03T10:04:43.458557Z",
+          "run": 1
+        },
+        {
+          "implementation": "Picoquic",
+          "large_file": {
+            "handshake_time_ms": 111.33,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": 0.0,
+            "transfer_time_ms": 0.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "quic_handshake_test",
+          "description": "Pure picoquic implementation",
+          "timestamp": "2026-04-03T10:04:45.592026Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 132.95,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_quic",
+          "description": "TAPS Racing client which closes after handshake",
+          "timestamp": "2026-04-03T10:04:47.803512Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 554.42,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_tcp",
+          "description": "TAPS Racing client where TCP wins",
+          "timestamp": "2026-04-03T10:04:50.838533Z",
+          "run": 1
+        }
+      ]
+    },
+    {
+      "rtt_ms": 100,
+      "tests": [
+        {
+          "implementation": "TCP native",
+          "large_file": {
+            "handshake_time_ms": 100.73,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "tcp_handshake_test",
+          "description": "TCP socket implementation",
+          "timestamp": "2026-04-03T10:04:53.159558Z",
+          "run": 1
+        },
+        {
+          "implementation": "Picoquic",
+          "large_file": {
+            "handshake_time_ms": 218.33,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": 0.0,
+            "transfer_time_ms": 0.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "quic_handshake_test",
+          "description": "Pure picoquic implementation",
+          "timestamp": "2026-04-03T10:04:55.400991Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 224.06,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_quic",
+          "description": "TAPS Racing client which closes after handshake",
+          "timestamp": "2026-04-03T10:04:57.750719Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 603.47,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_tcp",
+          "description": "TAPS Racing client where TCP wins",
+          "timestamp": "2026-04-03T10:05:00.780034Z",
+          "run": 1
+        }
+      ]
+    },
+    {
+      "rtt_ms": 150,
+      "tests": [
+        {
+          "implementation": "TCP native",
+          "large_file": {
+            "handshake_time_ms": 150.8,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "tcp_handshake_test",
+          "description": "TCP socket implementation",
+          "timestamp": "2026-04-03T10:05:03.104834Z",
+          "run": 1
+        },
+        {
+          "implementation": "Picoquic",
+          "large_file": {
+            "handshake_time_ms": 312.47,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": 0.0,
+            "transfer_time_ms": 0.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "quic_handshake_test",
+          "description": "Pure picoquic implementation",
+          "timestamp": "2026-04-03T10:05:05.437471Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 325.91,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_quic",
+          "description": "TAPS Racing client which closes after handshake",
+          "timestamp": "2026-04-03T10:05:07.968780Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 653.79,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_tcp",
+          "description": "TAPS Racing client where TCP wins",
+          "timestamp": "2026-04-03T10:05:10.990450Z",
+          "run": 1
+        }
+      ]
+    },
+    {
+      "rtt_ms": 200,
+      "tests": [
+        {
+          "implementation": "TCP native",
+          "large_file": {
+            "handshake_time_ms": 200.9,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "tcp_handshake_test",
+          "description": "TCP socket implementation",
+          "timestamp": "2026-04-03T10:05:13.373512Z",
+          "run": 1
+        },
+        {
+          "implementation": "Picoquic",
+          "large_file": {
+            "handshake_time_ms": 418.4,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": 0.0,
+            "transfer_time_ms": 0.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "quic_handshake_test",
+          "description": "Pure picoquic implementation",
+          "timestamp": "2026-04-03T10:05:15.809294Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 423.08,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_quic",
+          "description": "TAPS Racing client which closes after handshake",
+          "timestamp": "2026-04-03T10:05:18.458122Z",
+          "run": 1
+        },
+        {
+          "implementation": "TAPS Racing",
+          "large_file": {
+            "handshake_time_ms": 701.73,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0,
+            "buckets": []
+          },
+          "small_file": {
+            "handshake_time_ms": -1.0,
+            "transfer_time_ms": -1.0,
+            "bytes": 0,
+            "throughput_mbps": 0.0
+          },
+          "test_name": "taps_handshake_tcp",
+          "description": "TAPS Racing client where TCP wins",
+          "timestamp": "2026-04-03T10:05:21.489590Z",
+          "run": 1
+        }
+      ]
+    }
+  ]
+}
