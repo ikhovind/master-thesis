@@ -637,18 +637,153 @@ to downgrade security, but the unsecure variants of protocols would be at
 an advantage during candidate racing, since they would require fewer RTTs
 to set up completely. For this case, TAPS would be wise in assuming that
 there are few situations where it both secure and insecure protocols can
-be used over the same link and should be raced together. A secure connection
+be used over the same link and should be raced together.
+
+A secure connection
 should be mandated by default and TAPS should only allow racing with only
 secure protocols or with only insecure protocls. Security parameters should
 then naturally be mandatory by default, only allowing insecure protocols if
 explicitly enabled by the user. This is the ideology taken by TAPS as can be
 seen in the Allowed Security Protocols security parameter, which mandates
 that the default be \say{Implementation-specific best available security protocols}
-\cite{trammellAbstractApplicationProgramming2025}. - TODO more here
+\cite{trammellAbstractApplicationProgramming2025}.
 
-% Attack surface of TAPS engine
-More code more bugs more insecurity
+In addition to mandating that TAPS implementations set the default allowed
+security protocols to be the best available, RFC 9622 also mentions that applications
+should use common safe defaults for security parameters
+\cite{trammellAbstractApplicationProgramming2025}. This means that the
+default should be requiring an encrypted connection. RFC 9622 also describe
+the difference between disabled Security Parameters and opportunistic
+Security Parameters. Disabled Security Parameters are an option in order
+to support compatability with endpoints that do not support transport security
+protocols, such as a pure HTTP website, while opportunistic Security Parameters
+allow for the coexistence of secure and insecure transport layer protocols.
+It is natural to assume that in cases where both insecure and secure transport
+protocols are viable, any TAPS implementation would choose to prioritize the
+secure protocol if performing candidate racing. For this case, the TAPS implementation
+should also take the increased number of RTTs for the secure protocol into account
+when calculating the stagger delay for candidate racing, in order to not give
+the unencrypted protocols undue advantages.
+
+While these considerations obviously should be made, and will likely be
+arrived at independently by any serious production-ready TAPS implementations,
+they add both complexity and risk for downstream applications of TAPS implementation,
+as overlooked features or logic errors could lead to an insecure connection
+being established even when not necessary.
+
+These concerns are however very specific to the case of opportunistic
+Security Parameters, where both insecure and secure transport protocols have
+to be supported at the same time. This is likely a fairly small proportion
+of use cases and most applications will be well served by mandating Security
+Parameters and secure transport protocols as should be default according
+to TAPS.
+
+The concerns about potential differing behavior in different TAPS implementations
+does however raise a real concern for security aware applications when using
+a TAPS system. When introducing a large library such as TAPS which ends up forming
+the entire flow and architecture of the application, the surface area for potential
+attacks and errors becomes much larger. With CTaps, which is an incomplete TAPS implementation,
+sitting at over 13 000 LoC for only implementation code, downstream applications cannot
+be expected to comb through the source code with security experts in order to look
+for potential vulnerabilities.
+
+The most useful mitigation for issues like this would be for a community
+effort to develop a true fully featured open source implementation of TAPS
+which achieves genuine real world usage. This would create a real incentive
+to find and patch as many vulnerabilities as possible in the library. This naturally
+leads to a bit of an chicken and the egg problem, as no one wants to utilize
+a library if no-one has verified the security of it, while no-one has any incentive
+to verify the security of a library that no-one uses.
+
+This purposefuly rather vague phrasing is typical of TAPS future-proofing, as 
+it allows future implementations to update their defaults, if new security
+protocols have arrived which are considered more secure than for example TLS 1.3
+which is at the forefront at the time of writing.
+
+Although TAPS aims to be as secure as possible by default, there are of course
+tradeoffs to be made between the default configuration of an application
+when it comes to feature-richness and security. With the relative complexity
+and large number of configurations available within TAPS there is a genuine risk
+of unknown unknowns. Security minded applications may not have combed through all
+available configurations in TAPS, and therefore not be aware of the security risk.
+An example of a potential unknown unknown is the potential of isolating sessions
+through Security Parameters. By default this is set to false, allowing a TAPS implementation
+to use an internal cache to optimize established connections. Using this cache
+could lead to a leak of connection linkability, as observers over the wire could
+observe different connections exhibiting the same behavior, and thereby induce that
+they are made by the same client.
+
+This issue with a potentially large configuration space is naturally present in all
+software libraries, and is the reason behind sane defaults being extremely important
+for open source libraries such as TAPS. TAPS strikes a balance between being extremely
+cautious and being secure by default by allowing certain configurations to be the most
+performant by default instead of necessarily the most secure. For most applications,
+avoiding accidentally using unencrypted communication is extremely imporant, while
+potential client fingreprinting is not as important. Since a choice has to be made
+for TAPS, it can be assumed that extremely security conscious applications where
+issues like fingerprinting are absolutely unacceptable will perform a careful comb
+through of the security parameters, making the most cautious decision at every step.
+The same cannot be assumed of a more casual application, having to comb through
+Security Parameter configurations in order to find relatively large performance
+gains to be made with relatively small security trade-offs.
+
+%Racing reveal who uses TAPS? Other revealing options?
+For applications where fingerprinting are absolutely unacceptable there are
+also other issues related to TAPS, which cannot necessarily be traded away.
+First of all, using a networking library which standardizes the interaction
+with the network to a certain degree would naturally lead to potential fingreprinting
+of clients. This is not something which can be configured away and is an
+inherent property of software libraries whose behavior are exposed to the internet.
+Without a large and diverse enough userbase, fairly accurate assumptions can
+be made about the users behind a connection, if the underlying library being
+used can be ascertained. This can be seen in real world examples such as with TOR,
+where one of the key motivations behind it being open is the crowd effect.
+If only certain groups were using TOR, then TOR would provide no real anonymity,
+in that anyone seeing a TOR user, could reliably ascertain that they for
+example were a CIA agent or a whistleblower \cite{collier2025torhistory}.
+
+This fingerprinting is likely a potential for users of TAPS, especially
+in the more unique factors of TAPS systems such as connection racing.
+While racing in the format of Happy Eyeballs would be common, TAPS extended
+racing of all combinations of candidates could be imagined to be a source
+of client fingerprinting. As with TOR, security from this would come from
+a wider user base of TAPS. Assuming that individual TAPS implementations
+do not differ enough to be fingerprinted on their own, this risk would
+grow smaller and smaller as not only the actual use of TAPS implementations
+grow, but also as the concepts contained within TAPS become more common,
+such as racing both endpoints and protocols, in addition to the IP addresses
+as contained in Happy Eyeballs.
+
+%Dicuss migration scenario, cannot disable completely
+You cannot disable migration... Amplificiation attack??? Maybe.
 
 \section{Scope and Limitations}
-CTaps is an exploratory work, intended to show how an implmentation of a TAPS
-system might look in a real world context.
+CTaps is an exploratory work, intended to show how an implementation of a TAPS
+system might look in a real world context, but is not intended to be used
+in a production context.
+
+The nature of CTaps being an exploratory work naturally brings with it
+certain limitations unique to this kind of work. First of all, CTaps
+has throughout had a larger focus on exposing as much as possible of
+the TAPS api, without necessarily implementing the internal logic associated with
+the actual API settings. Since CTaps is the first known TAPS implementation
+since the RFCs were finalized, this was done to see exactly how the designed TAPS
+RFC would actually map into code and that the different settings could actually be
+presented well. Although this has proven successful in providing a public
+API to reason about and guidance for future TAPS implementations, this is
+not the ideal starting location when considering future real-world usage of
+CTaps.
+
+Applications coming across CTaps would likely find the API to be fairly confusing.
+It looks like a more complete implementation than it actually is, and several
+attempts to configure connections with unsupported settings, for example the multipath
+policy connection property, would lead to no changed behavior from the applications point of view.
+
+If CTaps were to be developed into a fully featured TAPS library, it would likely
+be wise to first strip away the parts of the external API which currently have
+no support in the internal implementation. This would allow a gradual addition of
+features as they were supported, making it more clear to downstream applications exactly
+which parts of the external library is mature enough to be used. This would also allow
+future development to focus on more imporant improvements, instead of implementing
+as much of the API as possible in order to make the features exposed by the API actually
+real. The highest priority future work is described in \cref{sec:future-work}.
