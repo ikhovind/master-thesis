@@ -603,6 +603,51 @@ of assuming an estbalished connection on opening the socket.
 
 \section{Security}
 The security of a TAPS system is reliant on the secuirity of the underlying protocols.
+While there are several key security measures which should be taken before
+CTaps could be used in a security-sensitive production context, such as adding support
+for TLS, it also shows that it is possible to achieve equivalent security benefits
+in a TAPS system as when using the underlying protocols directly.
+
+% Handling of underlying credentials
+Despite TAPS being designed before the official release of QUIC, it supports
+the same security settings due to QUIC using TLS under the hood. It supports
+both 0-RTT handshakes and the necesary client and server certicates for both
+clients and servers using TLS. In addition it supports the required ALPNs and
+and makes them accessible through Security Parameters. Security Parameters as
+designed in TAPS and implemented by CTaps are by nature extensible, without
+introducing breaking API changes.
+
+Since TAPS provides a common API to several different protocols, there may
+of course be situations where TAPS places a limitation on the security of the
+underlying protocol, although this is likely to be more related to the specific
+implementation than to TAPS specifically. One can for example imagine a scenario
+where the key files should specifically be kept in memory and cannot be referred
+to via a file name, then that could not be supported by CTaps as of the current
+implementation. The TAPS API does however support this since it is generic
+and only specifies server and client certificates through the use of
+certificate bundles, but does not mandate the form which these bundles should take.
+CTaps has chosen the form of referrring to files on disk, but there is no reason why
+it could not be adopted into taking the memory aeddress of a buffer instead.
+
+%TAPS downgrading security
+The user of a TAPS system is also reliant on TAPS not silently downgrading
+the required security of the application. Here TAPS needs to follow sane defaults
+which default to mandating security, otherwise TAPS would not only be liable
+to downgrade security, but the unsecure variants of protocols would be at
+an advantage during candidate racing, since they would require fewer RTTs
+to set up completely. For this case, TAPS would be wise in assuming that
+there are few situations where it both secure and insecure protocols can
+be used over the same link and should be raced together. A secure connection
+should be mandated by default and TAPS should only allow racing with only
+secure protocols or with only insecure protocls. Security parameters should
+then naturally be mandatory by default, only allowing insecure protocols if
+explicitly enabled by the user. This is the ideology taken by TAPS as can be
+seen in the Allowed Security Protocols security parameter, which mandates
+that the default be \say{Implementation-specific best available security protocols}
+\cite{trammellAbstractApplicationProgramming2025}. - TODO more here
+
+% Attack surface of TAPS engine
+More code more bugs more insecurity
 
 \section{Scope and Limitations}
 CTaps is an exploratory work, intended to show how an implmentation of a TAPS
