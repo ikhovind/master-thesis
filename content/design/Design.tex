@@ -375,7 +375,7 @@ function can be seen in \cref{lst:preconnection-listen-callbacks},
 while the structure passed as connection callbacks can be seen in
 \cref{lst:preconnection-initiate-callbacks}.
 
-\begin{listing}
+\begin{listing}[tbp]
   \begin{minted}{C}
 int ct_preconnection_listen(const ct_preconnection_t* preconnection,
                             const ct_listener_callbacks_t* listener_callbacks,
@@ -385,7 +385,7 @@ int ct_preconnection_listen(const ct_preconnection_t* preconnection,
   \label{lst:preconnection-listen-signature}
 \end{listing}
 
-\begin{listing}
+\begin{listing}[tbp]
   \begin{minted}{C}
 typedef struct ct_listener_callbacks_s {
 

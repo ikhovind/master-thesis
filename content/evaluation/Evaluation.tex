@@ -15,7 +15,7 @@ The performance seen in the benchmarks would likely not change much
 on a more performant system, as they are all I/O-bound to a large
 degree.
 
-\begin{table}[tbp]
+\begin{table}[p]
 \centering
 \begin{tabular}{ll}
 \toprule
@@ -103,7 +103,7 @@ was pure picoquic, using the built in picoquic packet loop. This was done to
 avoid any server-side issues with TAPS affecting the results and giving a
 biased result.
 
-\begin{figure}[tbp]
+\begin{figure}[p]
     \input{./resources/racing_handshake.pgf}
     \caption{Measured handshakes of QUIC, TAPS and TCP}
     \label{fig:racing-handshake}
@@ -111,18 +111,27 @@ biased result.
 
 \subsubsection{Connection Establishment with slow and fast endpoint}
 In order to show the added benefit of candidate racing, the benchmark in \cref{fig:handshake-kde}
-was created. A ping server was set up and the clients measured the handshake time to
+was created.
+
+This benchmark is designed to reflect the theoretical scenario described in 
+in \cref{fig:racingSeqDiagram} in \cref{chap:impl}.
+
+A ping server was set up and the clients measured the handshake time to
 reach the server. Two possible paths were used, with one slow and one fast endpoint
 reaching the server. The slow endpoint had a delay of 150 \qty{150}{\milli\second}
 while the fast endpoint had a delay of \qty{50}{\milli\second}. Both the Picoquic
 and the CTaps client were given the slow endpoint as a first alternative, with
 CTaps supporting racing and therefore being the second faster endpoint as a second
-alternative. This benchmark is intended to emulate a DNS resolution, where the slower
+alternative.
+
+This benchmark is intended to emulate a DNS resolution where the slower
 endpoint is given first in the list of results. For any library not supporting racing
-this means that the client will have to accept not only slower handshake times but
+this means that the client will likely attempt connection to the first resolved
+address. This connection does succeed, but the appliaction will have to
+accept not only slower handshake times but
 significantly higher latency throughout the entire connection lifetime. For a more
-realistic output a jitter of 7 ms and a latency correlation of 25 \% on localhost
-using the \mono{tc} linux utility. The test was run 200 times to gather a distribution
+realistic output, a jitter of 7 ms and a latency correlation of 25 \% on localhost
+using the \mono{tc} linux utility was added. The test was run 200 times to gather a distribution
 of handshake times.
 
 The theoretical ideal handshake times for each endpoint are featured
@@ -132,7 +141,7 @@ $\qty{50}{\milli\second} \cdot 4 + \qty{250}{\milli\second} = \qty{450}{\milli\s
 and
 $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively. 
 
-\begin{figure}[tbp]
+\begin{figure}[p]
     \input{./resources/handshake_kde.pgf}
     \caption{Distribution of handshake times when a fast and a slow endpoint are available, n~=~200}
     \label{fig:handshake-kde}
@@ -143,6 +152,11 @@ For this benchmark, the intention was to show that a TAPS system could benefit
 from QUIC multistreaming, with no code change necessary in a generic TAPS client
 compatible with both TCP and QUIC. The benchmark is intended to show the
 benefit of CWND reuse with QUIC multistreaming with a negligible overhead from TAPS.
+
+This benchmark is designed to reflect the lost capacity when performing Connection Cloning
+in CTaps over TCP copmared to QUIC, as modelled in \cref{fig:connection-clone-gains} in 
+\cref{chap:impl}.
+
 The measurement consists of the time taken to transfer a small file of 70 packets
 $70 \cdot 1460 \approx \qty{100}{\kilo\byte}$ after a large file already has been
 transferred in order to increase the CWND to be greater than the size of the small file.
@@ -155,12 +169,14 @@ is known as the bandwith delay product, and for the shortest RTT tested of
 \qty{50}{\milli\second} RTT it is
 $\qty{6.25}{\mega\byte\per\second} \cdot \qty{50}{\milli\second} = \qty{313}{\kilo\byte\per\second}$
 more than satisfying the \qty{100}{\kilo\byte} BDP required to transfer the entire
-the small file in one RTT. During the ramp up to the required CWND
+the small file in one RTT.
+
+During the ramp up to the required CWND
 $\sum_{n=1}^{4} 1460 \cdot 10 \cdot 2^n = \qty{219}{\kilo\byte}$ would be transferred.
 The combination of inital file size, the simulated bandwidth and the simluated RTT
 therefore ensures that the small file can be transferred in a single RTT.
 
-\begin{figure}[tbp]
+\begin{figure}[p]
   \input{./resources/small_file.pgf}
   \caption{Small file transfer time by implementation and RTT}
   \label{fig:small-file-bar}
@@ -202,7 +218,7 @@ them.
 A detailed account on how the iptables behaviour was integrated with the Picoquic packet loop
 used in the Picoquic client can be seen in \cref{sec:softwaretools}.
 
-\begin{figure}[tbp]
+\begin{figure}[p]
     \input{./resources/migration_throughput.pgf}
     \caption{Path recovery of TAPS and Picoquic, while TCP fails}
     \label{fig:migration-throughput}
@@ -223,7 +239,7 @@ arise, the application using CTaps get this feature for nearly free. The
 relative complexity of each benchmarking client, measured in lines of code,
 can be seen in \cref{tab:loc_complexity}.
 
-\begin{table}[tbp]
+\begin{table}[p]
 \centering
 \begin{tabular}{lrrrr}
 \toprule
@@ -342,7 +358,8 @@ this will still be reported through sending \mono{FIN} flags, which is supported
 
 There is also several pieces of lower layer QUIC functionality such as flow control
 through frames such as \mono{MAX_STREAM_DATA} which is in theory able to be
-sent from QUIC, but possible through a TAPS system. \todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
+sent from QUIC, but possible through a TAPS system.
+\todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
 
 TAPS does also not feature a way to completely disable connection migration,
 only allowing the application to disable active advertisment of local addresses.
@@ -774,7 +791,6 @@ such as racing both endpoints and protocols, in addition to the IP addresses
 as contained in Happy Eyeballs.
 
 %Dicuss migration scenario, cannot disable completely
-You cannot disable migration... Amplificiation attack??? Maybe.
 
 \section{Scope and Limitations}
 CTaps is an exploratory work, intended to show how an implementation of a TAPS

@@ -1,4 +1,4 @@
-\chapter{Implementation}  \label{transportSystemImpl}
+\chapter{Implementation}  \label{chap:impl}
 
 \section{Architecture}
 Internally, CTaps follows the TAPS architecture as described in
@@ -45,7 +45,7 @@ graceful connection teardown for a Connection using a shared
 Socket Manager.
 
 \definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
-\begin{figure}[tbp]
+\begin{figure}[ph]
 \centering
 \begin{tikzpicture}[font=\sffamily,
     block/.style={rectangle, draw, text centered, rounded corners, fill=white, font=\bfseries},
@@ -124,16 +124,238 @@ the tree is sorted according to the stated selection properties, as described in
 \section{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered when initiating a preconnection, CTaps
 will race them according to the specification from RFC 9623
-\cite{brunstromImplementingInterfacesTransport2025}.
+\cite{brunstromImplementingInterfacesTransport2025}. The combination
+of protocol stack, protocol options, local and remote endpoints are referred to as
+a candidate.
+
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
 system follows the same procedure as specified in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017},
 which was originally designed to increase IPv6 adoption, see \cref{happyEyeballs}.
 TAPS takes racing a step further by not only racing IP-address families, but also
-racing potential protocol configurations and endpoints. CTaps primarily follows a staggered
+racing potential protocol configurations and endpoints.
+
+CTaps follows a staggered
 approach, first sorting the gathered candidates by preference and performing a connection
 attempt for each, with a delay between each candidate. All outstanding racing attempts
 are cancelled upon the first success.
+
+Since CTaps has no internal state and no support for RTT estimation, the delay
+between each candidate is set to a fixed 250 ms which is the recommended value
+in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017}.
+
+An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.
+Here, DNS resolution resolves two endpoints, with the endpoints having an
+RTT of 300 and 100 ms respectively. The slower endpoint gets a head start,
+but the faster RTT leads to the faster endpoint winning the race, and being
+presented to the application.
+
+
+\begin{figure}[ph]
+\centering
+\begin{tikzpicture}[
+  >=Stealth,
+  msglbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  head/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.6cm,
+               font=\small, fill=white}
+]
+
+% ── x positions ─────────────────────────────────────────────────────────────
+\def\xO{0}     % Application
+\def\xA{2.5}     % CTaps
+\def\xB{4.5}   % DNS
+\def\xC{6.5}
+\def\xD{8.5}
+\def\xE{10.5}  % Server
+
+% ── y positions (y = -t/100 * 1.2) ─────────────────────────────────────────
+
+%  t=0:    y=-0.4 (Query)
+%  t=100:  y=-1.2 (DNS start)
+%  t=200:  y=-2.0
+%  t=300:  y=-2.8
+%  t=400:  y=-4.0
+%  t=500:  y=-5.2
+
+% ── Participant headers ──────────────────────────────────────────────────────
+\node[head]                   at (\xO, 0.4) {Application};
+\node[head]                   at (\xA, 0.4) {CTaps};
+\node[head]                   at (\xB, 0.4) {DNS};
+\node[head]                   at (\xC, 0.4) {Cand. 1};
+\node[head, font=\small]      at (\xD, 0.4) {Cand. 2};
+\node[head]                   at (\xE, 0.4) {Server};
+% \node[font=\scriptsize, gray] at (\xA, -0.05) {(per-candidate)};
+% \node[font=\scriptsize, gray] at (\xB, -0.05) {(per-candidate)};
+
+% ── Lifelines ───────────────────────────────────────────────────────────────
+\draw[dashed, gray!50] (\xO, 0.1) --  (\xO, -4.9);
+\draw[dashed, gray!50] (\xA, 0.1) --  (\xA, -4.9);
+\draw[dashed, gray!50] (\xB, 0.1) --  (\xB, -4.9);
+\draw[dashed, gray!50] (\xE, 0.1) --  (\xE, -4.9);
+
+\draw[dashed, gray!50] (\xC, -1.2) -- (\xC, -4.1);
+\draw[dashed, gray!50] (\xD, -2.4) -- (\xD, -4.9);
+
+%
+% \draw[gray!20] (-0.2, -0.8) -- (12.2, -0.8);
+
+% ── Time grid and labels ─────────────────────────────────────────────────────
+\foreach \yval/\t in {-0.4/0, -1.2/100, -2.0/200, -2.4/250, -2.8/300, -4.0/500} {
+  \node[font=\footnotesize, gray, left] at (-0.4, \yval) {\t\,ms};
+  \draw[gray!20] (-0.2, \yval) -- (12.2, \yval);
+}
+
+% ── t≈0: Start Connection attempt ─────────────────────────────────────────────────────────
+\draw[->] (\xO, -0.4) -- node[msglbl, above] {Connect to URL} (\xA, -0.4);
+
+% ── t≈0: DNS queries ─────────────────────────────────────────────────────────
+\draw[->] (\xA, -0.4) -- node[msglbl, above] {Query URL} (\xB, -0.4);
+
+% ── t=100: DNS resolves A ────────────────────────────────────────────────────
+\draw[->] (\xB, -0.8) -- node[msglbl, above] {Resolve {C1, C2}} (\xA, -0.8);
+
+\draw[fill=black] (\xA,-1.2) circle (1.5pt);
+\draw[->] (\xA, -1.2) -- node[msglbl, above] {Start attempt 1} (\xC, -1.2);
+
+% ── QUIC handshake for candidate A ───────────────────────────────────────────
+% Initial:        SM-A (t=100) → Server (t=175)
+\draw[->] (\xC,-1.2)  -- node[msglbl, above, sloped] {}         (\xE,-2.4);
+% Handshake:      Server(t=175) → SM-A (t=250)
+\draw[->] (\xE,-2.4)  -- node[msglbl, above, sloped] {}       (\xC,-3.6);
+% Finished:       SM-A (t=250) → Server (t=325)
+\draw[-, red!90] (\xC,-3.6)
+  -- node[msglbl, above, sloped] {}
+     node[pos=1.0, cross out, draw, inner sep=2pt] {}
+  (\xC + 2.08,-4.1);
+
+% ── t=350: racing timer fires, create SM-B ───────────────────────────────────
+\draw[fill=black] (\xA,-2.4) circle (1.5pt);
+%\node[font=\scriptsize, right=3pt] at (\xA,-2.4) {250\,ms timer};
+\draw[->] (\xA,-2.4) -- node[msglbl, above] {Start attempt 2} (\xD,-2.4);
+
+% ── QUIC handshake for candidate A ───────────────────────────────────────────
+\draw[->] (\xD,-2.4)  -- node[msglbl, above, sloped] {}         (\xE,-2.8);
+\draw[->] (\xE,-2.8)  -- node[msglbl, above, sloped] {}       (\xD,-3.2);
+\draw[->] (\xD,-3.2) -- node[msglbl, above, sloped] {}         (\xE,-3.6);
+\draw[->] (\xE,-3.6) -- node[msglbl, above, sloped] {} (\xD,-4.0);
+\draw[->] (\xD,-4.0) -- node[msglbl, above, sloped] {}   (\xA,-4.0);
+
+% ── t=400: SM-A wins ─────────────────────────────────────────────────────────
+\node[draw, fill=green!15, font=\scriptsize, rounded corners, inner sep=2pt]
+      at (\xD,-5.2) {Connected \cmark};
+
+\node[draw, fill=red!15, font=\scriptsize, rounded corners, inner sep=2pt]
+      at (\xC,-5.2) {Closed \xmark};
+
+% ── t=400: abort SM-B ────────────────────────────────────────────────────────
+\draw[->, red!70, thick] (\xA,-4.1) -- node[msglbl, below] {Close} (\xC,-4.1);
+
+\draw[->] (\xA, -4.2) -- node[msglbl, above] {\mono{ready()} CB} (\xO, -4.2);
+
+% \node[draw=red!70, text=red!70, font=\scriptsize, rounded corners, inner sep=2pt]
+%       at (\xB,-5.2) {Aborted};
+
+\end{tikzpicture}
+\caption{Example flow of Candidate Racing with a fast and a slow endpoint.}
+\label{fig:racingSeqDiagram}
+\end{figure}
+
+\section{Connection Cloning}
+TODO - skriv om Connection Cloning yay mange sider her
+
+\begin{figure}[ph]
+\centering
+\begin{tikzpicture}[font=\small, >=stealth]
+
+%% ============ LEFT PANEL: TCP ============
+\begin{scope}
+
+  % Lost-capacity shading
+  \fill[blue!12]
+    (3.1, 3.0) -- (5.1, 3.0)
+    .. controls (4.6, 3.0) and (3.6, 0.15) .. (3.1, 0.15) -- cycle;
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, blue!70!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {Clone Connection};
+
+  % Transfer 2: TCP slow starts again
+  \draw[very thick, blue!70!black]
+    (3.1, 0.15) .. controls (3.6, 0.15) and (4.6, 3.0) .. (5.1, 3.0);
+
+  % Lost capacity annotation
+  \node[font=\scriptsize, black] at (3.85, 2.75) {Lost};
+  \node[font=\scriptsize, black] at (3.85, 2.35) {capacity};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {TCP};
+
+\end{scope}
+
+%% ============ RIGHT PANEL: QUIC ============
+\begin{scope}[xshift=7.0cm]
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, green!50!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {Clone Connection};
+
+  % Transfer 2: QUIC resumes at W_max
+  \draw[very thick, green!50!black]
+    (3.1, 3.0) -- (5.1, 3.0);
+
+  % CWND reuse annotation
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.6) {Stream};
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.2) {multiplexing};
+
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 2) {First};
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 1.6) {Stream};
+
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 2) {Second};
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 1.6) {stream};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {QUIC};
+
+\end{scope}
+
+\end{tikzpicture}
+\caption{Lost capacity when Cloning TCP vs. QUIC Connections.}
+\label{fig:connection-clone-gains}
+\end{figure}
 
 \section{Protocol Implementations}
 
@@ -490,7 +712,7 @@ seen in \cref{fig:ctaps-quic-loop}.
 More details on why exactly picoquic was chosen over other QUIC implementations
 can be seen in \cref{sec:picoquic}.
 
-\begin{figure}[tbp]
+\begin{figure}[ph]
 \centering
 \begin{tikzpicture}[
     box/.style={draw, thick, rounded corners, minimum width=2.8cm, minimum height=1cm, align=center},

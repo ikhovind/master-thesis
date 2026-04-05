@@ -58,6 +58,8 @@ is known as network ossification. Several new protocols such
 as UDP-lite and QUIC are built on top of UDP in order to combat
 this ossification.
 
+\todo{Mention TCP 4-tuple}
+
 While using UDP as a substrate does present some overhead,
 it is fairly minimal with only an 8 bytes.
 
@@ -756,29 +758,6 @@ Another important abstraction presented by QUIC is the connection.
 A QUIC connection is a shared state between a client and a server 
 \cite{iyengarQUICUDPBasedMultiplexed2021}
 and is established through a handshake.
-The connection
-is identified by a connection ID, which is selected by each
-peer. Packets sent to this peer are identified as
-belonging to a given connection, by a destination connection ID
-field. Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
-has a unique connection ID, making sure that external observers cannot
-identify that the two endpoints are communicating with each
-other by looking at the connection ID.
-
-Using a connection ID allows the connection to survive a change
-in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
-When an address is changed, each endpoint has to
-independently verify that they can communicate using the new address.
-Path validation happens using a special type of stream frame
-known as \texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE}
-frames. The \texttt{PATH\_CHALLENGE} frame contains unpredictable
-data which must be mirrored back in the \texttt{PATH\_RESPONSE} frame.
-If the endpoint validation fails, which happens if no matching response
-is received within a given time period, the endpoints can continue
-communicating using other known addresses. If there are no valid
-addresses, the affected endpoint can signal this to the other
-peer by using a \texttt{NO\_VIABLE\_PATH} error.
 
 Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
@@ -813,6 +792,116 @@ by mandating TLS 1.3 and by encrypting the header.
 Unlike TLS which does not encrypt the TCP header, QUIC obscures
 as many details as possible from middleboxes, ensuring that they
 cannot grow reliant on the contents of the packet.
+
+\subsection{Connection ID}
+Unlike TCP, which uses a 4-tuple of source IP, source port, destination IP
+and destionation port to uniquely identify a connection,
+QUIC uses an unique identifier known as an 
+connection ID. Each peer selects a unique ID, which is used
+as a destination ID when transferring data from the associated 
+peer. \todo{er dette sant}
+
+Packets sent to this peer are identified as
+belonging to a given connection, by a destination connection ID
+field. Connection IDs make addressing in QUIC independent of addressing in lower layer
+protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
+has a unique connection ID, making sure that external observers cannot
+identify that the two endpoints are communicating with each
+other by looking at the connection ID.
+
+\subsection{Connection Migration}
+One of the key advantages of QUIC is that an established connection
+can survive changes in the parameters used in the underlying connection,
+unlike TCP which relies on these to identify the connection.
+This functionality is illustrated in \cref{fig:connectionBeforeAfterMigration}.
+
+Using a connection ID allows the connection to survive a change
+in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
+When an address is changed, each endpoint has to
+independently verify that they can communicate using the new address.
+Path validation happens using a special type of stream frame
+known as \texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE}
+frames. The \texttt{PATH\_CHALLENGE} frame contains unpredictable
+data which must be mirrored back in the \texttt{PATH\_RESPONSE} frame.
+If the endpoint validation fails, which happens if no matching response
+is received within a given time period, the endpoints can continue
+communicating using other known addresses. If there are no valid
+addresses, the affected endpoint can signal this to the other
+peer by using a \texttt{NO\_VIABLE\_PATH} error.
+
+\begin{figure}[hp]
+\begin{tikzpicture}[
+  >=Stealth,
+  field/.style={draw, rectangle, minimum width=2.6cm, minimum height=0.6cm,
+                font=\small, fill=white},
+  highlight/.style={field, fill=green!15},
+  dead/.style={field, fill=red!10, text=red!60},
+  lbl/.style={font=\footnotesize\itshape, gray},
+  title/.style={font=\normalsize\bfseries},
+  every node/.style={align=center}
+]
+ 
+% ── Column titles ─────────────────────────────────────────────────────────────
+\node[title] (tcptitle) at (1.3, 0.5)  {TCP};
+\node[title] (quictitle) at (7.3, 0.5) {QUIC};
+ 
+\draw[gray!40] (4.2, 1.0) -- (4.2, -8.5);
+ 
+% ═══════════════════════════════════════════════════════════════════════════════
+% TCP side
+% ═══════════════════════════════════════════════════════════════════════════════
+\node[lbl] at (1.3, 0.0) {Connection = 4-tuple};
+ 
+% Before
+\node[lbl] at (1.3,-0.5) {before migration};
+\node[field] (t1) at (1.3,-1.05) {src IP:\;10.0.0.1};
+\node[field] (t2) at (1.3,-1.75) {src port:\;54321};
+\node[field] (t3) at (1.3,-2.45) {dst IP:\;93.184.216.34};
+\node[field] (t4) at (1.3,-3.15) {dst port:\;443};
+ 
+% Arrow
+\node at (1.3,-3.7) {$\downarrow$ IP change};
+ 
+% After
+\node[lbl] at (1.3,-4.15) {after migration};
+\node[dead] at (1.3,-4.7)  {src IP:\;10.0.1.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
+\node[field] at (1.3,-5.4)  {src port:\;54321};
+\node[field] at (1.3,-6.1)  {dst IP:\;93.184.216.34};
+\node[field] at (1.3,-6.8)  {dst port:\;443};
+ 
+\node[draw=red!60, fill=red!10, rounded corners, font=\small, text=red!70]
+  at (1.3,-7.6) {Connection broken \texttimes};
+ 
+% ═══════════════════════════════════════════════════════════════════════════════
+% QUIC side
+% ═══════════════════════════════════════════════════════════════════════════════
+\node[lbl] at (7.3, 0.0) {Connection = Connection ID};
+ 
+% Before
+\node[lbl] at (7.3,-0.5) {before migration};
+\node[highlight] at (7.3,-1.05) {CID:\;0xABCD1234};
+\node[field]     at (7.3,-1.75) {src IP:\;10.0.0.1};
+\node[field]     at (7.3,-2.45) {src port:\;54321};
+\node[field]     at (7.3,-3.15) {dst IP:\;93.184.216.34};
+ 
+% Arrow
+\node at (7.3,-3.7) {$\downarrow$ IP change};
+ 
+% After
+\node[lbl] at (7.3,-4.15) {after migration};
+\node[highlight] at (7.3,-4.7)  {CID:\;0xABCD1234\;{\normalfont\bfseries\textcolor{green!50!black}{unchanged}}};
+\node[dead]      at (7.3,-5.4)  {src IP:\;10.0.1.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
+\node[field]     at (7.3,-6.1)  {src port:\;54321};
+\node[field]     at (7.3,-6.8)  {dst IP:\;93.184.216.34};
+ 
+\node[draw=green!60!black, fill=green!15, rounded corners, font=\small,
+      text=green!50!black] at (7.3,-7.6) {Connection survives \checkmark};
+ 
+\end{tikzpicture}
+\caption{TCP 4-tuple vs QUIC connection after path event.}
+\label{fig:connectionBeforeAfterMigration}
+\end{figure} \todo{Add QUIC port, change to benchmark IPs}
+
 
 \section{ALPN}
 Application layer protocol negotiation is a feature in
