@@ -344,6 +344,25 @@ There is also several pieces of lower layer QUIC functionality such as flow cont
 through frames such as \mono{MAX_STREAM_DATA} which is in theory able to be
 sent from QUIC, but possible through a TAPS system. \todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
 
+TAPS does also not feature a way to completely disable connection migration,
+only allowing the application to disable active advertisment of local addresses.
+While this is valuable, if the application is behind a simple load balancer,
+then it would be useful to let the peer know that connection migration is 
+not be supported \cite{iyengarQUICUDPBasedMultiplexed2021}. While this is
+not a security gap of any kind, since the migration request can be verified
+to come from the peer associated with the connection, due to the request
+being encrypted, it does present a certain lack of functionality of a TAPS
+system. If an application using a TAPS library wants to disable migration
+it would be reliant on essentially blocking all incoming \mono{PATH_CHALLENGE}
+frames, as if these reach the intrenal TAPS system QUIC implementation then
+the TAPS system has no way of knowing that the migration is not actually desired.
+
+One way of handling this would be for the TAPS implementation to allow migration
+to and from remote endpoints registered with the Connection. This would naturally
+be quite limiting and would require you to know all remote interfaces of a
+server before connecting to it, or discover them during the lifetime of the
+Connection.
+
 In a pure QUIC system an application can specify a maximum number of streams to
 be received on a QUIC connection. While a TAPS application can specify a maximum
 number of connections which chan be spawned from a Listener, there is no way
@@ -787,3 +806,32 @@ which parts of the external library is mature enough to be used. This would also
 future development to focus on more imporant improvements, instead of implementing
 as much of the API as possible in order to make the features exposed by the API actually
 real. The highest priority future work is described in \cref{sec:future-work}.
+
+Another consequence of this push to make CTaps present as much of the API of TAPS
+as possible is that most testing and development has been focused on the various
+happy paths of the features, while not enough time or testing has been devoted
+to testing various error paths, both for errors stemming from errors in user configuration
+and from network errors.
+
+Another key limitation with the current implementation of CTaps is that several key
+features have been deemed to be out of scope, and is not presented in the API at
+all. The largest of these are peer to peer connection establishment. This is however
+the only major group of TAPS features which is totally absent, while there are
+several other smaller features and quality of life pieces of the API not featured in
+CTaps. Among the actual features, which present an actual lacking feature are that CTaps
+cannot add endpoints in during the lifetime of a connection, CTaps does not feature
+listening on more than a single connection and inaccuracies like that sent-callbacks
+does not represent when a packet has been actully transeferred to the network,
+but instead when a packet has been handed over to picoquic if QUIC is the underlying
+protocol. QUIC may then cache the packets internally and the application
+cannot therefore use the sent callbacks to reliably get the state of the send buffers.
+
+Not being able to add endpoints to an active Connection places a real limitation on
+a Connetion's ability to migrate, as there is no way to dynamically administer the
+endpoints which can be migrated to or from. All Local and Remote endpoints has to be
+passed to the Preconnection. QUIC connections can still migrate to new remote endpoints,
+if migration is initiated by the peer, but there is no way to for example dynamically
+add a new endpoint. It is not difficult to imagine a scenario where being able to add a
+new endpoint dynamically would be useful for an application using CTaps. For example,
+the underlying device could have connected to a wi-fi network during the lifetime of
+the connection.
