@@ -334,6 +334,15 @@ expected behaviour no matter the underlying protocol in the TAPS system, this
 is however an example of underlying functionality leaking through to how the user
 should interact with the API.
 
+This mapping of QUIC connections to TAPS connection groups also affects how
+CTaps handles the notification of path changes. In CTaps, the \mono{path_change}
+callback is registered per-Connection, while QUIC cannot migrate single streams.
+This means that for each path change event, every CTaps Connection is notified
+separately for each change event, even though the event is always common for
+the entire Connection Group. This could be mitigated by allowing registration
+of callbacks on a per-Connection Group basis, but this is not currently supported
+by the TAPS API.
+
 As mentioned above QUIC streams do not map perfectly into the expected behavior
 if TAPS Connections. This also means that not all functionality in a QUIC stream
 is available through a TAPS Connection. For example, the one-way abort mentioned
@@ -407,11 +416,6 @@ is also useful for QUIC \cite{trammellAbstractApplicationProgramming2025}.
 
 Additionally, when closing connections picoquic exposes no way of passing
 an error code to the peer.
-
-TAPS features no standardized way of notifying the connection of migration \todo{Er dette sant?},
-though connection migration is a key feature of QUIC.
-With an extensible callback system, this could be implemented quite easily by
-an individual TAPS implementation.
 
 \section{Discussion}
 % Discuss handshake time

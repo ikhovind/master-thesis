@@ -145,7 +145,7 @@ be freed in order to prevent memory leaks. This is done through the
 CTaps teardown function \mono{ct_close()}. This closes the event loop
 and frees it synchronously.
 
-\subsection{Asynchrony} \label{asynchrony} \todo{Can I write some numbers here, how much is I/O bound as a percentage?}
+\subsection{Asynchrony} \label{asynchrony}
 Because CTaps uses libuv to interact with the network, the external API
 of CTaps also has to be callback-based. The application can register callbacks
 with CTaps at key locations in the API.
