@@ -1,9 +1,36 @@
 \chapter{Background} \label{chap:background}
-\section{Network sockets}
+
+\section{Network Interfaces and Paths}
+A machine is considered to be multihomed if it is connected to more than
+one network. In practice, this is often the case for modern devices,
+where a laptop may be connected to both a Wi-Fi network and a wired Ethernet.
+
+Each separate network is interacted with through a separate network interface,
+although these are often virtualized, for example with the loopback interface.
+Since each network interface is connected to a different network, each one
+feature a different IP address, and therefore may be used as a source
+address for outgoing traffic, if packets can be routed through the associated network.
+
+Given that a machine features more than one network interface which can reach
+the same destination, this can be used to improve reliability and performance
+of a connection, if it supports sending from multiple source addresses. Each
+local interface therefore represents a different network path, but can
+be used to reach the same destination.
+
+Within QUIC, a network path is a term used for the combination of
+source IP, source port, destination IP and destination port
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
+This term has become necessary in the context of QUIC, as unlike TCP, QUIC decouples
+the path from the connection itself. More details about this can be found in
+\cref{sec:quic}.
+
+\section{Network Sockets}
 Socket programming today exists in several forms and can
 in several forms, and can be used for both inter-process communication
-and network communication. When it comes to network programming,
-the network socket in its bost basic definition is an abstraction
+and network communication.
+
+When it comes to network programming,
+the network socket in its most basic definition is an abstraction
 for a network connection, through which an application can send
 and receive data \cite[p. 8]{donahooTCPIPSockets2009}. 
 First mentioned in 1970 in relation to ARPANET, the
@@ -23,16 +50,20 @@ invokes the \texttt{socket} system call. This system call
 descriptor that refers to that endpoint} \cite{Socket2LinuxManual}.
 This system call takes three parameters, the domain, the type
 and the protocol which will be used for the socket.
+
 The domain specifies the type of
 addressing which will be used, for example \texttt{AF\_UNIX}
 for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
 example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
 for a reliable stream of bytes. The type usually corresponds to a
-single transport layer protocol, usually UDP and TCP respectively.
+single transport layer protocol, usually UDP and TCP, the two
+most common transport layer protocols.
+
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
+\section{Barriers to Protocol Adoption} \label{sec:transport-protocol-barriers}
 The fact that the application has to specify both the domain
 and the type of the socket means that both the
 underlying addressing and the protocol are bound at compile time.
@@ -58,8 +89,6 @@ is known as network ossification. Several new protocols such
 as UDP-lite and QUIC are built on top of UDP in order to combat
 this ossification.
 
-\todo{Mention TCP 4-tuple}
-
 While using UDP as a substrate does present some overhead,
 it is fairly minimal with only an 8 bytes.
 
@@ -69,6 +98,319 @@ This way of designing new protocols has become so common that
 it has prompted an official RFC from the IETF, describing
 the best practices for implementing congestion control on top of UDP 
 \cite{eggertUnicastUDPUsage2008}.
+
+\section{TCP}
+TCP is by far the most common transport layer protocol used on the
+internet today. It is a connection-oriented protocol and provides
+a reliable, in-order transfer of a stream of bytes to the application layer,
+however it has also become common to use TCP for message-based applications,
+using a framing protocol on top of TCP to divide the TCP byte stream into
+discrete messages. A description of TCP was first published as an RFC in 1974
+\cite{cerfSpecificationInternetTransmission1974} and it has since grown to become
+ubiquitous accross the internet.
+
+In TCP, connections are uniquely identified by a four-tuple consisting
+of the source IP address, the source port, the destination IP address
+and the destination port. This is unlike more modern protocols such
+as QUIC, which contain a dedicated connection ID.
+
+\section{UDP}
+UDP has, along with TCP, grown to become one of the two dominant
+transport layer protocols on the internet. It is a connectionless
+protocol and provides an unreliable, unordered transfer of datagrams
+to the application layer. It is often used for applications which
+prioritize low latency over reliability, such as real-time applications.
+
+UDP is designed to be a very lightweight protocol with as little
+overhead as possible. It features a very simple 8 byte header, featuring
+only the source port, destination port, length and checksum. Due to
+the lightweight nature of UDP, it is oftern used as a substrate
+for other transport layer protocols. Since UDP does not mandate
+advanced features such as in-order delivery or reliability, it is
+often used as a substrate for other transport layer protocols, which
+then are free to develop their own algorithms for congestion control
+or reliable delivery as needed.
+
+The primary reason for why protocols choose to use UDP as a substrate
+instead of developing directly over IP is network ossification. This
+is discussed further in \cref{sec:transport-protocol-barriers}
+
+\section{TLS}
+TLS is a cryptographic protocol which provides secure communication
+over a computer network. It is commonly used on top of TCP, and is
+most visible as the basis for HTTPS, the secure version of HTTP.
+
+TLS features its own handshake protocol when establishing a connection,
+in order to exchange the cryptographic parameters needed for the connection.
+This means that connections using TLS have to perform an additional round trip time (RTT)
+during connection establishment, compared to a non-secure TCP connection.
+
+As a mitigation for this TLS 1.3 features support for 0-RTT handshakes,
+which allow a client to send data during the initial handshake when resuming
+a previous connection to a server \cite{rfc8446}. This can be a source
+of replay attacks for non-idempotent requests, and is often, such as
+when first introduced by cloudflare, not enabled by default \cite{sullivan20170rtt}.
+
+As of 2026, TLS adoption has been very widespread, especially when it comes
+to HTTPS, with 95 \% of all connections in Chrome on Windows using an encrypted
+connection \cite{google2026transparency}.
+
+\section{QUIC} \label{sec:quic}
+QUIC is a protocol intended to be a replacement for TCP.
+It was developed by Google and released to the
+public in 2013 described in RFC 9000
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
+Like TCP, QUIC is a connection-oriented protocol and provides reliability,
+despite being implemented in user-space on top of
+UDP. QUIC enables several features which either are not available
+or do not have a wide adoption in TCP, among these are 0-RTT connection establishment,
+multistreaming, along with TLS being a mandatory part of the protocol.
+
+While QUIC does present an overarching connection, the
+abstraction for each actual data transfer is called a stream
+A stream is an either either
+unidirectional or biderectional ordered stream of data, much
+like what an application sees when using TCP. Streams can be created and
+closed by either endpoint, and multple streams can exist over a
+single QUIC connection. QUIC mandates support for in-order deliver within a single
+stream, but not between streams. This way, a new straem can be
+used for each object transferred, solving the issue of
+head-of-line blocking which is present in TCP.
+
+For QUIC, a single connection can exist over several paths and
+congestion control is done on a per-path basis. Multiple streams
+can be transmitted over a single connection and data from
+multiple stream frames can be transmitted in a single packet.
+If a packet is lost, only applications using the streams contained
+in that packet will be affected.
+
+The format of a QUIC stream frame as described in RFC 9000 can
+be seen in \cref{lst:stream-frame-format}.
+
+\begin{listing}[tbp]
+	\centering
+	\begin{lstlisting}
+        STREAM Frame {
+          Type (i) = 0x08..0x0f,
+          Stream ID (i),
+          [Offset (i)],
+          [Length (i)],
+          Stream Data (..),
+        }
+    \end{lstlisting}
+	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
+	\label{lst:stream-frame-format}
+\end{listing}
+
+A given stream can exist in several different states.
+These states differ whether the stream is sending or receiving
+data. For a stream sending data, the states are:
+\texttt{Ready}, \texttt{Send}, \texttt{Data Sent}, \texttt{Reset Sent},
+\texttt{Data Recvd}, and \texttt{Reset Recvd}.
+A receiving streams states maps the perceived states of the
+sending stream. This means that there are some states
+which are not represented in the receiving stream, as they
+cannot be inferred from the data received. The states of a
+receiving stream are: 
+\texttt{Recv}, \texttt{Size Known}, \texttt{Data Recvd}, \texttt{Reset Recvd},
+\texttt{Data Read}, and \texttt{Reset Read}.
+A bidirectional stream consists of both sending and receiving parts,
+and can therefore exist in states belonging to both sending and
+receiving streams as described previously.
+
+A flow chart describing the QUIC stream state machine can be
+seen in \cref{fig:stream_states}.
+
+\begin{figure}[tbp]
+    \centering
+    \begin{lstlisting}
+       o
+       | Create Stream (Sending)
+       | Peer Creates Bidirectional Stream
+       v
+   +-------+
+   | Ready | Send RESET_STREAM
+   |       |-----------------------.
+   +-------+                       |
+       |                           |
+       | Send STREAM /             |
+       |      STREAM_DATA_BLOCKED  |
+       v                           |
+   +-------+                       |
+   | Send  | Send RESET_STREAM     |
+   |       |---------------------->|
+   +-------+                       |
+       |                           |
+       | Send STREAM + FIN         |
+       v                           v
+   +-------+                   +-------+
+   | Data  | Send RESET_STREAM | Reset |
+   | Sent  |------------------>| Sent  |
+   +-------+                   +-------+
+       |                           |
+       | Recv All ACKs             | Recv ACK
+       v                           v
+   +-------+                   +-------+
+   | Data  |                   | Reset |
+   | Recvd |                   | Recvd |
+   +-------+                   +-------+
+    \end{lstlisting}
+    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021}}
+    \label{fig:stream_states}
+\end{figure}
+
+Another important abstraction presented by QUIC is the connection.
+A QUIC connection is a shared state between a client and a server 
+\cite{iyengarQUICUDPBasedMultiplexed2021}
+and is established through a handshake.
+
+Much like TCP, QUIC also implements congestion control, there are
+however some key differences between the algorithms. A key concept
+to QUIC's congestion control is the 'packet number space'. Packet
+number spaces are \say{the context in which a packet can be processed
+and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021}. 
+This context reflects the level of encryption and there 
+are therefore three separate packet number spaces. Initial space,
+for the initial handshake packets, handshake space, for packets
+exchanged during the cryptographic handshake, and application
+data space, for packets exchanged after the cryptographic handshake
+has been completed. Separating these spaces allows QUIC to
+avoid spurious retransmission from one space affecting another,
+and allows QUIC to handle retransmissions more efficiently, for
+example by using a different expected acknowledgement delay for packets sent
+in the initial space, as these are not expected to be cached
+by the peer. Although the packet number spaces are handled
+separately when it comes to acknowledgements, they are still
+unified when it comes to congestion control and round trip
+time measurements.
+
+Another difference between how QUIC and TCP handle acknowledgements
+is that QUIC separates the transmission order from the delivery order.
+This is done by using stream offset as delivery order, and packet number as
+transmission order. This removes ambiguity about whether the
+original or the retransmitted packet is acknowledged in the case
+of retransmissions, making RTT measurements in these cases more accurate
+\cite{iyengarQUICUDPBasedMultiplexed2021}.
+
+Future network ossification related to QUIC is also mitigated 
+by mandating TLS 1.3 and by encrypting the header.
+Unlike TLS which does not encrypt the TCP header, QUIC obscures
+as many details as possible from middleboxes, ensuring that they
+cannot grow reliant on the contents of the packet.
+
+\subsection{Connection ID}
+Unlike TCP, which uses a 4-tuple of source IP, source port, destination IP
+and destionation port to uniquely identify a connection,
+QUIC uses an unique identifier known as an 
+connection ID. Each peer selects a unique ID, which is used
+as a destination ID when transferring data from the associated 
+peer. \todo{er dette sant}
+
+Packets sent to this peer are identified as
+belonging to a given connection, by a destination connection ID
+field. Connection IDs make addressing in QUIC independent of addressing in lower layer
+protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
+has a unique connection ID, making sure that external observers cannot
+identify that the two endpoints are communicating with each
+other by looking at the connection ID.
+
+\subsection{Connection Migration}
+One of the key advantages of QUIC is that an established connection
+can survive changes in the parameters used in the underlying connection,
+unlike TCP which relies on these to identify the connection.
+This functionality is illustrated in \cref{fig:connectionBeforeAfterMigration}.
+
+Using a connection ID allows the connection to survive a change
+in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
+When an address is changed, each endpoint has to
+independently verify that they can communicate using the new address.
+Path validation happens using 
+\texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE} stream
+frames.
+
+The \texttt{PATH\_CHALLENGE} frame contains unpredictable
+data which must be mirrored back in the \texttt{PATH\_RESPONSE} frame.
+If the endpoint validation fails, which happens if no matching response
+is received within a given time period, the endpoints can continue
+communicating using other known addresses. If there are no valid
+addresses, the affected endpoint can signal this to the other
+peer by using a \texttt{NO\_VIABLE\_PATH} error.
+
+\begin{figure}[hp]
+\centering
+\begin{tikzpicture}[
+  >=Stealth,
+  field/.style={draw, rectangle, minimum width=2.6cm, minimum height=0.6cm,
+                font=\small, fill=white},
+  highlight/.style={field, fill=green!15},
+  dead/.style={field, fill=red!10, text=red!60},
+  lbl/.style={font=\footnotesize\itshape, gray},
+  title/.style={font=\normalsize\bfseries},
+  every node/.style={align=center}
+]
+ 
+% ── Column titles ─────────────────────────────────────────────────────────────
+\node[title] (tcptitle) at (1.3, 0.5)  {TCP};
+\node[title] (quictitle) at (7.3, 0.5) {QUIC};
+ 
+\draw[gray!40] (4.2, 1.0) -- (4.2, -8.5);
+ 
+% ═══════════════════════════════════════════════════════════════════════════════
+% TCP side
+% ═══════════════════════════════════════════════════════════════════════════════
+\node[lbl] at (1.3, 0.0) {Connection = 4-tuple};
+ 
+% Before
+\node[lbl] at (1.3,-0.5) {before migration};
+\node[field] (t1) at (1.3,-1.05) {src IP:\;192.0.2.0};
+\node[field] (t2) at (1.3,-1.75) {src port:\;54321};
+\node[field] (t3) at (1.3,-2.45) {dst IP:\;198.51.100.0};
+\node[field] (t4) at (1.3,-3.15) {dst port:\;443};
+ 
+% Arrow
+\node at (1.3,-3.7) {$\downarrow$ IP change};
+ 
+% After
+\node[lbl] at (1.3,-4.15) {after migration};
+\node[dead] at (1.3,-4.7)  {src IP:\;192.0.2.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
+\node[field] at (1.3,-5.4)  {src port:\;54321};
+\node[field] at (1.3,-6.1)  {dst IP:\;198.51.100.0};
+\node[field] at (1.3,-6.8)  {dst port:\;443};
+ 
+\node[draw=red!60, fill=red!10, rounded corners, font=\small, text=red!70]
+  at (1.3,-7.6) {Connection broken \xmark};
+ 
+% ═══════════════════════════════════════════════════════════════════════════════
+% QUIC side
+% ═══════════════════════════════════════════════════════════════════════════════
+\node[lbl] at (7.3, 0.0) {Connection = Connection ID};
+ 
+% Before
+\node[lbl] at (7.3,-0.5) {before migration};
+\node[highlight] at (7.3,-1.05) {CID:\;0xABCD1234};
+\node[field]     at (7.3,-1.75) {src IP:\;192.0.2.0};
+\node[field]     at (7.3,-2.45) {src port:\;54321};
+\node[field]     at (7.3,-3.15) {dst IP:\;198.51.100.0};
+\node[field]     at (7.3,-3.85) {dst port\;443};
+ 
+% Arrow
+\node at (7.3,-4.4) {$\downarrow$ IP change};
+ 
+% After
+\node[lbl] at (7.3,-4.85) {after migration};
+\node[highlight] at (7.3,-5.55)  {CID:\;0xABCD1234\;{\normalfont\bfseries\textcolor{green!50!black}{unchanged}}};
+\node[dead]      at (7.3,-6.25)  {src IP:\;192.0.2.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
+\node[field]     at (7.3,-6.95)  {src port:\;54321};
+\node[field]     at (7.3,-7.65)  {dst IP:\;198.51.100.0};
+\node[field]     at (7.3,-8.35)  {dst port:\;4433};
+ 
+\node[draw=green!60!black, fill=green!15, rounded corners, font=\small,
+      text=green!50!black] at (7.3,-9.05) {Connection survives \cmark};
+ 
+\end{tikzpicture}
+\caption{TCP 4-tuple vs QUIC connection after path event.}
+\label{fig:connectionBeforeAfterMigration}
+\end{figure}
 
 \section{Transport Services}
 At its core, a protocol is an abstraction which provides a set of
@@ -99,7 +441,9 @@ coupling between application
 level code and the underlying transport protocol through
 focusing on Transport Services. This is intended to allow faster adaptation
 of new protocols and abstract away network-layer details from the
-application layer. From the application's point of view, this
+application layer.
+
+From the application's point of view, this
 means that it will be able to gain access to new protocols, such
 as QUIC, without having to implement its own fallback logic
 in cases where the new protocl is not supported by the remote.
@@ -649,260 +993,6 @@ or if it has to made by TCP for example. This will not only lead to
 an improved user experience, but also handle fallback-logic which otherwise
 would have to be written on a per-application basis.
 
-\section{What is QUIC}
-One of the key elements of TAPS is to make new transport protocols
-easier to adopt, and one of the most important recent innovations on the
-transport layer is QUIC.
-QUIC is a protocol developed by Google released to the
-public in 2013 described in RFC 9000
-\cite{iyengarQUICUDPBasedMultiplexed2021}. QUIC is a transport
-layer protocol which is designed to be a replacement for TCP.
-QUIC is a connection-oriented protocol which is built on top of
-UDP. QUIC enables 0-RTT connection establishment, multistreaming
-and integrates encryption as a mandatory feature of the protocol.
-
-While QUIC does present an overarching connection, the
-abstraction for each actual data transfer is called a stream
-A stream is an either either
-unidirectional or biderectional ordered stream of data, much
-like what an application sees when using TCP. Streams can be created and
-closed by either endpoint, and multple streams can exist over a
-single QUIC connection. QUIC mandates support for in-order deliver within a single
-stream, but not between streams. This way, a new straem can be
-used for each object transferred, solving the issue of
-head-of-line blocking which is present in TCP.
-
-For QUIC, a single connection can exist over several paths and
-congestion control is done on a per-path basis. Multiple streams
-can be transmitted over a single connection and data from
-multiple stream frames can be transmitted in a single packet.
-If a packet is lost, only applications using the streams contained
-in that packet will be affected.
-
-The format of a QUIC stream frame as described in RFC 9000 can
-be seen in \cref{lst:stream-frame-format}.
-
-\begin{listing}[tbp]
-	\centering
-	\begin{lstlisting}
-        STREAM Frame {
-          Type (i) = 0x08..0x0f,
-          Stream ID (i),
-          [Offset (i)],
-          [Length (i)],
-          Stream Data (..),
-        }
-    \end{lstlisting}
-	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
-	\label{lst:stream-frame-format}
-\end{listing}
-
-A given stream can exist in several different states.
-These states differ whether the stream is sending or receiving
-data. For a stream sending data, the states are:
-\texttt{Ready}, \texttt{Send}, \texttt{Data Sent}, \texttt{Reset Sent},
-\texttt{Data Recvd}, and \texttt{Reset Recvd}.
-A receiving streams states maps the perceived states of the
-sending stream. This means that there are some states
-which are not represented in the receiving stream, as they
-cannot be inferred from the data received. The states of a
-receiving stream are: 
-\texttt{Recv}, \texttt{Size Known}, \texttt{Data Recvd}, \texttt{Reset Recvd},
-\texttt{Data Read}, and \texttt{Reset Read}.
-A bidirectional stream consists of both sending and receiving parts,
-and can therefore exist in states belonging to both sending and
-receiving streams as described previously.
-
-A flow chart describing the QUIC stream state machine can be
-seen in \cref{fig:stream_states}.
-
-\begin{figure}[tbp]
-    \centering
-    \begin{lstlisting}
-       o
-       | Create Stream (Sending)
-       | Peer Creates Bidirectional Stream
-       v
-   +-------+
-   | Ready | Send RESET_STREAM
-   |       |-----------------------.
-   +-------+                       |
-       |                           |
-       | Send STREAM /             |
-       |      STREAM_DATA_BLOCKED  |
-       v                           |
-   +-------+                       |
-   | Send  | Send RESET_STREAM     |
-   |       |---------------------->|
-   +-------+                       |
-       |                           |
-       | Send STREAM + FIN         |
-       v                           v
-   +-------+                   +-------+
-   | Data  | Send RESET_STREAM | Reset |
-   | Sent  |------------------>| Sent  |
-   +-------+                   +-------+
-       |                           |
-       | Recv All ACKs             | Recv ACK
-       v                           v
-   +-------+                   +-------+
-   | Data  |                   | Reset |
-   | Recvd |                   | Recvd |
-   +-------+                   +-------+
-    \end{lstlisting}
-    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021}}
-    \label{fig:stream_states}
-\end{figure}
-
-Another important abstraction presented by QUIC is the connection.
-A QUIC connection is a shared state between a client and a server 
-\cite{iyengarQUICUDPBasedMultiplexed2021}
-and is established through a handshake.
-
-Much like TCP, QUIC also implements congestion control, there are
-however some key differences between the algorithms. A key concept
-to QUIC's congestion control is the 'packet number space'. Packet
-number spaces are \say{the context in which a packet can be processed
-and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021}. 
-This context reflects the level of encryption and there 
-are therefore three separate packet number spaces. Initial space,
-for the initial handshake packets, handshake space, for packets
-exchanged during the cryptographic handshake, and application
-data space, for packets exchanged after the cryptographic handshake
-has been completed. Separating these spaces allows QUIC to
-avoid spurious retransmission from one space affecting another,
-and allows QUIC to handle retransmissions more efficiently, for
-example by using a different expected acknowledgement delay for packets sent
-in the initial space, as these are not expected to be cached
-by the peer. Although the packet number spaces are handled
-separately when it comes to acknowledgements, they are still
-unified when it comes to congestion control and round trip
-time measurements.
-
-Another difference between how QUIC and TCP handle acknowledgements
-is that QUIC separates the transmission order from the delivery order.
-This is done by using stream offset as delivery order, and packet number as
-transmission order. This removes ambiguity about whether the
-original or the retransmitted packet is acknowledged in the case
-of retransmissions, making RTT measurements in these cases more accurate
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
-
-Future network ossification related to QUIC is also mitigated 
-by mandating TLS 1.3 and by encrypting the header.
-Unlike TLS which does not encrypt the TCP header, QUIC obscures
-as many details as possible from middleboxes, ensuring that they
-cannot grow reliant on the contents of the packet.
-
-\subsection{Connection ID}
-Unlike TCP, which uses a 4-tuple of source IP, source port, destination IP
-and destionation port to uniquely identify a connection,
-QUIC uses an unique identifier known as an 
-connection ID. Each peer selects a unique ID, which is used
-as a destination ID when transferring data from the associated 
-peer. \todo{er dette sant}
-
-Packets sent to this peer are identified as
-belonging to a given connection, by a destination connection ID
-field. Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
-has a unique connection ID, making sure that external observers cannot
-identify that the two endpoints are communicating with each
-other by looking at the connection ID.
-
-\subsection{Connection Migration}
-One of the key advantages of QUIC is that an established connection
-can survive changes in the parameters used in the underlying connection,
-unlike TCP which relies on these to identify the connection.
-This functionality is illustrated in \cref{fig:connectionBeforeAfterMigration}.
-
-Using a connection ID allows the connection to survive a change
-in the addressing of the underlying protocol \cite{iyengarQUICUDPBasedMultiplexed2021}.
-When an address is changed, each endpoint has to
-independently verify that they can communicate using the new address.
-Path validation happens using a special type of stream frame
-known as \texttt{PATH\_CHALLENGE} and \texttt{PATH\_RESPONSE}
-frames. The \texttt{PATH\_CHALLENGE} frame contains unpredictable
-data which must be mirrored back in the \texttt{PATH\_RESPONSE} frame.
-If the endpoint validation fails, which happens if no matching response
-is received within a given time period, the endpoints can continue
-communicating using other known addresses. If there are no valid
-addresses, the affected endpoint can signal this to the other
-peer by using a \texttt{NO\_VIABLE\_PATH} error.
-
-\begin{figure}[hp]
-\begin{tikzpicture}[
-  >=Stealth,
-  field/.style={draw, rectangle, minimum width=2.6cm, minimum height=0.6cm,
-                font=\small, fill=white},
-  highlight/.style={field, fill=green!15},
-  dead/.style={field, fill=red!10, text=red!60},
-  lbl/.style={font=\footnotesize\itshape, gray},
-  title/.style={font=\normalsize\bfseries},
-  every node/.style={align=center}
-]
- 
-% ── Column titles ─────────────────────────────────────────────────────────────
-\node[title] (tcptitle) at (1.3, 0.5)  {TCP};
-\node[title] (quictitle) at (7.3, 0.5) {QUIC};
- 
-\draw[gray!40] (4.2, 1.0) -- (4.2, -8.5);
- 
-% ═══════════════════════════════════════════════════════════════════════════════
-% TCP side
-% ═══════════════════════════════════════════════════════════════════════════════
-\node[lbl] at (1.3, 0.0) {Connection = 4-tuple};
- 
-% Before
-\node[lbl] at (1.3,-0.5) {before migration};
-\node[field] (t1) at (1.3,-1.05) {src IP:\;10.0.0.1};
-\node[field] (t2) at (1.3,-1.75) {src port:\;54321};
-\node[field] (t3) at (1.3,-2.45) {dst IP:\;93.184.216.34};
-\node[field] (t4) at (1.3,-3.15) {dst port:\;443};
- 
-% Arrow
-\node at (1.3,-3.7) {$\downarrow$ IP change};
- 
-% After
-\node[lbl] at (1.3,-4.15) {after migration};
-\node[dead] at (1.3,-4.7)  {src IP:\;10.0.1.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
-\node[field] at (1.3,-5.4)  {src port:\;54321};
-\node[field] at (1.3,-6.1)  {dst IP:\;93.184.216.34};
-\node[field] at (1.3,-6.8)  {dst port:\;443};
- 
-\node[draw=red!60, fill=red!10, rounded corners, font=\small, text=red!70]
-  at (1.3,-7.6) {Connection broken \texttimes};
- 
-% ═══════════════════════════════════════════════════════════════════════════════
-% QUIC side
-% ═══════════════════════════════════════════════════════════════════════════════
-\node[lbl] at (7.3, 0.0) {Connection = Connection ID};
- 
-% Before
-\node[lbl] at (7.3,-0.5) {before migration};
-\node[highlight] at (7.3,-1.05) {CID:\;0xABCD1234};
-\node[field]     at (7.3,-1.75) {src IP:\;10.0.0.1};
-\node[field]     at (7.3,-2.45) {src port:\;54321};
-\node[field]     at (7.3,-3.15) {dst IP:\;93.184.216.34};
- 
-% Arrow
-\node at (7.3,-3.7) {$\downarrow$ IP change};
- 
-% After
-\node[lbl] at (7.3,-4.15) {after migration};
-\node[highlight] at (7.3,-4.7)  {CID:\;0xABCD1234\;{\normalfont\bfseries\textcolor{green!50!black}{unchanged}}};
-\node[dead]      at (7.3,-5.4)  {src IP:\;10.0.1.1\;{\normalfont\bfseries\textcolor{red!70}{changed}}};
-\node[field]     at (7.3,-6.1)  {src port:\;54321};
-\node[field]     at (7.3,-6.8)  {dst IP:\;93.184.216.34};
- 
-\node[draw=green!60!black, fill=green!15, rounded corners, font=\small,
-      text=green!50!black] at (7.3,-7.6) {Connection survives \checkmark};
- 
-\end{tikzpicture}
-\caption{TCP 4-tuple vs QUIC connection after path event.}
-\label{fig:connectionBeforeAfterMigration}
-\end{figure} \todo{Add QUIC port, change to benchmark IPs}
-
-
 \section{ALPN}
 Application layer protocol negotiation is a feature in
 TLS where the application layer protocol which will be
@@ -933,6 +1023,51 @@ struggled with adoption, showing that not only network ossification
 prevents the adoption of new protocols, but also that
 the backing of major actors, such as Google backing QUIC,
 is required for major innovations on the transport layer.
+
+\section{Asynchronous I/O and event loops}
+The most naive way to write a networking application is to treat
+any interaction with the network as any normal CPU-bound task and
+simply wait for it to finish and return a message before progressing.
+While this naturally works and is a conceptually very simple model
+it is a very inefficient use of computing resources, as valuable
+compute time will be spent waiting for a response from the network.
+
+There are several ways of mitigating this unecessary waiting,
+with the most common ones being creating dedicated threads to interact
+with the network or an asynchronous model. 
+
+Both of these models allow
+the CPU to perform computational work while waiting for a response from I/O,
+but in slightly different ways. In a multithreaded program a dedicated thread
+can be for example created for each incoming connection, yielding the CPU
+while it is waiting for a response from the peer. An asynchronous 
+solution most commonly uses a single thread, returning for tasks immediately
+performing work in discrete units from a queue.
+
+When it comes to complexity, dedicated networking threads allows the
+program to modelled sequentially, allowing the structure to be more similar
+to a normal CPU-bound program, but it requires multithreading, which gives
+can be complex in the form of forcing syncrhonoizatoin of shared data structures,
+as well as potential overhead when creating a large amount of threads. 
+An async model with a single worker thread avoids both of these issues
+by using a single thread, but requires a very different mental model
+from normal sequential programming.
+
+Instead of a sequential flow, asynchronous programs utilize callbacks
+in order to notify the application of when a task completes. It naturally
+follows that any work relating to this completed task has to be performed
+within this callback. This also means that the application cannot know
+whether or not the request suceeded until the callback is invoked.
+
+In order to make use of a asynchronous programming model, most applications
+make use of an event loop. An event loop is a single threaded program which
+performs tasks in order. Tasks are added to the event loop either on
+startup or in reaction to an invoked callback. This allows the application
+to perform work in discrete pieces, and gives it a queue to add handling
+of I/O results when these returns.
+
+This asynchronous event loop model is very common, and is used for example
+in Node.js \cite{nodejsEventLoop} or in Python's asyncio \cite{pythonAsyncio}.
 
 \section{Libuv}
 Libuv \cite{Libuv2025} is an multi-platform event loop library focused on asynchronous I/O,

@@ -188,17 +188,21 @@ them having to implement their own fallback logic. QUIC has several desirable
 features which is not available in normal TCP and one of these is path migration.
 Since QUIC connections are identified by their connection ID not by their four-tuple
 as with TCP, QUIC connections can migrate to a different IP address while still maintaining
-their connection status. This is especially useful in mobile devices, where one might expect
+their connection status. A diagram explaining this can be seen in \cref{fig:connectionBeforeAfterMigration}
+in \cref{chap:background}.
+Connection migration is especially useful in mobile devices, where one might expect
 certain interfaces to become unavailable frequently, as users enter and exit buildings and switch
-between Wi-Fi and cellular frequently. It was therefore desired to show that this is a feature of
-QUIC which comes at a negligible overhead compared to a pure QUIC implementation such as Picoquic.
+between Wi-Fi and cellular frequently. 
+
+This test was devised to show that CTaps can also make use of QUIC's path migraiton, at a
+negligible overhead when compared to a pure QUIC implementation such as Picoquic.
 This test uses the same \qty{4.6}{\mega\byte} file as described in \cref{smallfiletransfer}, but
 sets the emulated network bandwidth to \qty{625}{\kilo\byte\per\second} and RTT value to \qty{50}{\milli\second}.
 This was done to give the transfer enough time to reach its steady-state and to still have data left
 to transfer after recovering from the path failure. For this test the CTaps
-client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It would try to connect
-from the first stated address of \mono{127.0.0.1} and succeed, the transfer would start, but after
-five seconds the benchmark script would run:
+client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connect
+from the first stated address of \mono{127.0.0.1}, the transfer would start, but after
+five seconds the benchmark script would block the data from and to the local endpoint using: 
 
 \begin{figure}[H]
     \begin{minted}[fontsize=\small]{bash}
@@ -206,14 +210,17 @@ iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
 \end{minted}
 \end{figure}
 
-In order to reject data flowing from the client's intitial endpoint of \mono{127.0.0.1}
-to the server. This would cause sendmsg to return an error, which then could be passed on to
+This was run together with the equivalent rule to block TCP traffic, to show that TCP does not have
+the same migration capabilities.
+
+This rule causes sendmsg to return an error, which then could be passed on to
 Picoquic. Picoquic would notify CTaps that the path had become unavailable, and CTaps could tell
 Picoquic to start probing the other path registered with the connection. For Picoquic the built
-in packet loop also has support for migration. It automatically detects when a path fails
+in packet loop also has support for migration; It automatically detects when a path fails
 and notifies the client that the offending path has been suspended. You can then immediately tell
 it to probe a new path, and it will start migration if it manages to contact the server on one of
-them.
+them. The resulting comparison of a a local endpoint becoming unavailable for TCP, QUIC and CTaps
+can be seen in \cref{fig:migration-throughput}.
 
 A detailed account on how the iptables behaviour was integrated with the Picoquic packet loop
 used in the Picoquic client can be seen in \cref{sec:softwaretools}.
