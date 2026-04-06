@@ -299,20 +299,20 @@ as many details as possible from middleboxes, ensuring that they
 cannot grow reliant on the contents of the packet.
 
 \subsection{Connection ID}
-Unlike TCP, which uses a 4-tuple of source IP, source port, destination IP
-and destionation port to uniquely identify a connection,
-QUIC uses an unique identifier known as an 
-connection ID. Each peer selects a unique ID, which is used
-as a destination ID when transferring data from the associated 
-peer. \todo{er dette sant}
+QUIC does not use a four-tuple to uniquely identify a connection like TCP does.
+Instead, it uses a Connection ID, which is independently selected by each
+endpoint \cite{iyengarQUICUDPBasedMultiplexed2021}.
+Each endpoint selects a range of connection IDs which it shares with its peer.
+The peer then selects from the assigned IDs when selecting
+a destination ID for an outgoing packet. Multiple Connection IDs
+are used for several reasons, among them making sure that connections
+cannot be linked by outside observers through a single connection ID.
 
-Packets sent to this peer are identified as
-belonging to a given connection, by a destination connection ID
-field. Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. Each endpoint
-has a unique connection ID, making sure that external observers cannot
-identify that the two endpoints are communicating with each
-other by looking at the connection ID.
+Connection IDs make addressing in QUIC independent of addressing in lower layer
+protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. 
+
+TODO skriv mer, er grafen i connection migration feil? Endres connection ID
+seg men det er greit siden vi vet at den er vår?
 
 \subsection{Connection Migration}
 One of the key advantages of QUIC is that an established connection
@@ -411,6 +411,7 @@ peer by using a \texttt{NO\_VIABLE\_PATH} error.
 \caption{TCP 4-tuple vs QUIC connection after path event.}
 \label{fig:connectionBeforeAfterMigration}
 \end{figure}
+\todo{Passer dette med hvordan connection IDs fungerer, med source og dest?}
 
 \section{Transport Services}
 At its core, a protocol is an abstraction which provides a set of
