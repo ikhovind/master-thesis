@@ -42,7 +42,26 @@ function in the Socket Manager.
 An example of the internal flow in CTaps can be seen in
 \cref{fig:async-close-flow}, showing the asynchronous flow of
 graceful connection teardown for a Connection using a shared
-Socket Manager.
+Socket Manager. Here, a single Connection in a Connection Group
+is closed.
+
+This Connection uses a Socket Manager which is shared
+with not only its Connection Goup, but also with a Connection
+in a completely separate Connection Group. This can for example
+happen when listening for Connections over UDP, as all received
+Connections will share a socket but belong to different Connection
+Groups. When the Connection is closed, the Socket Manager invokes
+the associated function pointer for the underlying protocol. This
+asynchronously performs any necessary connection teardown over the
+wire, and then notifies the Socket Manager when necessary.
+
+Crucially,
+it does not close the socket until notified by the Socket Manager,
+since the socket needs to stay open until all Connections using
+it have been closed. This is not the case in the example flow,
+so the Socket Manager simply updates the state of the Connection
+and notifies the application of the Connection closing through the
+\mono{closed()} callback.
 
 \definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
 \begin{figure}[ph]
@@ -252,16 +271,60 @@ presented to the application.
 
 \draw[->] (\xA, -4.2) -- node[msglbl, above] {\mono{ready()} CB} (\xO, -4.2);
 
-% \node[draw=red!70, text=red!70, font=\scriptsize, rounded corners, inner sep=2pt]
-%       at (\xB,-5.2) {Aborted};
-
 \end{tikzpicture}
 \caption{Example flow of Candidate Racing with a fast and a slow endpoint.}
 \label{fig:racingSeqDiagram}
 \end{figure}
 
 \section{Connection Cloning}
-TODO - skriv om Connection Cloning yay mange sider her
+CTaps support connection cloning through the \mono{ct_connection_clone()}
+function, which allows applications to create a new Connection to the same
+endpoint, either through normal connection establishment or through
+multistreaming if supported by the underlying protocol.
+
+After cloning a Connection, the resulting clone is passed to the application
+through the \mono{ready()} callback registered with the source Connection.
+The clone will be organised in the same Connection Group as the source Connection,
+and will therefore share most transport properties with the source Connection,
+and will be affected by Connection Group operations such as \mono{ct_connection_close_group()}. 
+
+The transport properties that are not shared is individual Connection state, the Connection
+priority and the Connection's \mono{can_send} and \mono{can_receive} flags. The
+internal Connection state track whether the Connection is initiating, open or closed.
+The Connection priority is used to prioritize data transfer between the Connections
+in the same Connection Group, while the \mono{can_send} and \mono{can_receive}
+are used to keep track of whether the Connection is unidirectional.
+
+Connection cloning is naturally the most useful when the underlying protocol can make
+use of multistreaming, since this allows the clone to reuse the same underlying connection.
+However, since CTaps strives to be as protocol agnostic as possible Connection cloning
+can be performed no matter what the underlying protocol is. This is an advantage since
+it allows code using CTaps to be protocol-agnostic, attempting to make use of benefits
+like multistreaming when available, but being functional even if the underlying protocol
+does not support it.
+
+For simplicities sake, all connections in CTaps belong to a Connection Group. This
+means that it is possible to handle Connections the same way, regardless of whether
+the Connection has been cloned or not.
+
+The implications of the application having to make an effort to write
+protocol-agnostic code when using Connection cloning in CTaps is discussed
+in \cref{sec:quicUnderTaps}.
+
+A theoretical example displaying the benefits of Connection cloning and multistreaming
+in general can be seen in \cref{fig:connection-clone-gains}. Here, two
+transfers are performed sequentially. After the first transfer completes successfully,
+the application makes use of connection cloning in CTaps and starts a second transfer.
+If the underlying protocol is TCP, CTaps will initiate a new connection and transfer
+successfully, but if the underlying protocol is QUIC then it will simply open a new
+stream and therefore benefit from stream multiplexing. The second transfer will therefore
+have significantly higher throughput over QUIC than TCP, since TCP has to go through
+slow start again for the second transfer. In CTaps a single client can use both
+TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
+of QUIC benefits when available.
+
+A benchmark showing the measured benefits of utilizing Connection cloning over
+QUIC vs. TCP can be seen in \cref{sec:smallfiletransfer}.
 
 \begin{figure}[ph]
 \centering
@@ -701,7 +764,9 @@ is available through a dedicated ALPN Security Parameter.
 Since libuv does not feature native QUIC support like it does with TCP and UDP,
 CTaps uses Picoquic as an external library, working as a "QUIC engine",
 while performing the actual transfer of data over a raw network socket managed
-by libuv. 
+by libuv. A raw socket is necessary since CTaps has to set the from and two
+address in the IP packet, to match the IP addresses requested by picoquic.
+
 CTaps is responsible for handling reading and writing data to the network, while picoquic
 formats outgoing QUIC packets and handles incoming data.
 Picoquic specifies when the application needs to query it next through the
@@ -780,13 +845,7 @@ callback to CTaps when teardown has completed.
 As mentioned previously ALPN is mandatory for QUIC and is supplied to picoquic
 by CTaps through a configurable Security Parameter. ALPN is a negotiation
 between a QUIC server and client, therefore, both a Listener using QUIC and
-a client using QUIC has to take this parameter into account. When initiating
-a connection, ALPNs are used as protocol options, and are therefore treated
-used to generate new combinations when gathering candidates. This is done
-because picoquic does not support multiple ALPNs when initiating a connection
-with 0-rtt, as the \mono{picoquic_create()} function only takes a single possible
-ALPN. If ALPN negotiation happens later through the \mono{picoquic_set_alpn_select_fn_v2}
-functionality, then it has to happen after a single RTT has already passed.
+a client using QUIC has to take this parameter into account.
 
 The implementation of the QUIC protocol implementation struct can be seen in
 \cref{lst:quic-protocol-impl-struct}.
@@ -883,8 +942,10 @@ to the application.
 \section{Testing} \label{testing}
 A core tenet since the very start of development was that the library should be
 as robust as possible. This would to a very large degree achieved primarily through
-the use of automated testing, and continious integration. By writing automated tests
-which run on every commit to the repository, it would be easy to see exactly which change
+the use of automated testing, and continious integration.
+
+By writing automated tests
+which run on every commit to the repository it is easy to see exactly which change
 has lead to a bug, making it far easier to fix. A well-tested library is also an absolute
 necessity when trying to attract external dependents, or to integrate it into a larger software
 library. This is especially important for large libraries such as CTaps, which abstract away
@@ -915,11 +976,15 @@ external libraries. Both to limit the scope of our testing, but also to potentia
 simulate a failure to 
 check that CTaps handles an external library failure properly.
 All of these concerns are best met by
-mocking. Mocking is the concept of defining a custom behaviour for an external library
+mocking.
+
+Mocking is the concept of defining a custom behaviour for an external library
 or dependency when testing, instead of invoking the real library. By using this we can
 simulate the full range of behaviours from the external library and verify that our application
 reacts correctly, while also avoiding time-consuming API calls, making unit tests
-significantly faster. For mocking, CTaps uses FFF, which is a small open-source
+significantly faster.
+
+For mocking, CTaps uses FFF, which is a small open-source
 framework for creating fake C functions when testing \cite{longFakeFunctionFramework2025}.
 FFF can either mock the external library functions, such as \texttt{uv\_getaddrinfo},
 which is the built in support for DNS lookup in libuv, or mock a call to a different
@@ -962,6 +1027,7 @@ and structure used by libuv
 in order to make the structure as familiar as possible. This includes
 having the API consist of a single header file, \mono{ctaps.h} which
 is included to expose all functionality intended to be used by an application.
+
 CTaps is also compiled with visibility of all symbols set to hidden by default,
 with only the symbols marked as \mono{CT_EXTERN} being available in the final
 shared library file. This is done to hide internal state from applications,
@@ -975,6 +1041,7 @@ compiled binary looks for a shared object file at a given location at
 run time. This means that any Application depending on CTaps will by default
 not include CTaps in its own binary, leading to a smaller file size, although this 
 is naturally dependent on the build configuration of the application. 
+
 The largest downside of a a dynamically
 linked Application is that it requires its users to have CTaps installed on their
 systems, in order for the Application find the correct symbols at run time.
@@ -1011,6 +1078,7 @@ in CMake using FetchContent, as exemplified in the CTaps example project
 As with most libraries, CTaps has several external dependencies
 used to simplify the logic required to be implemented within CTaps itself.
 These are again divided into statically and dynamically linked dependencies.
+
 A description of the difference between statically linked and dynamically linked
 dependencies can be found in \cref{sec:build-system}. CTaps statically links against
 picoquic since it is a library very specific to CTaps, while it uses dynamic linking for

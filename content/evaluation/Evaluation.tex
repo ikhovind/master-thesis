@@ -89,7 +89,7 @@ that there is no significant overhead between CTaps and the underlying
 protocol handshake and show the cost of the staggered racing delay
 as it stands now and as an area for future improvement. The handhake
 was captured in the same benchmark as the small file transfer as
-described in \cref{smallfiletransfer}. The benchmark iterated
+described in \cref{sec:smallfiletransfer}. The benchmark iterated
 over 50, 100, 150, and \qty{200}{\milli\second} RTTs, to show the linear
 growth between handshake time and the handshake time. While the Picoquic
 and TCP client handshakes had to be measured by different clients compatible
@@ -147,7 +147,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
     \label{fig:handshake-kde}
 \end{figure}
 
-\subsubsection{Small file transfer} \label{smallfiletransfer}
+\subsubsection{Small file transfer} \label{sec:smallfiletransfer}
 For this benchmark, the intention was to show that a TAPS system could benefit
 from QUIC multistreaming, with no code change necessary in a generic TAPS client
 compatible with both TCP and QUIC. The benchmark is intended to show the
@@ -196,7 +196,7 @@ between Wi-Fi and cellular frequently.
 
 This test was devised to show that CTaps can also make use of QUIC's path migraiton, at a
 negligible overhead when compared to a pure QUIC implementation such as Picoquic.
-This test uses the same \qty{4.6}{\mega\byte} file as described in \cref{smallfiletransfer}, but
+This test uses the same \qty{4.6}{\mega\byte} file as described in \cref{sec:smallfiletransfer}, but
 sets the emulated network bandwidth to \qty{625}{\kilo\byte\per\second} and RTT value to \qty{50}{\milli\second}.
 This was done to give the transfer enough time to reach its steady-state and to still have data left
 to transfer after recovering from the path failure. For this test the CTaps
@@ -377,12 +377,18 @@ through frames such as \mono{MAX_STREAM_DATA} which is in theory able to be
 sent from QUIC, but possible through a TAPS system.
 \todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
 
-TAPS does also not feature a way to completely disable connection migration,
-only allowing the application to disable active advertisment of local addresses.
+TAPS does also not feature a way to completely disable connection migration
+as can be done in QUIC through the use of the \mono{disable_active_migration} transport
+parameter. In TAPS, the only migration setting available to the application is
+disabling active advertisment of local addresses.
 While this is valuable, if the application is behind a simple load balancer,
 then it would be useful to let the peer know that connection migration is 
-not be supported \cite{iyengarQUICUDPBasedMultiplexed2021}. While this is
-not a security gap of any kind, since the migration request can be verified
+not be supported \cite{iyengarQUICUDPBasedMultiplexed2021}. Not all connection
+migration is initiated intentionally however, as it might be a result of a network
+change, for example a NAT rebinding.
+
+While this is
+not a security gap since the migration request can be verified
 to come from the peer associated with the connection, due to the request
 being encrypted, it does present a certain lack of functionality of a TAPS
 system. If an application using a TAPS library wants to disable migration
@@ -433,7 +439,9 @@ of the benchmarking to a single CTaps client as possible, showing that modifying
 code is not necessary. For candidate racing CTaps currently uses a stagger delay
 of 250 milliseconds between attempts as recommended by Happy Eyeballs V2, it does
 however not implement interleaving as described in the same document
-\cite{schinaziHappyEyeballsVersion2017}. As CTaps races local endpoints,
+\cite{schinaziHappyEyeballsVersion2017}. 
+
+As CTaps races local endpoints,
 protocols, ALPN options and remote endpoints the consequences become
 even more apparent for CTaps, as if it prefers an incompatible protocol
 it will iterate through all possible combinations of local endpoints,
@@ -443,6 +451,34 @@ might be after a hostname resolution for example, or when binding to an
 ephemeral local endpoint, then you could face a multi second delay in CTaps
 before even trying the correct protocol, if the highest ranked protocol is
 not compatible to the server you are trying to connect to.
+
+The reason for CTaps using ALPN values as separate protocol options is
+two-pronged.
+Primarily is done
+in order to support 0-rtt. Since QUIC sesssion resumption relies on
+resuming a previous session, one a single ALPN can be selected.
+Therefore, each indivual ALPN value generates new racing Candidates
+for each protocol which supports ALPN, although this is currently
+only QUIC.
+
+In theory, multiple ALPNs could be supported with a single candidate,
+as you can select from a list of ALPNs after 1-RTT if you are not
+using session resumption, but the current solution was selected since
+it more followed the racing ideology of TAPS, as well as not having
+to modify the racing flow to support 0-rtt. Unless 0-rtt is used,
+having each ALPN create a new protocol candidate naturally creates
+unecessary overhead in the form of unecessary candidates, which all
+could be served by a single candidate, however the risk of this being
+a significant overhead was deemed to be relatively small, since
+applications are likely to not support a very large number of ALPNs,
+and CTaps currently only supports a single protocol with ALPN support,
+naturally limiting the number of generated combinations.
+
+If this is found to be an unacceptable overhead in the future, optimizations
+can be made, for example only generating a single candidate with several
+ALPNs for each protocol if 0-rtt is not used by the application for the
+current Connection, although this has been deemed to be out of scope for
+CTaps.
 
 If an attempt was to be made to make CTaps into a real-world production
 ready system, then candidate interleaving would likely be one of the first
