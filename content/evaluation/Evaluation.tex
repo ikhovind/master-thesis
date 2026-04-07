@@ -33,7 +33,7 @@ Kernel     & 6.1.0-44-amd64 \\
 \end{table}
 
 
-\subsubsection{Software tools} \label{sec:softwaretools}
+\subsubsection{Software Tools} \label{sec:softwaretools}
 Netem is a Linux kernel module which allows users to emulate network conditions such
 as RTT packet loss and bandwidth limitations. For the benchmarks in this thesis, netem
 was used to set RTT times and bandwidth limitations to show TAPS, Picoquic and TCP
@@ -82,7 +82,7 @@ together with a README on how to reproduce the benchmarks.}.
 
 \subsection{Results}
 
-\subsubsection{Handshake latency}
+\subsubsection{Handshake Latency}
 This benchmark has several intentions. It was meant to show that
 a CTaps client can connect to multiple servers serving different protocols,
 that there is no significant overhead between CTaps and the underlying
@@ -109,7 +109,7 @@ biased result.
     \label{fig:racing-handshake}
 \end{figure}
 
-\subsubsection{Connection Establishment with slow and fast endpoint}
+\subsubsection{Connection Establishment with Slow and Fast Endpoint}
 In order to show the added benefit of candidate racing, the benchmark in \cref{fig:handshake-kde}
 was created.
 
@@ -143,111 +143,140 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 
 \begin{figure}[p]
     \input{./resources/handshake_kde.pgf}
-    \caption{Distribution of handshake times when a fast and a slow endpoint are available, n~=~200}
+    \caption{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
+    endpoint is attempted first, showing the benefit of candidate racing. ($N = 200$)}
     \label{fig:handshake-kde}
 \end{figure}
 
-\subsubsection{Small file transfer} \label{sec:smallfiletransfer}
+\subsubsection{Small File Transfer} \label{sec:smallfiletransfer}
 For this benchmark, the intention was to show that a TAPS system could benefit
-from QUIC multistreaming, with no code change necessary in a generic TAPS client
-compatible with both TCP and QUIC. The benchmark is intended to show the
-benefit of CWND reuse with QUIC multistreaming with a negligible overhead from TAPS.
+from QUIC multistreaming, while using a generic TAPS client
+compatible with both TCP and QUIC, without considerable overhead when compared
+to a non-TAPS QUIC implementation.
 
-This benchmark is designed to reflect the lost capacity when performing Connection Cloning
-in CTaps over TCP copmared to QUIC, as modelled in \cref{fig:connection-clone-gains} in 
+This benchmark shows an example of lost capacity when performing Connection Cloning
+over TCP when compared to QUIC, as modelled in \cref{fig:connection-clone-gains} in 
 \cref{chap:impl}.
 
-The measurement consists of the time taken to transfer a small file of 70 packets
-$70 \cdot 1460 \approx \qty{100}{\kilo\byte}$ after a large file already has been
-transferred in order to increase the CWND to be greater than the size of the small file.
-In the benchmark the emulated bandwidth was set to \qty{6.25}{\mega\byte\per\second} and
-a file of \qty{4.6}{\mega\byte} was transferred. In order to achieve the desired CWND
-of at least 70, the connection would have to remain in slow start for
-$10 \cdot 2^x \geq 70 \Rightarrow x = 4 \text{ RTTs}$, requiring a capacity of
-$70 \cdot 1460 \approx \qty{100}{\kilo\byte}$ per round trip. This capacity
-is known as the bandwith delay product, and for the shortest RTT tested of
-\qty{50}{\milli\second} RTT it is
-$\qty{6.25}{\mega\byte\per\second} \cdot \qty{50}{\milli\second} = \qty{313}{\kilo\byte\per\second}$
-more than satisfying the \qty{100}{\kilo\byte} BDP required to transfer the entire
-the small file in one RTT.
+The measurement consists of the time taken to transfer a file with 70 packets'
+worth of data. For TCP this works out to
+$70 \cdot 1460 \approx \qty{100}{\kilo\byte}$ after discounting the 20 byte IP and TCP
+headers from a typical 1500 byte MTU. QUIC has slightly more overhead per packet,
+but not enough to make a significant difference in the required file size.
 
-During the ramp up to the required CWND
-$\sum_{n=1}^{4} 1460 \cdot 10 \cdot 2^n = \qty{219}{\kilo\byte}$ would be transferred.
-The combination of inital file size, the simulated bandwidth and the simluated RTT
-therefore ensures that the small file can be transferred in a single RTT.
+Before the small file transfer was started, a large file of \qty{4.6}{\mega\byte} was
+transferred in order to increase the CWND to be greater than the size of the small file.
+This ensures that the small file transfer could be performed in a single RTT, if the
+CWND is reused. This large file is the same as the one used in the migration benchmark
+described in \cref{sec:path-migration}, which is why it is much larger than strictly
+required for the small file transfer benchmark.
+
+To verify that the small file transfer can actually be completed in
+a single RTT, we need to check that the large file is large enough for the CWND to ramp up to at least 70 packets
+and that the BDP of the link is large enough to carry the entire small file in a single RTT.
+
+Assuming an initial CWND of 10 packets, the number of RTTs required for the CWND to grow to at least 70 during slow start is
+$10 \cdot 2^{x-1} \geq 70 \Rightarrow x \geq 4 \text{ RTTs}$. During the minimum of 4 RTTs
+$\sum_{n=1}^{4} 1460 \cdot 10 \cdot 2^{n-1} = \qty{219}{\kilo\byte}$ of data would
+be transferred, which is well below the \qty{4.6}{\mega\byte} file used in the benchmark.
+
+To verify that the BDP is large enough, we can calculate the minimum BDP for
+70 packets, which works out to be
+$70 \cdot 1500 \cdot 8 = \qty{840}{\kilo\bit}$.
+
+In our benchmark, the shortest RTT is \qty{50}{\milli\second} and the bandwidth is
+constant at \qty{50}{\mega\bit\per\second}. This gives a BDP of
+$\qty{50}{\mega\bit\per\second} \cdot \qty{50}{\milli\second} = \qty{2.5}{\mega\bit}$.
+Since the bandwidth is constant and BDP scales
+with RTT we can therefore conclude that the BDP of the link is large enough
+to carry the small file for all RTTs tested.
+
+The benchmark contains four RTTs of 50, 100, 150 and 200 milliseconds. This was done to
+show that the performance gap between TCP and QUIC grows with increasing RTTs.
+The resulting transfer times of the small file can be seen in \cref{fig:small-file-bar}.
 
 \begin{figure}[p]
   \input{./resources/small_file.pgf}
-  \caption{Small file transfer time by implementation and RTT}
+  \caption{Transfer time of 100 kB file time after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
   \label{fig:small-file-bar}
 \end{figure}
 
-\subsubsection{Path migration}
-One of the key faetures of TAPS is exposing QUIC to clients without
-them having to implement their own fallback logic. QUIC has several desirable
-features which is not available in normal TCP and one of these is path migration.
-Since QUIC connections are identified by their connection ID not by their four-tuple
-as with TCP, QUIC connections can migrate to a different IP address while still maintaining
-their connection status. A diagram explaining this can be seen in \cref{fig:connectionBeforeAfterMigration}
-in \cref{chap:background}.
-Connection migration is especially useful in mobile devices, where one might expect
-certain interfaces to become unavailable frequently, as users enter and exit buildings and switch
-between Wi-Fi and cellular frequently. 
+\subsubsection{Path Migration} \label{sec:path-migration}
+The path migration benchmark is intended to show the benefits of connection migration,
+that it is available with minimal code changes in CTaps, and the behaviour of TCP
+when a local endpoint becomes unavailable.
+In this benchmark, a \qty{4.6}{\mega\byte} file is transferred over an emulated
+\qty{5}{\mega\bit\per\second} link with an RTT of \qty{50}{\milli\second}.
 
-This test was devised to show that CTaps can also make use of QUIC's path migraiton, at a
-negligible overhead when compared to a pure QUIC implementation such as Picoquic.
-This test uses the same \qty{4.6}{\mega\byte} file as described in \cref{sec:smallfiletransfer}, but
-sets the emulated network bandwidth to \qty{625}{\kilo\byte\per\second} and RTT value to \qty{50}{\milli\second}.
-This was done to give the transfer enough time to reach its steady-state and to still have data left
-to transfer after recovering from the path failure. For this test the CTaps
-client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connect
-from the first stated address of \mono{127.0.0.1}, the transfer would start, but after
-five seconds the benchmark script would block the data from and to the local endpoint using: 
+The combination of file size and bandwidth was chosen to give the transfer enough
+time to reach its steady-state and to still have data left
+to transfer after recovering from the path failure. For this test, the CTaps
+client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connects
+from \mono{127.0.0.1} and begins the transfer. After
+five seconds the benchmark script blocks the data from and to the local endpoint using
+the iptables command seen in \cref{lst:iptables-command}.
 
-\begin{figure}[H]
+This command adds a packet filter rule to the OUTPUT chain in the Linux kernel.
+This chain is
+run for locally generated packets \cite{iptables_man}, causing
+system calls which send matching data to fail and return \mono{-EPERM}.
+CTaps detects this failure and notify picoquic that the path has
+become unavailable, starting the connection migration process.
+The picoquic client had to be adapted slightly in order to treat
+this exact failure as a condition for connection migration,
+the exact required modifications and the reasons behind them
+are described in \cref{sec:softwaretools}.
+
+An equivalent command blocking
+TCP data was run, in order to illustrate the TCP connection failing after a path event.
+
+The resulting comparison of a local endpoint becoming unavailable for TCP, QUIC and CTaps
+can be seen in \cref{fig:migration-throughput}. This figure shows how both CTaps and the picoquic
+client recover after the local endpoint becomes unavailable, but TCP fails and does not complete
+the transfer.
+
+This benchmark was gathered with the CTaps and QUIC client described in \cref{sec:client-complexity},
+showing that connection migration is made available through CTaps with minimal complexity
+for the application.
+
+\begin{listing}[htbp]
     \begin{minted}[fontsize=\small]{bash}
 iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
 \end{minted}
-\end{figure}
-
-This was run together with the equivalent rule to block TCP traffic, to show that TCP does not have
-the same migration capabilities.
-
-This rule causes sendmsg to return an error, which then could be passed on to
-Picoquic. Picoquic would notify CTaps that the path had become unavailable, and CTaps could tell
-Picoquic to start probing the other path registered with the connection. For Picoquic the built
-in packet loop also has support for migration; It automatically detects when a path fails
-and notifies the client that the offending path has been suspended. You can then immediately tell
-it to probe a new path, and it will start migration if it manages to contact the server on one of
-them. The resulting comparison of a a local endpoint becoming unavailable for TCP, QUIC and CTaps
-can be seen in \cref{fig:migration-throughput}.
-
-A detailed account on how the iptables behaviour was integrated with the Picoquic packet loop
-used in the Picoquic client can be seen in \cref{sec:softwaretools}.
+\caption{iptables command to block UDP data from local endpoint to file server on localhost with port 8080.}
+\label{lst:iptables-command}
+\end{listing}
 
 \begin{figure}[p]
     \input{./resources/migration_throughput.pgf}
-    \caption{Path recovery of TAPS and Picoquic, while TCP fails}
+    \caption{Transfer of a 4.6 MB file over a 5 Mbit link with CTaps, picoquic and TCP. A path block is applied at t = 5s.}
     \label{fig:migration-throughput}
 \end{figure}
 
-\subsection{Client complexity}
+\subsection{Client complexity} \label{sec:client-complexity}
 While the advantages from QUIC made available through TAPS are clear, they
 can also be achieved through using a QUIC library and writing custom fallback
 logic to retreat to TCP on failing to establish a QUIC connection. This does
 however introduce a lot of complexity in the client, and makes the application
 layer responsible for what should be the responsibility of the transport layer.
-One of the goals if TAPS is therefore to reduce complexity presented to the
+
+One of the goals of TAPS is therefore to reduce complexity presented to the
 application. This is achieved by front-loading complexity in the initialization
 and context setup and abstracting away live connection management from the application.
-This means that even more advanced features such as migration is achieved with
+This means that even more advanced features such as migration are achieved with
 minimal code changes, simply by stating the intention to migrate if issues
-arise, the application using CTaps get this feature for nearly free. The
-relative complexity of each benchmarking client, measured in lines of code,
-can be seen in \cref{tab:loc_complexity}.
+arise.
+
+When collecting these benchmarks, the same picoquic, CTaps and TCP clients have
+been used for the small file transfer and the connection migration benchmarks.
+Their relative complexity measured in lines of code
+can be seen in \cref{tab:loc_complexity}. \todo{Update the counts to match to slightly modified clients}
 
 \begin{table}[p]
 \centering
+\begin{threeparttable}
+\caption{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
+\label{tab:loc_complexity}
 \begin{tabular}{lrrrr}
 \toprule
 \textbf{Component} & \textbf{TCP} & \textbf{QUIC} & \textbf{TCP \& QUIC} & \textbf{CTaps} \\
@@ -262,16 +291,21 @@ Migration                        &  0  &  24 &  24  &  3  \\
 \textbf{Total}                   & 149 & 212 & 361 & 264 \\
 \bottomrule
 \end{tabular}
-\caption{Benchmark client implementations by lines of code.\protect\footnotemark}
-\label{tab:loc_complexity}
-\end{table}
-
-\footnotetext{
-The following counts were achieved by classifying each non-blank,
+\begin{tablenotes}
+      \small
+      \item $^1$ The counts were obtained by classifying each non-blank,
 non-comment line into one of six categories
 for each of the three clients used for benchmarking.
-Annotated source files used for counting are available at \mono{benchmark/annotations/} in the CTaps repository.}
+Annotated source files used for counting are available at \mono{benchmark/annotations/} in the CTaps repository.
+    \end{tablenotes}
+\end{threeparttable}
+\end{table}
 
+% TODO kom hit. les gjennom Connection Establishment with Slow and Fast Endpoint.
+% nevn hvorfor man brukte andre klienter til handshakes og så fiks resten av tilbakemeldingene
+% fra michael, inkludert det arket vi har hjemme.
+% Så les gjennom alt selv. Så print ut. Så les gjennom print igjen og se om man ser noe.
+% Gi alle figures og tabeller etc. mye mer beskrivende captions.
 
 \section{QUIC Under TAPS} \label{sec:quicUnderTaps}
 TAPS has been designed with QUIC in mind from the very start,
@@ -550,6 +584,7 @@ can be treated exactly the same, and the application does not have to care
 whether the server it is connecting to supports QUIC or not.
 
 % Discuss connection migration
+\subsection{Connection Migration Benchmark} \label{sec:connection-mig-benchmark}
 As mentioned above, one of the key features with QUIC is Connection Migration.
 This is another aspect of QUIC hich helps utilize the avaiable bandwidth more
 efficiently. If QUIC can successfully migrate from a dead path to a live one
@@ -611,6 +646,13 @@ make use of a single protocol such as QUIC. With CTaps, the complexity is moved
 away from the application and presented in a generic way which can be reused
 by any appliaction using the network. This does not only come with the added
 simplicity, but also much easier migration to future protocols.
+
+While CTaps is the most complex
+individual client, it provides TCP and QUIC support, connection racing,
+and several QUIC benefits at less than the combined complexity of the QUIC
+and TCP clients. In order to develop a replacement of CTaps, the TCP and QUIC
+clients would not only have to be combined, but would also have to implement
+fallback logic, which is not accounted for in this table.
 
 Several popular libraries exist which has significant feature overlap
 with QUIC such as Valve's GameNetworkingSockets or ENet \cite{ValveGameNetworkingSockets}
