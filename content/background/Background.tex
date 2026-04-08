@@ -19,7 +19,7 @@ be used to reach the same destination.
 
 Within QUIC, a network path is a term used for the combination of
 source IP, source port, destination IP and destination port
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
+\cite{rfc9000}.
 This term has become necessary in the context of QUIC, as unlike TCP, QUIC decouples
 the path from the connection itself. More details about this can be found in
 \cref{sec:quic}.
@@ -159,7 +159,7 @@ connection \cite{google2026transparency}.
 QUIC is a protocol intended to be a replacement for TCP.
 It was developed by Google and released to the
 public in 2013 described in RFC 9000
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
+\cite{rfc9000}.
 Like TCP, QUIC is a connection-oriented protocol and provides reliability,
 despite being implemented in user-space on top of
 UDP. QUIC enables several features which either are not available
@@ -198,7 +198,7 @@ be seen in \cref{lst:stream-frame-format}.
           Stream Data (..),
         }
     \end{lstlisting}
-	\caption{Format of a QUIC stream frame \cite{iyengarQUICUDPBasedMultiplexed2021}}
+	\caption{Format of a QUIC stream frame \cite{rfc9000}}
 	\label{lst:stream-frame-format}
 \end{listing}
 
@@ -255,20 +255,20 @@ seen in \cref{fig:stream_states}.
    | Recvd |                   | Recvd |
    +-------+                   +-------+
     \end{lstlisting}
-    \caption{States of a QUIC stream sending data \cite{iyengarQUICUDPBasedMultiplexed2021}}
+    \caption{States of a QUIC stream sending data \cite{rfc9000}}
     \label{fig:stream_states}
 \end{figure}
 
 Another important abstraction presented by QUIC is the connection.
 A QUIC connection is a shared state between a client and a server 
-\cite{iyengarQUICUDPBasedMultiplexed2021}
+\cite{rfc9000}
 and is established through a handshake.
 
 Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
 number spaces are \say{the context in which a packet can be processed
-and acknowledged} \cite{iyengarQUICUDPBasedMultiplexed2021}. 
+and acknowledged} \cite{rfc9000}. 
 This context reflects the level of encryption and there 
 are therefore three separate packet number spaces. Initial space,
 for the initial handshake packets, handshake space, for packets
@@ -290,7 +290,7 @@ This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
 of retransmissions, making RTT measurements in these cases more accurate
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
+\cite{rfc9000}.
 
 Future network ossification related to QUIC is also mitigated 
 by mandating TLS 1.3 and by encrypting the header.
@@ -301,7 +301,7 @@ cannot grow reliant on the contents of the packet.
 \subsection{Connection ID}
 QUIC does not use a four-tuple to uniquely identify a connection like TCP does.
 Instead, it uses a set of source and destination Connection IDs which are independently selected by each
-endpoint \cite{iyengarQUICUDPBasedMultiplexed2021}.
+endpoint \cite{rfc9000}.
 Each endpoint selects a range of connection IDs which it shares with its peer.
 The peer then selects from the assigned IDs when selecting
 a destination ID for an outgoing packet.
@@ -312,7 +312,7 @@ ensure that connections cannot be linked by outside observers through a single c
 for example after path migration.
 
 Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{iyengarQUICUDPBasedMultiplexed2021}. This allows QUIC to survive
+protocols \cite{rfc9000}. This allows QUIC to survive
 changes in the underlying four-tuple and therefore enables connection migration.
 
 \subsection{Connection Migration} \label{sec:connection-migration}
@@ -336,14 +336,14 @@ the new local path, since the remote is
 previously validated. The peer initiating the 
 path migration can defer local path validation until
 after receiving data on the new local endpoint
-\cite{iyengarQUICUDPBasedMultiplexed2021}.
+\cite{rfc9000}.
 
 If the endpoint validation fails, which happens if no matching response
 is received within a given time period, the endpoints can continue
 communicating using other known addresses. If the connection has no
 viable paths the connection fails. This can be signaled to the peer 
 using a \mono{NO_VIABLE_PATH} connection error, although this is only
-possible if a path exist but does not support the required MTU \cite{iyengarQUICUDPBasedMultiplexed2021}.
+possible if a path exist but does not support the required MTU \cite{rfc9000}.
 
 A figure comparing a TCP and QUIC connection before and after an
 IP address becomes unavailable can be seen in \cref{fig:connectionBeforeAfterMigration}.
@@ -351,7 +351,7 @@ Here, a local address becomes unavailable and the TCP connection is therefore br
 as with a new IP address it would be considered a completely new connection. The
 QUIC connection on the other hand is able to survive this change, as the connection
 ID is recognized by the peer, even if it is changed on connection migration to avoid
-linkability as recommended by RFC 9000 \cite{iyengarQUICUDPBasedMultiplexed2021}, since
+linkability as recommended by RFC 9000 \cite{rfc9000}, since
 it was picked from the pool of valid IDs generated by the peer.
 
 \begin{figure}[hp]
@@ -503,7 +503,7 @@ seen in \cref{fig:socket-programming-api-model} and
         |               Network-Layer Interface               |
         +-----------------------------------------------------+
     \end{lstlisting}
-    \caption{API model for socket programming \cite{trammellAbstractApplicationProgramming2025}}
+    \caption{API model for socket programming \cite{rfc9622}}
     \label{fig:socket-programming-api-model}
 \end{figure}
 
@@ -527,7 +527,7 @@ seen in \cref{fig:socket-programming-api-model} and
         |               Network-Layer Interface               |
         +-----------------------------------------------------+
     \end{lstlisting}
-    \caption{API model for TAPS \cite{trammellAbstractApplicationProgramming2025}}
+    \caption{API model for TAPS \cite{rfc9622}}
     \label{fig:taps-api-model}
 \end{figure}
 
@@ -721,7 +721,7 @@ underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
   |         Transport Protocol Stack         |
   +------------------------------------------+
   \end{lstlisting}
-\caption{Protocol Stack Showing a Message Framer from RFC 9622 \cite{trammellAbstractApplicationProgramming2025}}
+\caption{Protocol Stack Showing a Message Framer from RFC 9622 \cite{rfc9622}}
 \label{fig:tpsStack}
 \end{figure}
 

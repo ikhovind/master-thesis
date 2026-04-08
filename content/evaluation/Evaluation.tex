@@ -352,7 +352,7 @@ expected behaviour
 is that closing an individual Connection will close both the sending
 and receiving side and start teardown. For QUIC, this can in theory be emulated by sending a \mono{FIN}
 flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
-frame if their stream is in a ready or sending state \cite{iyengarQUICUDPBasedMultiplexed2021}.
+frame if their stream is in a ready or sending state \cite{rfc9000}.
 A \mono{RESET_STREAM} frame tears down a QUIC stream in the sending direction,
 which in combination with the \mono{FIN} flag sent would completely close the frame.
 
@@ -373,7 +373,7 @@ after the peer has finished sending its data.
 If a peer wants to gracefully close
 a connection before all data has been received, the only way of handling it gracefully is to
 close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
-functionality form RFC9622 \cite{trammellAbstractApplicationProgramming2025}.
+functionality form RFC9622 \cite{rfc9622}.
 
 If the application takes care of performing TAPS connection cloning in a consistent way,
 it can constently use \mono{ConnectionGroup.close()} and achieve the same
@@ -383,7 +383,7 @@ should interact with the API.
 
 This mapping of QUIC connections to TAPS connection groups also affects how
 CTaps handles the notification of path changes. In TAPS, the PathChange 
-event is per-Connection \cite[Sec. 8.3.2]{trammellAbstractApplicationProgramming2025},
+event is per-Connection \cite[Sec. 8.3.2]{rfc9622},
 while QUIC migration happens for an entire Connection Group.
 
 For CTaps this means that for each path change event every CTaps Connection is notified
@@ -397,54 +397,79 @@ through a TAPS Connection.
 One example of this is the one-way abort mentioned
 earlier through \mono{STOP_SENDING}, which requests that the peer abort their
 sending, and \mono{RESET_STREAM}
-which aborts the local sending side \cite[Sec. 19.4, 19.5]{iyengarQUICUDPBasedMultiplexed2021}.
+which aborts the local sending side \cite[Sec. 19.4, 19.5]{rfc9000}.
 For aborting Connections, the TAPS API presents only the generic
-\mono{Connection.abort()} \cite[Sec. 10]{trammellAbstractApplicationProgramming2025},
-so a TAPS implementation has no way of knowing whether the application
+\mono{Connection.abort()} \cite[Sec. 10]{rfc9622}.
+A TAPS implementation therefore has no way of knowing whether the application
 wants to abort sending, abort receiving, or both. The only natural conclusion is
 therefore to abort both sending and receiving, leaving the granular QUIC control 
 unavailable to the application.
 
 Another stream functionality which is not exposed through CTaps is
 initiating unidirectional streams. QUIC allows
-applications to open streams to be used purely for unidiraction sending.
-Here, the stream IDs denominating whether the stream was opened by the client
-or the server and whether or not the stream is unidirectional on bidirectional.
-A TAPS system has to assume that every new stream opened via \mono{Connection.clone()}
-is bidirectional, although since the TAPS API is extensible a parameter to
-respesct this can easily be added, although it would likely have to be ignored
-or enforced by the TAPS system itself for TCP and several other protocols.
-A TAPS system is able to receive an unidirectional stream initiated by the peer,
-and can simply mark the incoming connection as closed for sending before presenting
-it to the application.
+applications to open streams for unidiractional sending \cite[Sec. 1]{rfc9000}.
+A TAPS implementation has to assume that every new stream opened via \mono{Connection.clone()}
+is bidirectional, although since the TAPS API is extensible, a parameter could
+easily be added when Cloning a Connection to support this.
 
-TAPS Connections also do not let the application control \mono{FINAL_SIZE} values
-of QUIC streams, which is used to control how much data a QUIC stream can send, although
-this will still be reported through sending \mono{FIN} flags, which is supported.
+Despite not being able to inititate unidirectional sending, a TAPS implementation
+is able to receive an unidirectional stream initiated by the peer as expected by QUIC.
+It can infer from the stream ID that it is unidirectional \cite[Sec. 2.1]{rfc9000}
+and mark it as closed for sending before presenting it to the appliaction.
 
-There is also several pieces of lower layer QUIC functionality such as flow control
-through frames such as \mono{MAX_STREAM_DATA} which is in theory able to be
-sent from QUIC, but possible through a TAPS system.
-\todo{Er dette relevant, er ikke akkurat som om det er tilgjengelig via TCP heller}
+Withing QUIC, there are also several transport parameters \cite[Sec. 18]{rfc9000} which are not
+exposed through the TAPS API. TAPS does not feature a generic timeout value
+wihch can be passed as \mono{max_idle_timeout} \cite[Sec. 10.1]{rfc9000}.
+While TAPS does support timeouts for when sending data, for example through
+the Timeout for Aborting Connection Connection Property \cite[Sec. 8.1.3]{rfc9622},
+it does not feature a generic idle timeout for automatically closing a connection.
+
+The TAPS API also does not support setting a maximum data to be received on either
+a Connection Group or on a Connection, as supported on QUIC connections and streams
+through the \mono{initial_max_data} and various \mono{initial_max_stream_data_*}
+transport properties respectively.
+
+In theory, an application
+using TAPS could desire to set these, but they can also be assumed to
+be handled by the underlying QUIC implementation and therefore not
+necessarily be considered a gap in the TAPS API.
+In CTaps' case, Picoquic provides
+an optional \mono{picoquic_set_max_data_control} for
+connection-level max data, but this is not surfaced through CTaps.
+Picoquic does not provide a per-stream max data configuration.
+
+CTaps does not expose any form of maximum data,
+and as picoquic does not surface it as configuration options,
+they are handled internally by the implementation
+
+While TAPS does allow the application to control the number of Connections
+in a Connection Group through the groupConnLimit Connection Property \cite[Sec. 8.1.9]{rfc9622},
+it loses some granularity exposed through QUIC when controlling the number
+of streams in a connection. QUIC allows control over both the maximum number
+of both unidirectional and bidirectional streams through either the
+\mono{initial_max_streams_uni} and \mono{initial_max_streams_bidi} or a
+\mono{MAX_STREAMS} frame \cite[Sec. 18.2, 19.11]{rfc9000}. 
 
 TAPS does also not feature a way to completely disable connection migration
 as can be done in QUIC through the use of the \mono{disable_active_migration} transport
-parameter. In TAPS, the only migration setting available to the application is
-disabling active advertisment of local addresses.
-While this is valuable, if the application is behind a simple load balancer,
-then it would be useful to let the peer know that connection migration is 
-not be supported \cite{iyengarQUICUDPBasedMultiplexed2021}. Not all connection
-migration is initiated intentionally however, as it might be a result of a network
-change, for example a NAT rebinding.
+parameter \cite[Sec. 18.2]{rfc9000}. In TAPS, the only migration setting available to the application is
+disabling active advertisment of local addresses through the \mono{advertisesAltaddr} Selection
+Property \cite[Sec. 6.2.15]{rfc9622}.
+The QUIC RFC specifically brings up the case where an application is behind
+a simple load balancer, stating that a application should then disable
+active migration \cite[Sec. 5.2.3]{rfc9000}, but this is not possible through
+the TAPS API.
 
-While this is
-not a security gap since the migration request can be verified
-to come from the peer associated with the connection, due to the request
-being encrypted, it does present a certain lack of functionality of a TAPS
-system. If an application using a TAPS library wants to disable migration
-it would be reliant on essentially blocking all incoming \mono{PATH_CHALLENGE}
-frames, as if these reach the intrenal TAPS system QUIC implementation then
-the TAPS system has no way of knowing that the migration is not actually desired.
+% TODO skriv om preferred_address, men bedre
+On the server side, TAPS does not expose preferred addresses through its API.
+These are used by QUIC when it wants to accept on a given address but wants
+to migrate it to a new address shortly after the handshake \cite{rfc9000}.
+Migration is however supported, so future support for preferred addresses can
+easily be added to the API through a flag in a given local endpoint.
+
+The remaining QUIC transport parameters which have no suitable mapping in TAPS
+and cannot be assumed to be handled automatically are \mono{ack_delay_exponent},
+\mono{max_ack_delay} and \mono{preferred_address} \cite[Sec. 18.2]{rfc9000}.
 
 One way of handling this would be for the TAPS implementation to allow migration
 to and from remote endpoints registered with the Connection. This would naturally
@@ -452,25 +477,14 @@ be quite limiting and would require you to know all remote interfaces of a
 server before connecting to it, or discover them during the lifetime of the
 Connection.
 
-In a pure QUIC system an application can specify a maximum number of streams to
-be received on a QUIC connection. While a TAPS application can specify a maximum
-number of connections which chan be spawned from a Listener, there is no way
-to stop the peer from opening more connections through connection cloning.
-
-On the server side, TAPS does not expose preferred addresses through its API.
-These are used by QUIC when it wants to accept on a given address but wants
-to migrate it to a new address shortly after the handshake \cite{iyengarQUICUDPBasedMultiplexed2021}.
-Migration is however supported, so future support for preferred addresses can
-easily be added to the API through a flag in a given local endpoint.
-
 Certain features, such as stateless Reset are not exposed through the TAPS
 API directly, but are expected to be handled by the underlying QUIC implementation,
 so that there is no need to expose them in a TAPS system.
 
 In the TAPS API ECN is marked as an UDP-lite specific feature, though this
-is also useful for QUIC \cite{trammellAbstractApplicationProgramming2025}.
+is also useful for QUIC \cite{rfc9622}.
 
-Additionally, when closing connections picoquic exposes no way of passing
+Additionally, when closing connections Picoquic exposes no way of passing
 an error code to the peer.
 
 \section{Discussion}
@@ -718,7 +732,7 @@ connection to a server, to ensure that if the underlying protocl supports multis
 then the entire connection will be closed. While this is breaks slightly with 
 with the principle of least surprised as described in RFC 9622, it provides
 far greater flexibility and consistent behaviour to the downstream application
-\cite{trammellAbstractApplicationProgramming2025}. It can also be added that
+\cite{rfc9622}. It can also be added that
 the only reason for this expectation of how to interact with the network
 exists is due to TCP's long ubiquity as a transport protocol. This is
 purely an appeal to tradition and should not be considered blocking in
@@ -787,12 +801,12 @@ then naturally be mandatory by default, only allowing insecure protocols if
 explicitly enabled by the user. This is the ideology taken by TAPS as can be
 seen in the Allowed Security Protocols security parameter, which mandates
 that the default be \say{Implementation-specific best available security protocols}
-\cite{trammellAbstractApplicationProgramming2025}.
+\cite{rfc9622}.
 
 In addition to mandating that TAPS implementations set the default allowed
 security protocols to be the best available, RFC 9622 also mentions that applications
 should use common safe defaults for security parameters
-\cite{trammellAbstractApplicationProgramming2025}. This means that the
+\cite{rfc9622}. This means that the
 default should be requiring an encrypted connection. RFC 9622 also describe
 the difference between disabled Security Parameters and opportunistic
 Security Parameters. Disabled Security Parameters are an option in order

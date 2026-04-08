@@ -106,7 +106,7 @@ to the application, we can also define which fields are supposed to be settable 
 gettable externally. This also helps future-proof the API, as renaming and adding or
 removing internal members of structures does not affect downstream applications.
 This API with heap-allocated objects is also as close as possible to the object oriented
-API as described in RFC9622 \cite{trammellAbstractApplicationProgramming2025}.
+API as described in RFC9622 \cite{rfc9622}.
 
 Because all objects in CTaps are allocated on the heap in CTaps using \mono{\*\_new()}
 functions it is important that the client frees the allocated structures at the appropriate time.
@@ -178,7 +178,7 @@ a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this 
 Properties and Selection Properties. In a slight deviation from RFC 9622
 CTaps does not feature generic setters or getters, instead all selection
 and transport properties are set through dedicated function in the format
-\mono{ct_transport_properties_set_*} \cite{trammellAbstractApplicationProgramming2025}.
+\mono{ct_transport_properties_set_*} \cite{rfc9622}.
 This is a deliberate design choice, made to make it possible to move away from
 the current enum-based properties in the future, and also ensure type safety on
 all \mono{get()} and \mono{set()} operations.
@@ -447,7 +447,7 @@ In a full feature TAPS system the application would be able to
 dynamically set Connection Properties on Connections. This would
 involve for example setting the capacity profile in order to
 manipulate the underlying DSCP values in the IP header
-\cite{trammellAbstractApplicationProgramming2025}. CTaps
+\cite{rfc9622}. CTaps
 has very limited support for this, with the only Connection Property
 that can be dynamically set being Connection Priority. This decides,
 if applicable, the relative priority of Connections within a Connection
