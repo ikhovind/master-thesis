@@ -1,5 +1,35 @@
 \chapter{Background} \label{chap:background}
 
+\section{Object Orientation in C} \label{sec:object-orientation-in-c}
+The abstract interface described by the TAPS WG is very clearly object
+oriented, C is a procedural programming language, and does not feature
+the concept of classes or objects, which would most neatly map to the
+TAPS interface. Instead, the object orientation and division of responsibility
+featured in an object-oriented language has to be emulated through the use of
+structs, and dedicated functions which operate on them.
+
+\begin{listing}[phtb]
+\begin{minted}{C}
+typedef struct ct_example_object_s {
+    uint8_t value;
+} ct_example_object_t;
+
+ct_example_object_t* ct_example_object_new(uint8_t value);
+ct_example_object_t* ct_example_object_free(ct_example_object_t* obj);
+uint8_t ct_example_object_get_value(const ct_example_object_t* obj);
+void ct_example_object_set_value(ct_example_object_t* obj, 
+                                 uint8_t new_value);
+\end{minted}
+\caption{Example of using a struct in C to emulate an object}
+\label{lst:example-object}
+\end{listing}
+
+By creating dedicated constructors, destructors and other utility functions
+object orientation can be largely emulated in C, with the same advantages
+of encapsulation of responsibilities
+as seen in higher level languages. An example of this pattern can be seen in
+\cref{lst:example-object}.
+
 \section{Network Interfaces and Paths}
 A machine is considered to be multihomed if it is connected to more than
 one network. In practice, this is often the case for modern devices,
@@ -972,7 +1002,7 @@ has successfully established a connection with a remote endpoint, or
 when all candidates have failed. 
 
 \section{Happy Eyeballs} \label{happyEyeballs}
-Happy Eyeballs, which is described in RFC 86305 is an algorithm
+Happy Eyeballs, which is described in RFC 8305 is an algorithm
 for racing IPv4 and  IPv6 addresses on dual-stack hosts
 \cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering
 and Candidate Racing algorithm found in TAPS is based on Happy Eyeballs,

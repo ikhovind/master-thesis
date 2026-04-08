@@ -1,128 +1,44 @@
 \chapter{Implementation}  \label{chap:impl}
 
-\section{Architecture}
-Internally, CTaps follows the TAPS architecture as described in
-RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.
-This divides a TAPS system into two distinct sections, a public
-Transport Services API described in \cref{cTapsApiDesign} and the
-Transport System Implementation which is described in this chapter.
+\section{Socket Manager} \label{sec:socketManager}
+The need for a Socket Manager was described in \cref{sec:socket-manager-design},
+with the most important responsibilities being managaing the lifetimes
+of sockets as well as acting as an intermediary between Connections
+and the various protocol implementations.
 
-The architecture of CTaps has been designed to fit the restrictions
-placed on socket lifetimes by the underlying protocols of TCP, UDP
-and QUIC. Because the application can close and free connections
-at any point, CTaps has to ensure that all required memory remains
-valid until the final external resource using it has been freed.
+The reference counter is however decremented when the
+memory associated with one of the objects using the Socket Manager is
+freed. If this counter reaches 0, then the entire Socket Manager structure
+is freed, as can be seen in \cref{lst:socketManagerRefCount}.
 
-CTaps therefore makes use of an internal structure called a
-Socket Manager which is described in detail in \cref{sec:socketManager}.
+Socket Managers
+are also responsible for closing sockets when the final associated Connection
+or Listener has been closed. This is done through a separate functionality from
+the reference counting. Instead, a Socket Manager maintains a list of Connections
+and Listeners using its socket, only closing the socket when the last of these
+Connections or the last Listener is closed. Freeing the internal state and closing
+of the socket are implemented as two separate operations so that the application
+can still query for internal state, such as the underlying protocol, after
+a Connection or Listener has been closed.
 
-Because UDP mandates that multiple unrelated Connections must
-be able to share a socket, TCP mandates that Connections in the
-same Connection Group must be able to have different sockets Socket
-Managers are referenced on the Connection level. The application
-interacts only with the connection
-which in turn interacts with the Socket Manager. The Socket Manager
-owns the protocol implementation and invokes one or more of the interface
-function pointers, according to the will of the application.
+\begin{listing}[tbp]
+  \begin{minted}{C}
+void socket_manager_decrement_ref(SocketManager* socket_manager) {
+  socket_manager->ref_count--;
+  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
+  if (socket_manager->ref_count == 0) {
+    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
+    if (rc < 0) {
+      log_error("Error stopping socket manager listen: %d", rc);
+    }
+    free(socket_manager);
+  }
+}
+  \end{minted}
+  \caption{Internal Socket Manager counter decrementation}
+  \label{lst:socketManagerRefCount}
+\end{listing}
 
-Since several functions within the various protocol implementations
-are asynchronous, communication between the protocol implementation
-and the socket manager has to be asynchronous as well. The Socket
-Manager has a structure with internal callbacks which are invoked by the protocol
-implementation at appropriate times, for example to notify
-the Socket Manager that a Connection has been closed when teardown
-has completed.
-
-This closed-layer model only applies to memory-critical paths, in order
-to mitigate
-potential memory leaks. Some remaining flows, such as messages being passed
-from Connection to protocol do not currently flow through a dedicated
-function in the Socket Manager. 
-
-An example of the internal flow in CTaps can be seen in
-\cref{fig:async-close-flow}, showing the asynchronous flow of
-graceful connection teardown for a Connection using a shared
-Socket Manager. Here, a single Connection in a Connection Group
-is closed.
-
-This Connection uses a Socket Manager which is shared
-with not only its Connection Group, but also with a Connection
-in a completely separate Connection Group. This can for example
-happen when listening for Connections over UDP, as all received
-Connections will share a socket but belong to different Connection
-Groups. When the Connection is closed, the Socket Manager invokes
-the associated function pointer for the underlying protocol. This
-asynchronously performs any necessary connection teardown over the
-wire, and then notifies the Socket Manager when necessary.
-
-Crucially,
-it does not close the socket until notified by the Socket Manager,
-since the socket needs to stay open until all Connections using
-it have been closed. This is not the case in the example flow,
-so the Socket Manager simply updates the state of the Connection
-and notifies the application of the Connection closing through the
-\mono{closed()} callback.
-
-\definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
-\begin{figure}[ph]
-\centering
-\begin{tikzpicture}[font=\sffamily,
-    block/.style={rectangle, draw, text centered, rounded corners, fill=white, font=\bfseries},
-    client/.style={rectangle, draw, text centered, fill=white, font=\small},
-    arrow/.style={-Stealth, thick},
-    asyncArrow/.style={arrow, dashed, red!70!black},
-    label/.style={font=\scriptsize\itshape}
-    ]
-
-% Place connections first
-\node[client] (Conn1) at (0,0) {Connection 1};
-\node[client, below=0.3cm of Conn1] (Conn2) {Connection 2};
-\node[client, below=1.2cm of Conn2] (ConnN) {Connection N};
-
-% SM centred vertically on the connections group
-\node[block, align=center] (SM) at
-    ($(Conn1.north east)!0.5!(ConnN.south east) + (4,0)$)
-    {Socket Manager};
-
-\node[block, right=of SM] (Prot) {Protocol Impl};
-
-\draw[arrow] (Conn1.north east) -- node[above, sloped, label, yshift=3pt] {close()} (SM.north west);
-\draw[arrow] (Conn2.east) -- (SM.west);
-\draw[arrow] (ConnN.east) -- (SM.south west);
-
-\node[font=\Huge, text=gray] at ($(Conn2.south)!0.4!(ConnN.north)$) {$\vdots$};
-
-\begin{scope}[on background layer]
-    \draw[rounded corners, fill=blue!5!white, draw=blue!20]
-        ($(Conn1.north west)+(-0.3, 0.4)$) rectangle ($(ConnN.south east)+(0.3,-0.3)$);
-    \node[font=\normalsize\bfseries, above=0.4cm of Conn1, blue!70!black, align=center]
-        {Connections};
-    \node[fit=(Conn1)(Conn2), rounded corners, fill=green!5!white,
-          draw=green!20, inner sep=0.13cm] (GreenBox1) {};
-    \node[fit=(ConnN), rounded corners, fill=green!5!white,
-          draw=green!20, inner sep=0.13cm] (GreenBoxN) {};
-\end{scope}
-\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBox1] {Connection Group 1};
-\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBoxN] {Connection Group N};
-
-% Request Flow
-\draw[arrow]
-    ([yshift=-0.5mm]SM.north east)
-    -- node[above, sloped, label, align=center] {Close connection}
-    ([yshift=-0.5mm]Prot.north west);
-\draw[asyncArrow] 
-    ([yshift=0.5mm]Prot.south west)
-    -- node[below, label, text=red!70!black, align=center] {Socket Manager cb}
-    ([yshift=0.5mm]SM.south east);
-\draw[asyncArrow]
-    ([yshift=4pt]SM.west)
-    -- node[below, sloped, label, text=red!70!black, align=center] {User cb}
-    ([yshift=3pt]Conn1.east);
-\end{tikzpicture}
-\caption[Flow of internal callbacks in CTaps.]{Example model of the asynchronous communication
-between the CTaps Socket Manager and the protocol implementation when an application invokes \mono{close()}}
-\label{fig:async-close-flow}
-\end{figure}
 
 \section{Candidate Gathering} \label{sec:candidateGathering}
 Before a Connection can be established, a list of possible Local and Remote
@@ -428,117 +344,6 @@ multiplexing.}
 
 \section{Protocol Implementations}
 
-\subsection{Protocol Interface}
-In order to make the CTaps design as modular as possible,
-CTaps uses an internal interface to interact with the underlying protocol.
-This interface abstracts away the implementation details of the individual
-protocols and allows the upper layers to interact with the network in an
-asynchronous way. This interface consists of the protocol name and certain
-protocol properties, a list of selection properties which is used
-when filtering candidates during Candidate Gathering, as well as
-a list of function pointers invoked when interacting with the protocol.
-The full definition of the protocol interface struct can be seen in
-\cref{lst:protocol-impl-struct}.
-
-A single protocol is implemented as a single implementation of the interface.
-Together with providing implementations of the interface protocols, it also
-has to register a list of settings for each selection protocol. These settings
-indicate which properties the given protocol can fulfill, which is used 
-when filtering candidates during candidate gathering.
-
-\begin{listing}[tbp]
-\begin{minted}{C}
-typedef struct ct_protocol_impl_s {
-    const char* name;                               ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
-    ct_protocol_enum_t protocol_enum;               ///< Protocol enumeration value
-    bool supports_alpn;                             ///< True if protocol supports ALPN negotiation
-    ct_selection_properties_t selection_properties; ///< Properties supported by this protocol
-    /** @brief Initialize a new connection using this protocol. */
-    int (*init)(ct_connection_t* connection);
-    /** @brief Initialize a new connection using this protocol and attempt 0-RTT. */
-    int (*init_with_send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
-    /** @brief Send a message over the protocol. */
-    int (*send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
-
-    /** @brief Start listening for incoming connections. */
-    int (*listen)(struct ct_socket_manager_s* socket_manager);
-
-    /** @brief Stop listening for incoming connections. */
-    void (*close_listener)(struct ct_socket_manager_s*);
-
-    /** @brief Close a connection. */
-    int (*close_connection)(ct_connection_t*);
-
-    /** @brief Close the underlying socket for a socket manager. */
-    void (*close_socket)(struct ct_socket_manager_s*);
-
-    /** @brief Forcefully abort a connection without graceful shutdown. */
-    void (*abort)(ct_connection_t* connection);
-
-    /** @brief Clone a connection's protocol specific state. */
-    int (*clone_connection)(const ct_connection_t* source_connection,
-                            ct_connection_t* target_connection);
-
-    /** @brief Free protocol-specific state in a connection. */
-    void (*free_connection_state)(ct_connection_t* connection);
-
-    /** @brief Free socket-specific state in a connection. */
-    void (*free_socket_state)(struct ct_socket_manager_s* socket_manager);
-
-    void (*close_connection_group)(ct_connection_group_t* connection_group);
-
-    int (*set_connection_priority)(ct_connection_t* connection, uint8_t priority);
-
-    /** @brief Free protocol-specific shared state in a connection group, useful for multiplexing */
-    void (*free_connection_group_state)(ct_connection_group_t* connection_group);
-
-} ct_protocol_impl_t;
-\end{minted}
-\caption{Protocol Implementation interface}
-\label{lst:protocol-impl-struct}
-\end{listing}
-
-\subsection{Socket Manager} \label{sec:socketManager}
-In order to manage sockets, CTaps uses a structure it refers to as a Socket Manager
-internally. This is done to maintain the lifetime of the socket and to
-own its internal state. Since a single socket can feature many connections
-depending on the associated protocol, the socket may need to remain valid
-for the entire lifetime of its most long-lived Connection or Listener.
-In order to achieve this the Socket Manager contains a counter for the
-number of objects still using it. This counter is decremented when the
-memory associated with one of the objects using the Socket Manager is
-freed. If this counter reaches 0, then the entire Socket Manager structure
-is freed, as can be seen in \cref{lst:socketManagerRefCount}.
-
-Socket Managers
-are also responsible for closing sockets when the final associated Connection
-or Listener has been closed. This is done through a separate functionality from
-the reference counting. Instead, a Socket Manager maintains a list of Connections
-and Listeners using its socket, only closing the socket when the last of these
-Connections or the last Listener is closed. Freeing the internal state and closing
-of the socket are implemented as two separate operations so that the application
-can still query for internal state, such as the underlying protocol, after
-a Connection or Listener has been closed.
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-void socket_manager_decrement_ref(SocketManager* socket_manager) {
-  socket_manager->ref_count--;
-  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
-  if (socket_manager->ref_count == 0) {
-    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
-    if (rc < 0) {
-      log_error("Error stopping socket manager listen: %d", rc);
-    }
-    free(socket_manager);
-  }
-}
-  \end{minted}
-  \caption{Internal Socket Manager counter decrementation}
-  \label{lst:socketManagerRefCount}
-\end{listing}
-
-
 \subsection{Supported protocols}
 Currently, CTaps natively supports three transportation layer protocols:
 UDP, TCP and QUIC. TCP and UDP were added because of their ubiquity and
@@ -736,13 +541,6 @@ of CTaps, QUIC is also by far the most complex of the supported protocols
 which can be seen through the required number of lines of code in 
 \cref{sec:protocolComplexity}. QUIC also features several features which
 do not map cleanly into TAPS, which is discussed further in \cref{sec:quicUnderTaps}.
-
-As QUIC and TAPS was developed relatively concurrently, the TAPS
-RFCs feature no protocol considerations or implementations hints like is featured
-for several other protocols, despite access to QUIC being one of the
-major value propositions of a TAPS system \cite{brunstromImplementingInterfacesTransport2025}. 
-There exists a draft for mapping Transport Services to QUIC, but this has
-not made it into the official RFC \cite{transportServicesMappingForQuic}.
 
 With the standardization of QUIC being fairly recent,
 none of the current implementations of TAPS found during research for this

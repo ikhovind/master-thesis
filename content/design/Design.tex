@@ -37,47 +37,289 @@ This library was chosen because of its simplicity
 and pure C implementation, making it easy to integrate
 with CTaps.
 
-\section{API Design}
+\section{Scope}
 CTaps is not a complete implementation of the TAPS standard,
 instead aiming to present the core of a TAPS system and show
 how the most important functionality of QUIC and other protocols
 can be exposed through TAPS.
 \todo{Check in on this later, describe how large of a subset}
-This chapter will describe which parts of the TAPS API that has
-been implemented in CTaps, and what operations that are supported
-in CTaps.
 
-\subsection{Object Orientation in C}
-The abstract interface described by the TAPS WG is very clearly object
-oriented, C is a procedural programming language, and does not feature
-the concept of classes or objects, which would most neatly map to the
-TAPS interface. Instead, the object orientation and division of responsibility
-featured in an object-oriented language has to be emulated through the use of
-structs, and dedicated functions which operate on them. An example of this
-would be the struct representing remote endpoints which can be seen in \cref{lst:remote-endpoint}.
-This contains all the
-context related to remote endpoints, which then is used
-in Connections and Listeners.
+\section{Architecture}
+\subsection{Protocol Interface}
+In order to make the CTaps design as modular as possible,
+CTaps uses an internal interface to interact with the underlying protocol.
+This interface abstracts away the implementation details of the individual
+protocols and allows the upper layers to interact with the network in an
+asynchronous way. This interface consists of the protocol name and certain
+protocol properties, a list of selection properties which is used
+when filtering candidates during Candidate Gathering, as well as
+a list of function pointers invoked when interacting with the protocol.
+The full definition of the protocol interface struct can be seen in
+\cref{lst:protocol-impl-struct}.
 
-\begin{listing}[tbp]
+A single protocol is implemented as a single implementation of the interface.
+Together with providing implementations of the interface protocols, it also
+has to register a list of settings for each selection protocol. These settings
+indicate which properties the given protocol can fulfill, which is used 
+when filtering candidates during candidate gathering.
+
+\begin{listing}[phtb]
+\begin{minted}{C}
+typedef struct ct_protocol_impl_s {
+    const char* name;                               ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
+    ct_protocol_enum_t protocol_enum;               ///< Protocol enumeration value
+    bool supports_alpn;                             ///< True if protocol supports ALPN negotiation
+    ct_selection_properties_t selection_properties; ///< Properties supported by this protocol
+    /** @brief Initialize a new connection using this protocol. */
+    int (*init)(ct_connection_t* connection);
+    /** @brief Initialize a new connection using this protocol and attempt 0-RTT. */
+    int (*init_with_send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+    /** @brief Send a message over the protocol. */
+    int (*send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+
+    /** @brief Start listening for incoming connections. */
+    int (*listen)(struct ct_socket_manager_s* socket_manager);
+
+    /** @brief Stop listening for incoming connections. */
+    void (*close_listener)(struct ct_socket_manager_s*);
+
+    /** @brief Close a connection. */
+    int (*close_connection)(ct_connection_t*);
+
+    /** @brief Close the underlying socket for a socket manager. */
+    void (*close_socket)(struct ct_socket_manager_s*);
+
+    /** @brief Forcefully abort a connection without graceful shutdown. */
+    void (*abort)(ct_connection_t* connection);
+
+    /** @brief Clone a connection's protocol specific state. */
+    int (*clone_connection)(const ct_connection_t* source_connection,
+                            ct_connection_t* target_connection);
+
+    /** @brief Free protocol-specific state in a connection. */
+    void (*free_connection_state)(ct_connection_t* connection);
+
+    /** @brief Free socket-specific state in a connection. */
+    void (*free_socket_state)(struct ct_socket_manager_s* socket_manager);
+
+    void (*close_connection_group)(ct_connection_group_t* connection_group);
+
+    int (*set_connection_priority)(ct_connection_t* connection, uint8_t priority);
+
+    /** @brief Free protocol-specific shared state in a connection group, useful for multiplexing */
+    void (*free_connection_group_state)(ct_connection_group_t* connection_group);
+
+} ct_protocol_impl_t;
+\end{minted}
+\caption{Protocol Implementation interface}
+\label{lst:protocol-impl-struct}
+\end{listing}
+
+
+\subsection{Socket Manager} \label{sec:socket-manager-design}
+The architecture of CTaps has been designed to fit the restrictions
+placed on socket lifetimes by the underlying protocols of TCP, UDP
+and QUIC. Because the application can close and free connections
+at any point, CTaps has to ensure that all required memory remains
+valid until the final external resource using it has been freed.
+
+CTaps therefore makes use of an internal structure called a
+Socket Manager which is described in detail in \cref{sec:socketManager}.
+
+Because UDP mandates that multiple unrelated Connections must
+be able to share a socket, TCP mandates that Connections in the
+same Connection Group must be able to have different sockets Socket
+Managers are referenced on the Connection level. The application
+interacts only with the connection
+which in turn interacts with the Socket Manager. The Socket Manager
+owns the protocol implementation and invokes one or more of the interface
+function pointers, according to the will of the application.
+
+Since several functions within the various protocol implementations
+are asynchronous, communication between the protocol implementation
+and the socket manager has to be asynchronous as well. The Socket
+Manager has a structure with internal callbacks which are invoked by the protocol
+implementation at appropriate times, for example to notify
+the Socket Manager that a Connection has been closed when teardown
+has completed.
+
+This closed-layer model only applies to memory-critical paths, in order
+to mitigate
+potential memory leaks. Some remaining flows, such as messages being passed
+from Connection to protocol do not currently flow through a dedicated
+function in the Socket Manager. 
+
+An example of the internal flow in CTaps can be seen in
+\cref{fig:async-close-flow}, showing the asynchronous flow of
+graceful connection teardown for a Connection using a shared
+Socket Manager. Here, a single Connection in a Connection Group
+is closed.
+
+This Connection uses a Socket Manager which is shared
+with not only its Connection Group, but also with a Connection
+in a completely separate Connection Group. This can for example
+happen when listening for Connections over UDP, as all received
+Connections will share a socket but belong to different Connection
+Groups. When the Connection is closed, the Socket Manager invokes
+the associated function pointer for the underlying protocol. This
+asynchronously performs any necessary connection teardown over the
+wire, and then notifies the Socket Manager when necessary.
+
+Crucially,
+it does not close the socket until notified by the Socket Manager,
+since the socket needs to stay open until all Connections using
+it have been closed. This is not the case in the example flow,
+so the Socket Manager simply updates the state of the Connection
+and notifies the application of the Connection closing through the
+\mono{closed()} callback.
+
+\definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
+\begin{figure}[ph]
+\centering
+\begin{tikzpicture}[font=\sffamily,
+    block/.style={rectangle, draw, text centered, rounded corners, fill=white, font=\bfseries},
+    client/.style={rectangle, draw, text centered, fill=white, font=\small},
+    arrow/.style={-Stealth, thick},
+    asyncArrow/.style={arrow, dashed, red!70!black},
+    label/.style={font=\scriptsize\itshape}
+    ]
+
+% Place connections first
+\node[client] (Conn1) at (0,0) {Connection 1};
+\node[client, below=0.3cm of Conn1] (Conn2) {Connection 2};
+\node[client, below=1.2cm of Conn2] (ConnN) {Connection N};
+
+% SM centred vertically on the connections group
+\node[block, align=center] (SM) at
+    ($(Conn1.north east)!0.5!(ConnN.south east) + (4,0)$)
+    {Socket Manager};
+
+\node[block, right=of SM] (Prot) {Protocol Impl};
+
+\draw[arrow] (Conn1.north east) -- node[above, sloped, label, yshift=3pt] {close()} (SM.north west);
+\draw[arrow] (Conn2.east) -- (SM.west);
+\draw[arrow] (ConnN.east) -- (SM.south west);
+
+\node[font=\Huge, text=gray] at ($(Conn2.south)!0.4!(ConnN.north)$) {$\vdots$};
+
+\begin{scope}[on background layer]
+    \draw[rounded corners, fill=blue!5!white, draw=blue!20]
+        ($(Conn1.north west)+(-0.3, 0.4)$) rectangle ($(ConnN.south east)+(0.3,-0.3)$);
+    \node[font=\normalsize\bfseries, above=0.4cm of Conn1, blue!70!black, align=center]
+        {Connections};
+    \node[fit=(Conn1)(Conn2), rounded corners, fill=green!5!white,
+          draw=green!20, inner sep=0.13cm] (GreenBox1) {};
+    \node[fit=(ConnN), rounded corners, fill=green!5!white,
+          draw=green!20, inner sep=0.13cm] (GreenBoxN) {};
+\end{scope}
+\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBox1] {Connection Group 1};
+\node[font=\tiny\bfseries, text=ConnectionGroupTextColor, above=-1.2mm of GreenBoxN] {Connection Group N};
+
+% Request Flow
+\draw[arrow]
+    ([yshift=-0.5mm]SM.north east)
+    -- node[above, sloped, label, align=center] {Close connection}
+    ([yshift=-0.5mm]Prot.north west);
+\draw[asyncArrow] 
+    ([yshift=0.5mm]Prot.south west)
+    -- node[below, label, text=red!70!black, align=center] {Socket Manager cb}
+    ([yshift=0.5mm]SM.south east);
+\draw[asyncArrow]
+    ([yshift=4pt]SM.west)
+    -- node[below, sloped, label, text=red!70!black, align=center] {User cb}
+    ([yshift=3pt]Conn1.east);
+\end{tikzpicture}
+\caption[Flow of internal callbacks in CTaps.]{Example model of the asynchronous communication
+between the CTaps Socket Manager and the protocol implementation when an application invokes \mono{close()}}
+\label{fig:async-close-flow}
+\end{figure}
+
+\subsection{QUIC to TAPS mapping}
+While the TAPS RFCs were designed with QUIC in mind, it was written before the
+QUIC design was finalized in RFC 9000. This means that RFC 9623 does not
+feature any specific transport protocol consideratoins for mapping QUIC into
+a TAPS system \cite{brunstromImplementingInterfacesTransport2025}.
+There exists a draft for mapping Transport Services to QUIC, but this has
+not made it into the official RFC \cite{transportServicesMappingForQuic}.
+
+Because of RFC 9623 not featuring a mapping of transport services
+onto QUIC, CTaps has had to make certain design decisions in order
+to expose as much QUIC functionality as possible through the TAPS API.
+
+Write more etc. etc.
+
+\section{API Design}
+\subsection{Object Orientation}
+In oder to present a consistent API to downstream application,
+CTaps follows a design philosophy to match the design
+described in RFC 9622 as closely as possible \cite{rfc9622}
+The abstract interface described in this RFC is object
+oriented and to match this, CTaps emulates object
+orientation as described in \cref{sec:object-orientation-in-c}.
+
+An example of this
+is the struct representing Remote Endpoints which can be seen in \cref{lst:remote-endpoint}.
+This object contains all the context related to remote endpoints, which then is used
+in Connections and Listeners. The object has dedicated functions to operate
+on it, and therefore encapsulates all responsibilities related to Remote Endpoints.
+
+The CTaps API consists of a single header file, and all CTaps objects are contained
+as forward declarations within this file
+The application then has to interact with the objects through a list of functions
+which are use to allocate a struct on the heap and to modify the object using
+its pointer.
+This pattern can be seen in \cref{lst:using-remote-endpoint}.
+
+Not exposing the definitions of the sturcts 
+to the application allows CTaps defines which fields are supposed to be external,
+by controlling getters and setters in the external API.
+This also helps future-proof the API, as renaming and adding or
+removing internal members of a struct does not affect downstream applications.
+
+Because all objects in CTaps are allocated on the heap in CTaps using \mono{\*\_new()}
+functions it is important that the client frees the allocated object at the appropriate time.
+In order to make this as intuitive and consistent as possible CTaps has taken the deliberate
+design decision to never take ownership over any of these objects when they are passed as parameters
+to a CTaps function. CTaps is then responsible for freeing its internal copies when appropriate.
+
+This also means that if the application
+knows that the object it has allocated will not be used again, then it can
+be freed after the last
+function taking it as a parameters returns.
+
+All CTaps objects have
+dedicated destructors and it would therefore be be possible for each object
+to contain an internal reference count ensuring the lifetime of the passed
+objects. Deep copying parameters was however chosen over reference counting
+since the objects in the external CTaps API are relatively small, so the simplicity
+of deep copying was deemed more important than the efficiency of reference
+counting.
+
+
+\begin{listing}[phtb]
 \begin{minted}{C}
 typedef struct ct_remote_endpoint_s {
-    uint16_t port;  ///< Port number set by user
-    char* service;  ///< Service name (e.g., "https") or NULL
-    char* hostname; ///< Hostname for DNS resolution or NULL
-    struct sockaddr_storage resolved_address; ///< Resolved socket address
+    ///< Port number set by user
+    uint16_t port;
+    ///< Service name (e.g., "https") or NULL
+    char* service;
+    ///< Hostname for DNS resolution or NULL
+    char* hostname;
+    ///< Resolved socket address
+    struct sockaddr_storage resolved_address;
 } ct_remote_endpoint_t;
+
+// Example functions
+ct_remote_endpoint_t* ct_remote_endpoint_new(void);
+int ct_remote_endpoint_with_hostname(
+    ct_remote_endpoint_t* remote_endpoint,
+    const char* hostname);
 \end{minted}
 \caption{Remote endpoint as represented in CTaps}
 \label{lst:remote-endpoint}
 \end{listing}
 
-In the external API CTaps only contains forward declarations for all its structures.
-The application then has to interact with the structure through a list of functions
-which are use to allocate a structure on the heap and to modify an existing object.
-This pattern can be seen in \cref{lst:using-remote-endpoint}.
-
-\begin{listing}[tbp]
+\begin{listing}[phtb]
 \begin{minted}{C}
     // Step one allocate object on the heap
     ct_remote_endpoint_t* remote_endpoint = ct_remote_endpoint_new();
@@ -92,30 +334,13 @@ This pattern can be seen in \cref{lst:using-remote-endpoint}.
 
     // ... Then use it in a Preconnection for example...
 
+
     // And finally free it when done
     ct_remote_endpoint_free(remote_endpoint);
 \end{minted} 
 \caption{Remote endpoint lifetime example}
 \label{lst:using-remote-endpoint}
 \end{listing}
-
-By defining structs and dedicated functions to work on the structs like
-above, we can to a very large degree emulate the encapsulation of responsibilities
-as seen in a object oriented language. By not exposing the definitions of the structs
-to the application, we can also define which fields are supposed to be settable and
-gettable externally. This also helps future-proof the API, as renaming and adding or
-removing internal members of structures does not affect downstream applications.
-This API with heap-allocated objects is also as close as possible to the object oriented
-API as described in RFC9622 \cite{rfc9622}.
-
-Because all objects in CTaps are allocated on the heap in CTaps using \mono{\*\_new()}
-functions it is important that the client frees the allocated structures at the appropriate time.
-In order to make this as intuitive and consistent as possible CTaps has taken the deliberate
-design decision to never take ownership over any of these objects when they are passed as parameters
-to a CTaps function. CTaps will always perform a deep copy of this object and then be
-responsible for freeing its own copy. This also means that if the application
-knows that the allocated object will not be used again, it can be freed as the last
-function taking it as a parameters returns.
 
 \subsection{Library Lifetime}
 Internally, CTaps uses a global event loop, which has to be initialized
@@ -145,7 +370,7 @@ be freed in order to prevent memory leaks. This is done through the
 CTaps teardown function \mono{ct_close()}. This closes the event loop
 and frees it synchronously.
 
-\subsection{Asynchrony} \label{asynchrony}
+\subsection{Single-threaded async model} \label{asynchrony}
 Because CTaps uses libuv to interact with the network, the external API
 of CTaps also has to be callback-based. The application can register callbacks
 with CTaps at key locations in the API.
@@ -163,8 +388,14 @@ implementation of the callback to dereference the void pointer
 and pass any data to the callback, to make it accessible in
 the body of the callback itself.
 
-% Follow RFC 9622 ordering:
-\subsection{Preestablishment Phase}
+CTaps is not designed for multi-threading in mind and does not make use
+of the threading API available through libuv \cite{libuv_threading}. This
+means that there is no internal synchronization and it expects applications
+to only interact with CTaps through a single thread, which eventually will
+start executing the event loop.
+
+
+\section{API overview}
 \subsubsection{\texttt{ct\_preconnection\_t}}
 As described in TAPS, Preconnections are used as sources to both servers
 and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
@@ -284,6 +515,11 @@ the callbacks seen in \cref{lst:preconnection-initiate-callbacks}.
 Upon receiving a Connection the application takes ownership over it,
 and must make sure to close it and free it using the appropriate functions
 provided by CTaps when needed.
+
+Every Connection belongs to a Connection Group and can be
+operated on with Connection Group-functions, even if it is 
+the only Connection in the Connection Group. Connection
+Groups are discussed further in \cref{sec:managing-cloning}.
 
 \subsubsection{Active Open}
 In order to establish a connection, the application has to initiate
@@ -417,7 +653,7 @@ close it and free the structure using the appropriate functions when needed.
 
 \subsection{Managing Connections}
 
-\subsubsection{Cloning}
+\subsubsection{Cloning} \label{sec:managing-cloning}
 Cloning a Connection in TAPS yields a Connection Group. A Connection Group
 is represented as an array of connections. The client operates on each individual
 Connection, with certain operations, such as aborting/closing all being able
