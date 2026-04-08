@@ -4,18 +4,16 @@
 
 \subsubsection{Hardware}
 In order to get consistent results, all benchmarks were run on a single
-machine which is described in \cref{tab:machine-specs}. This had several
-advantages. The benchmarks could be part of a rapid development iteration since
-they were gathered on the same machine as CTaps was developed. It would also
-give a more realistic of using CTaps in a software development context.
-Local networking was emulated as described in \cref{sec:softwaretools}
-for consistencies sake.
+machine which is described in \cref{tab:machine-specs} and
+local networking was emulated as described in \cref{sec:softwaretools}.
+All tests were run on localhost, so the network emulation was used to
+show CTaps behavior under different network conditions.
 
 The performance seen in the benchmarks would likely not change much
 on a more performant system, as they are all I/O-bound to a large
 degree.
 
-\begin{table}[p]
+\begin{table}[hp]
 \centering
 \begin{tabular}{ll}
 \toprule
@@ -34,13 +32,10 @@ Kernel     & 6.1.0-44-amd64 \\
 
 
 \subsubsection{Software Tools} \label{sec:softwaretools}
-Netem is a Linux kernel module which allows users to emulate network conditions such
-as RTT packet loss and bandwidth limitations \cite{tc-netem}. 
-
 As mentioned, all the benchmarks in this thesis were performed on the machine listed in
-\cref{tab:machine-specs} on localhost. In order to provide network emulation the
-Linux utility \mono{tc-netem} was used \cite{tc-netem}. This enabled the benchmarks
-to emulate a link with delay, limited bandwidth and jitter.
+\cref{tab:machine-specs} on localhost, while the 
+Linux utility \mono{tc-netem} was used \cite{tc-netem} to emulate delay, bandwidth limitations
+and potential jitter.
 
 Netem could be invoked programmatically
 from the Python testing script, which allowed varying network conditions to be used for
@@ -66,7 +61,7 @@ Picoquic would then communicate back to CTaps that the path has become unavailab
 a callback, and CTaps could start probing new paths.
 
 For the Picoquic client, a small patch had to be applied in order to achieve
-the expected behavior in this specific benchmark. The Picoquic in packet loop only
+the expected behavior in this specific benchmark. The Picoquic packet loop only
 notifies the QUIC engine of a path failure if the \mono{sendmsg()} fails with errno set to a value which implies
 that the remote is unreachable, which means one of the following errors: \mono{EAFNOSUPPORT},
 \mono{ECONNRESET}, \mono{EHOSTUNREACH}, \mono{ENETDOWN} or \mono{ENETUNREACH}
@@ -75,7 +70,7 @@ to treat \mono{EPERM} as implying that the remote is unreachable. Picoquic was t
 for this benchmark and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
 unreachable \cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
-for the Picoquic client when benchmarking, all other instances of Picoquic,
+for the Picoquic client when benchmarking. All other instances of Picoquic,
 including the one used in CTaps, were fetched from the main Picoquic repository.
 
 \begin{listing}[htbp]
@@ -102,33 +97,44 @@ together with a README on how to reproduce the benchmarks.}.
 \subsection{Results}
 
 \subsubsection{Handshake Latency}
-This benchmark has several intentions. It was meant to show that
-a CTaps client can connect to multiple servers serving different protocols,
-that there is no significant overhead between CTaps and the underlying
-protocol handshake and show the cost of the staggered racing delay
-as it stands now and as an area for future improvement. The handhake
-was captured in the same benchmark as the small file transfer as
-described in \cref{sec:smallfiletransfer}. The benchmark iterated
-over 50, 100, 150, and \qty{200}{\milli\second} RTTs, to show the linear
-growth between handshake time and the handshake time. While the Picoquic
-and TCP client handshakes had to be measured by different clients compatible
-with the given server protocol, the TAPS racing client remained the same.
-This was intentional, to show the benefit of TAPS not requiring code change 
-despite the protocol offered by the server changing. For each of the handshakes
+This benchmark intends to show that a single CTaps client
+can connect to multiple servers serving different protocols and
+that there is no significant overhead in CTaps when connecting to a server.
+It also shows the cost of a staggered racing delay as it exists now in CTaps.
+
+This benchmark iterates
+over 50, 100, 150, and \qty{200}{\milli\second} RTTs to show the linear
+growth between network delay and the handshake time.
+The handshake are very consistent since no jitter was added to the emulated
+network. The graph is therefore based on a single measured
+handshake time for each data point.
+
+Because the handshake client used for CTaps here is the same as
+the client used in \cref{sec:handshake-kde}, the client has a preference
+for QUIC and is given two remote endpoints. This is the reason for the
+\qty{500}{\milli\second} stagger delay between the CTaps TCP and QUIC
+handshake times, since CTaps tries two remote endpoints for QUIC before trying TCP
+and the stagger delay is a static \qty{250}{\milli\second} for each attempt.
+The implications of this delay and possible improvements are discussed further
+in \cref{sec:discussion}.
+
+For each of the handshakes
 the bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
 does not have an effect on the time taken for the initial handshake.
-The TCP server was a pure socket implementation, while the QUIC server
-was pure picoquic, using the built in picoquic packet loop. This was done to
-avoid any server-side issues with TAPS affecting the results and giving a
-biased result.
+
+The associated TCP server was a pure socket implementation and the QUIC server
+used the picoquic packet loop.
+
+The measured handshake times by RTT can be seen in
+\cref{fig:racing-handshake}.
 
 \begin{figure}[p]
     \input{./resources/racing_handshake.pgf}
-    \caption{Measured handshakes of QUIC, TAPS and TCP}
+    \caption{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
 \end{figure}
 
-\subsubsection{Connection Establishment with Slow and Fast Endpoint}
+\subsubsection{Connection Establishment with Slow and Fast Endpoint} \label{sec:handshake-kde}
 This benchmark intends to show the benefits of candidate racing, and
 how it can mitigate the effects of for example a bad ordering of endpoints in
 a DNS resolution. This benchmark was modelled after the theoretical
@@ -278,7 +284,7 @@ to optimize the benchmark execution time
 \footnote{All clients used for benchmarking can be found in the \mono{benchmark/src/client/} folder
 in the CTaps repository.}
 
-\begin{table}[p]
+\begin{table}[ph]
 \centering
 \begin{threeparttable}
 \caption{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
@@ -306,12 +312,6 @@ Annotated source files used for counting are available at \mono{benchmark/annota
     \end{tablenotes}
 \end{threeparttable}
 \end{table}
-
-% TODO kom hit.
-% så fiks resten av tilbakemeldingene
-% fra michael, inkludert det arket vi har hjemme.
-% Så les gjennom alt selv. Så print ut. Så les gjennom print igjen og se om man ser noe.
-% Gi alle figures og tabeller etc. mye mer beskrivende captions.
 
 \section{QUIC Under TAPS} \label{sec:quicUnderTaps}
 TAPS has been designed with QUIC in mind from the very start,
@@ -377,7 +377,7 @@ functionality form RFC9622 \cite{rfc9622}.
 
 If the application takes care of performing TAPS connection cloning in a consistent way,
 it can constently use \mono{ConnectionGroup.close()} and achieve the same
-expected behaviour no matter the underlying protocol in the TAPS system, this
+expected behaviour irrespective of the underlying protocol in the TAPS system, this
 is however an example of underlying functionality leaking through to how the application 
 should interact with the API.
 
@@ -460,34 +460,31 @@ a simple load balancer, stating that a application should then disable
 active migration \cite[Sec. 5.2.3]{rfc9000}, but this is not possible through
 the TAPS API.
 
-% TODO skriv om preferred_address, men bedre
-On the server side, TAPS does not expose preferred addresses through its API.
-These are used by QUIC when it wants to accept on a given address but wants
-to migrate it to a new address shortly after the handshake \cite{rfc9000}.
+On the server side, TAPS does not expose the preferred
+addresses QUIC transport parameter \cite[Sec. 18.2]{rfc9000}
+through its API.
+This parameter is used by a QUIC server when it wants to accept on a given address but wants
+to migrate it to a new address shortly after the handshake \cite[Sec. 9.6]{rfc9000}.
 Migration is however supported, so future support for preferred addresses can
-easily be added to the API through a flag in a given local endpoint.
+easily be added to the API through a flag when adding Local Endpoints to a Preconnection.
 
 The remaining QUIC transport parameters which have no suitable mapping in TAPS
-and cannot be assumed to be handled automatically are \mono{ack_delay_exponent},
-\mono{max_ack_delay} and \mono{preferred_address} \cite[Sec. 18.2]{rfc9000}.
+and cannot be assumed to be handled automatically are \mono{ack_delay_exponent} 
+and \mono{max_ack_delay} \cite[Sec. 18.2]{rfc9000}.
 
-One way of handling this would be for the TAPS implementation to allow migration
-to and from remote endpoints registered with the Connection. This would naturally
-be quite limiting and would require you to know all remote interfaces of a
-server before connecting to it, or discover them during the lifetime of the
-Connection.
-
-Certain features, such as stateless Reset are not exposed through the TAPS
+There are also other features such as stateless reset which are not exposed through the TAPS
 API directly, but are expected to be handled by the underlying QUIC implementation,
 so that there is no need to expose them in a TAPS system.
 
 In the TAPS API ECN is marked as an UDP-lite specific feature, though this
 is also useful for QUIC \cite{rfc9622}.
 
-Additionally, when closing connections Picoquic exposes no way of passing
-an error code to the peer.
+% TODO kom hit.
+% så fiks resten av tilbakemeldingene fra michael
+% Så les gjennom alt selv. Så print ut. Så les gjennom print igjen og se om man ser noe.
+% Gi alle figures og tabeller etc. mye mer beskrivende captions.
 
-\section{Discussion}
+\section{Discussion} \label{sec:discussion}
 % Discuss handshake time
 The handshake time shown in \cref{fig:racing-handshake} tells several stories.
 Fist of all, it shows that there is little overhead in connection setup for
