@@ -2,3 +2,23 @@
 In this thesis we have
 
 \section{Future Work}\label{sec:future-work}
+If an attempt was to be made to make CTaps into a real-world production
+ready system, then candidate interleaving would likely be one of the first
+features to be implemented.
+
+It would have to be carefully considered exactly how these candidates were
+to be interleaved. The applications does rank its most desired protocols,
+so interleaving with no care as to the order could lead to a lower ranked
+protocol being tried second after the most desirable one, to the application's
+surprise. It would also be beneficial to include the local and remote endpoints
+in the interleaving algorithm somehow. In the hypothetical situation that the
+first candidates all try to connect to the same remote endpoint, but that endpoint
+turns out to be unreachable, the current stagger delay would lead to a one
+second delay before the next endpoint was tried.
+
+In order to mitigate the possible DNS delay,
+connection attempts in CTaps can be made the same way as recommended in Happy Eyeballs V2, racing
+as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
+to give preferred addresses a chance to return before initiating an
+attempt with a less desirable endpoint.
+

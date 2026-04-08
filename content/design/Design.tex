@@ -17,9 +17,9 @@ NEAT, which also influenced the decision of CTaps \cite{neatCode}.
 Since QUIC is not currently supported by libuv or by the Linux kernel
 an additional external library was needed in order to add QUIC support
 to CTaps. Since CTaps is primarily a thesis project and is not
-designed to be production ready, picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
+designed to be production ready, Picoquic \cite{christianhuitemaPicoquic} was chosen over other, larger
 C QUIC implementations, such as MsQuic \cite{MsQuic} from Microsoft or XQUIC \cite{XQUIC} from Alibaba,
-because of its relative simplicty. Picoquic also features the benefit
+because of its relative simplicity. Picoquic also features the benefit
 of allowing the use of a built in event loop in benchmarking code,
 making the QUIC comparisons when benchmarking completely independent of CTaps.
 
@@ -90,7 +90,7 @@ This pattern can be seen in \cref{lst:using-remote-endpoint}.
     ct_remote_endpoint_with_ipv4(remote_endpoint, inet_addr("127.0.0.1"));
     ct_remote_endpoint_with_port(remote_endpoint, 1234); // example port
 
-    // ... Then use it in a preconnection for example...
+    // ... Then use it in a Preconnection for example...
 
     // And finally free it when done
     ct_remote_endpoint_free(remote_endpoint);
@@ -100,7 +100,7 @@ This pattern can be seen in \cref{lst:using-remote-endpoint}.
 \end{listing}
 
 By defining structs and dedicated functions to work on the structs like
-above, we can to a very large degree emulate the encapsulation of responsibilites
+above, we can to a very large degree emulate the encapsulation of responsibilities
 as seen in a object oriented language. By not exposing the definitions of the structs
 to the application, we can also define which fields are supposed to be settable and
 gettable externally. This also helps future-proof the API, as renaming and adding or
@@ -135,7 +135,7 @@ This means that if the application invokes \mono{ct_preconnection_initiate()},
 then CTaps will attempt to connect to the specified endpoint only when the event
 loop is started.
 
-Any behaviour that has to happen after an event loop is created has to be
+Any behavior that has to happen after an event loop is created has to be
 specified in the callbacks provided by CTaps. For example, if a Connection
 has to immediately send a message after successfully connecting to an endpoint,
 then this behaviour has to be defined in the \mono{ready()} callback.
@@ -174,7 +174,7 @@ the given preconnection.
 
 \subsubsection{\texttt{ct\_transport\_properties\_t}}
 Whenever the user creates a new Preconnection they have the option of passing
-a Transport Propertie\mono{ct_transport_properties_t}s object. Internally, this object consists of Connection
+a Transport Properties object. Internally, this object consists of Connection
 Properties and Selection Properties. In a slight deviation from RFC 9622
 CTaps does not feature generic setters or getters, instead all selection
 and transport properties are set through dedicated function in the format
@@ -273,7 +273,7 @@ void ct_remote_endpoint_free(ct_remote_endpoint_t* remote_endpoint);
 \end{listing}
 
 \subsection{Establishing Connections}
-While RFC 9622 features information on how to establish rendevouz
+While RFC 9622 features information on how to establish rendezvous
 connections this has been deemed to be out of scope for CTaps.
 
 \subsubsection{\texttt{ct\_connection\_t}}
@@ -357,7 +357,7 @@ typedef struct ct_connection_callbacks_s {
 
 \subsubsection{Passive Open}
 To listen on a local endpoint the application must first
-intiate a Preconnection and then listen. The signature
+initiate a Preconnection and then listen. The signature
 of the listen function can be seen in \cref{lst:preconnection-listen-signature}.
 This function
 initiates a listener and open a socket on the most
@@ -452,7 +452,7 @@ has very limited support for this, with the only Connection Property
 that can be dynamically set being Connection Priority. This decides,
 if applicable, the relative priority of Connections within a Connection
 Group, and is only applicable if the underlying protocol is QUIC and
-the application is using mulistreaming.
+the application is using multistreaming.
 
 \subsection{Data Transfer}
 Due to the asynchronous nature of the library, users can request to
@@ -483,7 +483,7 @@ be freed, and can be freed immediately after \mono{send_message()} returns.
 
 \subsubsection{\texttt{ct\_message\_properties\_t}}
 Message properties can be passed when sending a message to influence the
-underlying behaviour of the mssage. Several API functions are available
+underlying behaviour of the Message. Several API functions are available
 through CTaps, but currently only \mono{final} and \mono{safely_replayable}
 are supported, where final is used to close sending on a connection and
 safely replayable is required for 0-rtt.
@@ -491,7 +491,7 @@ safely replayable is required for 0-rtt.
 \subsubsection{\texttt{ct\_message\_context\_t}}
 In TAPS Message Context is additional information which is passed alongside
 the received message when receiving data. This can be used to fetch the
-Local and Remote Endpoint associated with the message as well as read the Message Properites
+Local and Remote Endpoint associated with the message as well as read the Message Properties
 of the incoming message.
 
 \subsubsection{Receiving data}
@@ -509,7 +509,7 @@ and the structure of the passed callbacks can be seen in \cref{lst:connection-re
 int ct_receive_message(ct_connection_t* connection,
                        const ct_receive_callbacks_t* receive_callbacks);
   \end{minted}
-  \caption{Function signature for queueing a receive on a connection}
+  \caption{Function signature for queuing a receive on a connection}
   \label{lst:connection-queue-receive}
 \end{listing}
 
@@ -612,7 +612,7 @@ static ct_framer_impl_t length_prepend_framer = {
 \subsection{Connection Termination}
 Since both aborting and closing Connections may involve over-the-wire teardown,
 all Connection termination is treated asynchronously by CTaps, even when it only involves
-closing a socket synchrnously as with UDP. Since the application has ownership over
+closing a socket synchronously as with UDP. Since the application has ownership over
 the Connections it has received, it must be careful to free them when appropriate.
 Connections cannot be received until the underlying state has been successfully closed,
 which is indicated through the application through the \mono{closed()} callback.

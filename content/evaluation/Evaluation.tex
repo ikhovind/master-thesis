@@ -26,7 +26,7 @@ OS         & Debian GNU/Linux 12 \\
 Kernel     & 6.1.0-44-amd64 \\
 \bottomrule
 \end{tabular}
-\caption{Evaluation machine specifications.}
+\caption{Specifications of machine running benchmarks.}
 \label{tab:machine-specs}
 \end{table}
 
@@ -39,7 +39,7 @@ and potential jitter.
 
 Netem could be invoked programmatically
 from the Python testing script, which allowed varying network conditions to be used for
-a single benchmark, for example with the varying RTT times
+a single benchmark, for example with the varying RTTs
 in the handshake benchmark.
 
 In the migration test, iptables \cite{iptables_man} was used in order to block a specific path based on
@@ -77,7 +77,7 @@ including the one used in CTaps, were fetched from the main Picoquic repository.
     \begin{minted}[fontsize=\small]{bash}
 iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
 \end{minted}
-\caption{iptables command to block UDP data from local endpoint to file server on localhost with port 8080.}
+\caption[iptables command forcing path migration.]{iptables command to block UDP data from local endpoint to file server on localhost with port 8080.}
 \label{lst:iptables-command}
 \end{listing}
 
@@ -88,15 +88,15 @@ of the Python script for each benchmark was stored as four separate shell script
 in 
 
 Benchmarking data was gathered through a common benchmark runner Python script.
-This script is invoked with a specfic set of command line arguments for each
+This script is invoked with a specific set of command line arguments for each
 benchmark. These invocations were stored in dedicated per-benchmark shell
- scripts for reproducibilities sake \footnote{The associated shell scripts
+ scripts for reproducibility's sake \footnote{The associated shell scripts
  can be found in the \mono{benchmark/scripts/} folder of the main CTaps repository,
 together with a README on how to reproduce the benchmarks.}.
 
 \subsection{Results}
 
-\subsubsection{Handshake Latency}
+\subsubsection{Single Endpoint Handshake}
 This benchmark intends to show that a single CTaps client
 can connect to multiple servers serving different protocols and
 that there is no significant overhead in CTaps when connecting to a server.
@@ -107,7 +107,10 @@ over 50, 100, 150, and \qty{200}{\milli\second} RTTs to show the linear
 growth between network delay and the handshake time.
 The handshake are very consistent since no jitter was added to the emulated
 network. The graph is therefore based on a single measured
-handshake time for each data point.
+handshake time for each data point. Since CTaps does not
+support TLS over TCP, the TCP handshakes do not feature encryption,
+and therefore require only one RTT to set up compared to the two RTTs required
+for QUIC.
 
 Because the handshake client used for CTaps here is the same as
 the client used in \cref{sec:handshake-kde}, the client has a preference
@@ -123,21 +126,21 @@ the bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwid
 does not have an effect on the time taken for the initial handshake.
 
 The associated TCP server was a pure socket implementation and the QUIC server
-used the picoquic packet loop.
+used the Picoquic packet loop.
 
 The measured handshake times by RTT can be seen in
 \cref{fig:racing-handshake}.
 
 \begin{figure}[p]
     \input{./resources/racing_handshake.pgf}
-    \caption{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
+    \caption[Single Endpoint Handshake Benchmark]{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
 \end{figure}
 
-\subsubsection{Connection Establishment with Slow and Fast Endpoint} \label{sec:handshake-kde}
+\subsubsection{Slow and Fast Endpoint Handshake} \label{sec:handshake-kde}
 This benchmark intends to show the benefits of candidate racing, and
 how it can mitigate the effects of for example a bad ordering of endpoints in
-a DNS resolution. This benchmark was modelled after the theoretical
+a DNS resolution. This benchmark was modeled after the theoretical
 scenario described in \cref{fig:racingSeqDiagram} in \cref{chap:impl},
 with a fast and a slow endpoint where the slow endpoint is attempted
 first.
@@ -148,7 +151,7 @@ while the fast endpoint had a delay of \qty{50}{\milli\second}.
 Bandwidth was limited to \qty{50}{\mega\bit\per\second}, although
 this has no effect on the handshake times.
 
-Both the Picoquic client \todo{picoquic -> Picoquic}
+Both the Picoquic client
 and CTaps were given the slow endpoint as a first alternative.
 Since CTaps supports racing, it was also given the fast endpoint
 as a second alternative.
@@ -168,7 +171,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 
 \begin{figure}[p]
     \input{./resources/handshake_kde.pgf}
-    \caption{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
+    \caption[Slow and fast endpoint handshake benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
     endpoint is attempted first, showing the benefit of candidate racing. ($N = 200$)}
     \label{fig:handshake-kde}
 \end{figure}
@@ -180,7 +183,7 @@ compatible with both TCP and QUIC, without considerable overhead when compared
 to a non-TAPS QUIC implementation.
 
 This benchmark shows an example of lost capacity when performing Connection Cloning
-over TCP when compared to QUIC, as modelled in \cref{fig:connection-clone-gains} in 
+over TCP when compared to QUIC, as modeled in \cref{fig:connection-clone-gains} in 
 \cref{chap:impl}.
 
 The measurement consists of the time taken to transfer a file with 70 packets'
@@ -222,13 +225,13 @@ The resulting transfer times of the small file can be seen in \cref{fig:small-fi
 
 \begin{figure}[p]
   \input{./resources/small_file.pgf}
-  \caption{Transfer time of 100 kB file time after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
+  \caption[Small file transfer benchmark]{Transfer time of 100 kB file time after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
   \label{fig:small-file-bar}
 \end{figure}
 
 \subsubsection{Path Migration} \label{sec:path-migration}
 The path migration benchmark is intended to show the benefits of connection migration,
-that it is available with minimal code changes in CTaps, and the behaviour of TCP
+that it is available with minimal code changes in CTaps, and the behavior of TCP
 when a local endpoint becomes unavailable.
 In this benchmark, a \qty{4.6}{\mega\byte} file is transferred over an emulated
 \qty{5}{\mega\bit\per\second} link with an RTT of \qty{50}{\milli\second}.
@@ -236,7 +239,7 @@ In this benchmark, a \qty{4.6}{\mega\byte} file is transferred over an emulated
 The combination of file size and bandwidth was chosen to give the transfer enough
 time to reach its steady-state and to still have data left
 to transfer after recovering from the path failure. For this test, the CTaps
-client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connects
+client was given two local IP addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connects
 from \mono{127.0.0.1} and begins the transfer. After
 five seconds the benchmark script blocks the local endpoint, as
 described in \cref{sec:softwaretools}.
@@ -246,7 +249,7 @@ detect this failure and
 start the connection migration process, while TCP fails and cannot recover.
 
 The resulting comparison of a local endpoint becoming unavailable for TCP, QUIC and CTaps
-can be seen in \cref{fig:migration-throughput}. This figure shows how both CTaps and the picoquic
+can be seen in \cref{fig:migration-throughput}. This figure shows how both CTaps and the Picoquic
 client recover after the local endpoint becomes unavailable, but TCP fails and does not complete
 the transfer.
 
@@ -256,7 +259,7 @@ for the application.
 
 \begin{figure}[p]
     \input{./resources/migration_throughput.pgf}
-    \caption{Transfer of a 4.6 MB file over a 5 Mbit link with CTaps, picoquic and TCP. A path block is applied at t = 5s.}
+    \caption[Path migration benchmark]{Transfer of a 4.6 MB file over a 5 Mbit link with CTaps, Picoquic and TCP. A path block is applied at t = 5s.}
     \label{fig:migration-throughput}
 \end{figure}
 
@@ -277,7 +280,7 @@ arise.
 When collecting these benchmarks, the same Picoquic, CTaps and TCP clients
 were used for the small file transfer and the connection migration benchmarks.
 Their relative complexity measured in lines of code
-can be seen in \cref{tab:loc_complexity}. \todo{Update the counts to match to slightly modified clients}
+can be seen in \cref{tab:loc_complexity}.
 The handshake benchmarks used custom clients which immediately
 terminated the connection after the handshake had completed, in order
 to optimize the benchmark execution time
@@ -287,7 +290,7 @@ in the CTaps repository.}
 \begin{table}[ph]
 \centering
 \begin{threeparttable}
-\caption{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
+\caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
 \label{tab:loc_complexity}
 \begin{tabular}{lrrrr}
 \toprule
@@ -298,9 +301,9 @@ Connection establishment         & 16  &  37 &  53  & 44  \\
 Data transfer                    & 22  &  29 &  51  & 57  \\
 Error handling                   & 63  &  26 &  89  & 57  \\
 Teardown                         & 15  &  27 &  42  & 30  \\
-Migration                        &  0  &  24 &  24  &  3  \\
+Migration                        &  0  &  24 &  24  &  4  \\
 \midrule
-\textbf{Total}                   & 149 & 212 & 361 & 264 \\
+\textbf{Total}                   & 149 & 212 & 361 & 265 \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
@@ -320,7 +323,7 @@ to a control flow presented to the application via the standardized
 TAPS interface.
 
 As the first TAPS implementation to feature QUIC as
-an underlying protocol option, finding out exactly which featues of
+an underlying protocol option, finding out exactly which features of
 QUIC are available through the default TAPS interface was one of the
 key research questions for this thesis. Since TAPS is an interface to
 a generic transport layer, TAPS concepts, terminology and intended functionality
@@ -341,14 +344,14 @@ A QUIC stream is designed with HTTP/3 in mind, intended to transfer
 a single object, with both the client and the server marking the transfer
 from their respective ends as independently completed to close the stream.
 
-While TCP connections can be closed one way, the typical behaviour is that
+While TCP connections can be closed one way, the typical behavior is that
 when it closed by one peer, then the other peer closes the connection
 in conjunction, which differs from the expected one-way closing of QUIC
 streams.
 
 This means that a TAPS system has to make a choice for how to close individual
 TAPS connections when using QUIC as the underlying protocol. Based on TCP, the 
-expected behaviour
+expected behavior
 is that closing an individual Connection will close both the sending
 and receiving side and start teardown. For QUIC, this can in theory be emulated by sending a \mono{FIN}
 flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
@@ -360,13 +363,13 @@ Even though this handling of underlying QUIC streams in TAPS is superficially
 closer to the expected behavior from TCP, \mono{STOP_SENDING} is not a graceful close and is
 only
 expected to be used on error conditions. For a graceful teardown of a single
-stream only, the expected behaviour is both sides sending \mono{FIN} flags when
+stream only, the expected behavior is both sides sending \mono{FIN} flags when
 they are done sending.
 
-In order to avoid unecessary error behaviour for QUIC the most natural mapping
+In order to avoid unnecessary error behavior for QUIC the most natural mapping
 for closing a TAPS Connection over QUIC is therefore to simply
-send a \mono{FIN} flag in the sending direction and remain open in the receving direction.
-This will appear to the appication in the form of it still having to monitor
+send a \mono{FIN} flag in the sending direction and remain open in the receiving direction.
+This will appear to the application in the form of it still having to monitor
 the connection for incoming messages and it not receiving a closed()-callback until
 after the peer has finished sending its data.
 
@@ -376,8 +379,8 @@ close the entire QUIC connection. This naturally maps to the \mono{ConnectionGro
 functionality form RFC9622 \cite{rfc9622}.
 
 If the application takes care of performing TAPS connection cloning in a consistent way,
-it can constently use \mono{ConnectionGroup.close()} and achieve the same
-expected behaviour irrespective of the underlying protocol in the TAPS system, this
+it can consistently use \mono{ConnectionGroup.close()} and achieve the same
+expected behavior irrespective of the underlying protocol in the TAPS system, this
 is however an example of underlying functionality leaking through to how the application 
 should interact with the API.
 
@@ -407,19 +410,19 @@ unavailable to the application.
 
 Another stream functionality which is not exposed through CTaps is
 initiating unidirectional streams. QUIC allows
-applications to open streams for unidiractional sending \cite[Sec. 1]{rfc9000}.
+applications to open streams for unidirectional sending \cite[Sec. 1]{rfc9000}.
 A TAPS implementation has to assume that every new stream opened via \mono{Connection.clone()}
 is bidirectional, although since the TAPS API is extensible, a parameter could
 easily be added when Cloning a Connection to support this.
 
-Despite not being able to inititate unidirectional sending, a TAPS implementation
+Despite not being able to initiate unidirectional sending, a TAPS implementation
 is able to receive an unidirectional stream initiated by the peer as expected by QUIC.
 It can infer from the stream ID that it is unidirectional \cite[Sec. 2.1]{rfc9000}
-and mark it as closed for sending before presenting it to the appliaction.
+and mark it as closed for sending before presenting it to the application.
 
 Withing QUIC, there are also several transport parameters \cite[Sec. 18]{rfc9000} which are not
 exposed through the TAPS API. TAPS does not feature a generic timeout value
-wihch can be passed as \mono{max_idle_timeout} \cite[Sec. 10.1]{rfc9000}.
+which can be passed as \mono{max_idle_timeout} \cite[Sec. 10.1]{rfc9000}.
 While TAPS does support timeouts for when sending data, for example through
 the Timeout for Aborting Connection Connection Property \cite[Sec. 8.1.3]{rfc9622},
 it does not feature a generic idle timeout for automatically closing a connection.
@@ -439,7 +442,7 @@ connection-level max data, but this is not surfaced through CTaps.
 Picoquic does not provide a per-stream max data configuration.
 
 CTaps does not expose any form of maximum data,
-and as picoquic does not surface it as configuration options,
+and as Picoquic does not surface it as configuration options,
 they are handled internally by the implementation
 
 While TAPS does allow the application to control the number of Connections
@@ -453,7 +456,7 @@ of both unidirectional and bidirectional streams through either the
 TAPS does also not feature a way to completely disable connection migration
 as can be done in QUIC through the use of the \mono{disable_active_migration} transport
 parameter \cite[Sec. 18.2]{rfc9000}. In TAPS, the only migration setting available to the application is
-disabling active advertisment of local addresses through the \mono{advertisesAltaddr} Selection
+disabling active advertisement of local addresses through the \mono{advertisesAltaddr} Selection
 Property \cite[Sec. 6.2.15]{rfc9622}.
 The QUIC RFC specifically brings up the case where an application is behind
 a simple load balancer, stating that a application should then disable
@@ -479,129 +482,103 @@ so that there is no need to expose them in a TAPS system.
 In the TAPS API ECN is marked as an UDP-lite specific feature, though this
 is also useful for QUIC \cite{rfc9622}.
 
-% TODO kom hit.
-% så fiks resten av tilbakemeldingene fra michael
-% Så les gjennom alt selv. Så print ut. Så les gjennom print igjen og se om man ser noe.
-% Gi alle figures og tabeller etc. mye mer beskrivende captions.
-
 \section{Discussion} \label{sec:discussion}
-% Discuss handshake time
-The handshake time shown in \cref{fig:racing-handshake} tells several stories.
-Fist of all, it shows that there is little overhead in connection setup for
-CTaps. Since the action is I/O-bound, the the network is the largest bottleneck
-by far. It also shows a slightly biased comparison between the TCP and QUIC
-handshakes as it does not include TLS, which would add another RTT onto
-the TCP handshake and bring it in line with QUIC. It does however show that
-there is a linear trend between all four combinations of server/client tried,
-and that all of the handshake times grows in relation to their required number
-of RTTs, nothing else. With the TCP implementation it also shows both a weakness
-in the current implementation of CTaps, and a result of the desire to as much
-of the benchmarking to a single CTaps client as possible, showing that modifying the
-code is not necessary. For candidate racing CTaps currently uses a stagger delay
-of 250 milliseconds between attempts as recommended by Happy Eyeballs V2, it does
-however not implement interleaving as described in the same document
-\cite{schinaziHappyEyeballsVersion2017}. 
+\subsection{Single Endpoint Handshake Benchmark}
+When it comes to CTaps, the results in \cref{fig:racing-handshake} are promising
+but also illustrate some weaknesses.
+The benchmark shows that 
+there is little overhead in connection setup for
+CTaps and that a single CTaps client can successfully connect to multiple
+servers with different protocols, thanks to candidate racing.
 
-As CTaps races local endpoints,
-protocols, ALPN options and remote endpoints the consequences become
-even more apparent for CTaps, as if it prefers an incompatible protocol
-it will iterate through all possible combinations of local endpoints,
-remote endpoints and ALPNs if applicable before trying the next protocol.
-This means that if you are faced with a large number of endpoints, as you
-might be after a hostname resolution for example, or when binding to an
-ephemeral local endpoint, then you could face a multi second delay in CTaps
-before even trying the correct protocol, if the highest ranked protocol is
-not compatible to the server you are trying to connect to.
+The benchmark does however also show that candidate racing
+is not implemented optimally in CTaps.
+Currently, CTaps uses static stagger delay
+of 250 milliseconds between attempts as recommended by Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017}, but it does
+not implement interleaving as described in the same document.
+This means that all
+combinations involving the most desirable protocol are attempted
+before a new protocol is attempted.
 
-The reason for CTaps using ALPN values as separate protocol options is
-two-pronged.
-Primarily is done
-in order to support 0-rtt. Since QUIC sesssion resumption relies on
-resuming a previous session, one a single ALPN can be selected.
-Therefore, each indivual ALPN value generates new racing Candidates
-for each protocol which supports ALPN, although this is currently
-only QUIC.
+This easily becomes a very significant delay, as the number of
+raced parameters easily becomes very high when racing both
+path combinations and protocol options.
 
-In theory, multiple ALPNs could be supported with a single candidate,
-as you can select from a list of ALPNs after 1-RTT if you are not
-using session resumption, but the current solution was selected since
-it more followed the racing ideology of TAPS, as well as not having
-to modify the racing flow to support 0-rtt. Unless 0-rtt is used,
-having each ALPN create a new protocol candidate naturally creates
-unecessary overhead in the form of unecessary candidates, which all
-could be served by a single candidate, however the risk of this being
-a significant overhead was deemed to be relatively small, since
-applications are likely to not support a very large number of ALPNs,
-and CTaps currently only supports a single protocol with ALPN support,
-naturally limiting the number of generated combinations.
+If even a simple form of interleaving was implemented, then the
+stagger delay present for TCP could be halved from \qty{500}{\milli\second}
+to \qty{250}{\milli\second}.
 
-If this is found to be an unacceptable overhead in the future, optimizations
-can be made, for example only generating a single candidate with several
-ALPNs for each protocol if 0-rtt is not used by the application for the
-current Connection, although this has been deemed to be out of scope for
-CTaps.
+This means that if an application is faced with a large number of Endpoints,
+as it for example might be after a remote hostname resolution,
+then it could face a multi second delay in CTaps
+if the most desirable protocol is
+not compatible to the server it is trying to connect to.
 
-If an attempt was to be made to make CTaps into a real-world production
-ready system, then candidate interleaving would likely be one of the first
-features to be implemeted. The biggest advantage of CTaps, that you can
+This lack of protocol interleaving is made worse by CTaps treating
+each individual ALPN value as a separate protocol option, as this
+inflates the number of candidates for racing for all protocols which
+support ALPN. This design choice was however necessary 
+in order to support 0-RTT as session resumption relies on
+using the same ALPN as the previous session. In theory it
+would be possible to only generate candidates for each ALPN like
+this if 0-RTT was supported according to the Transport Properties
+and Security Parameters set by the user, but this was deemed to be out
+of scope for CTaps.
+
+The biggest advantage of CTaps, that you can
 access to several different transport layer protocols, without having to
 implement racing and fallback logic yourself becomes moot if the racing
 overhead is so large, that any other fallback system would be much faster.
-It would have to be carefully considered exactly how these candidates were
-to be interleaved. The applications does rank its most desired protocols,
-so interleaving with no care as to the order could lead to a lower ranked
-protocol being tried second after the most desirable one, to the application's
-surprise. It would also be beneficial to include the local and remote endpoints
-in the interleaving algorithm somehow. In the hypothetical situation that the
-first candidates all try to connect to the same remote endpoint, but that endpoint
-turns out to be unreachable, the current stagger delay would lead to a one
-second delay before the next endpoint was tried.
+Potential mitigations for this problem with interleaving is discussed further
+in \cref{sec:future-work}.
 
-In retrospect, the \qty{250}{\milli\second} delay recommended in Happy Eyeballs
-V2 has a very specific background in that it is racing two protocol families.
-While racing is one of the key features of TAPS, with the larger combination
-of candidates where each one can represent an unreachable server or an incompatible
-protocol, the staggering should likely be much shorter than \qty{250}{\milli\second}
-for a TAPS system. This would allow CTaps to race its larger number of candidates
-more efficiently, while still avoiding the undue strain on the network which
-simultaneous racing can present.
+The \qty{250}{\milli\second} delay recommended in Happy Eyeballs
+V2 has a very specific background in that it is racing two protocol families
+on a single local path.
+With the larger number of
+possible combinations of candidates, a TAPS implementation should heed the
+more closely follow the recommendations for racing on multihomed hosts as
+described in \cite{rfc8421}.
 
-Another mitagation against the tyranny of the stagger
-delay would be to start connection attempts upon first resolution at least
-one local and remote endpoint. Currently, CTaps waits until all local and remote
+In addition to the stagger delay, the connection establishment time of
+a CTaps client is also vulnerable to slow DNS resolutions,
+although this does not show in the handshake time benchmark.
+Currently, CTaps waits until all local and remote
 endpoints have been resolved before sorting the gathered candidates according
-to the application preferences and then working its way down the list. Connection
-attempts in CTaps can be made the same way as recommended in Happy Eyeballs V2, racing
-as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
-to give preferred addresses a chance to return before initiating an
-attempt with a less desirable endpoint.
+to the application preferences and then working its way down the list.
 
 % Discuss candidate racing benchmark
+\subsection{Slow and Fast Endpoint Handshake Benchmark}
 The stagger delay does not show up only in the raw handshake measurement times,
 but also in the candidate racing benchmark. Here the benchmark itself becomes
 more contrived than needed because it needs to make the faster endpoint
 preferred even with the long 250 ms stagger delay. This means making the
-slow endpoint three times slower than the slow endpoint. While this
+delay for the slow endpoint three times larger than for the fast
+endpoint. While this
 still serves to show the benefit gained on a suboptimal ordering from
-a DNS resolution, it would become even more apparent if the delay
-was lower.
+a DNS resolution, the difference in the two endpoints has to be
+unrealistically large due to the CTaps stagger delay.
 
 % Discuss the small file transfer
+\subsection{Small File Transfer Benchmark}
 While the above benchmarks show that CTaps achieves performance parity
 with TCP sockets and Picoquic on small I/O bound applications, it does
 not mean that there is no overhead at all with using CTaps. The small file
 transfer is a constructed scenario used to show advantages with QUIC and
 how CTaps makes them available through no extra cost to the user. In real-world
 situations downloading large files like this is uncommon.
+
 In 2025 Cloudflare
 measured that the median number of packets sent to visitors to their service
 was 12 \cite{sulemanahmadMeasuringCharacteristicsTCP2025}. A majority of 
 connections never even leave slow start. However, it can also be argued that
-thesee are exactly the connections which necessitate multistreaming. Since
+these are exactly the connections which necessitate multistreaming. Since
 such a large number of connections consist of only short data transfer, they
 are never able to be scaled up to make use of the full available bandwidth.
 Therefore, multiple streams using the same congestion control allows for a
-far more efficient use of the network. This is also exactly what the small
+far more efficient use of the network.
+
+This is also exactly what the small
 file transfer benchmark shows, that the second transfer is so small that TCP
 cannot compete with QUIC, since it has to go through slow start for the new data
 transfer. This is a benefit of QUIC over TCP, not a benefit of TAPS vs a normal
@@ -613,49 +590,39 @@ whether the server it is connecting to supports QUIC or not.
 % Discuss connection migration
 \subsection{Connection Migration Benchmark} \label{sec:connection-mig-benchmark}
 As mentioned above, one of the key features with QUIC is Connection Migration.
-This is another aspect of QUIC hich helps utilize the avaiable bandwidth more
-efficiently. If QUIC can successfully migrate from a dead path to a live one
-without having to restart the connection and go through slow start again then
-it leads to a much lower experienced latency by the user, for any transfer less
-than the 10 packets sent during the initial RTT for TCP, in addition to avoiding
-an additional handshake. It was therefore desirable to show that this feature
-too was available through CTaps, and that there is minimal overhead. The results
-are absolutely promising and show that the necessary complexity presented to the application
-in order to achieve conneciton migration is very small. The graph shows familiar
-sawtooth patterns of both CTaps, TCP and Picoquic having reached their steady-state
-throughput. After the initiated path failure, TCP naturally fails, while Picoquic
-and CTaps can both probe new paths, allowing them to continue until the transfer
-completes.
+It was therefore desirable to show that this feature
+is available through CTaps, and that there is minimal overhead. The results
+are show that the performance of CTaps is on par with the Picoquic client
+and that the necessary complexity presented to the application
+in order to achieve connection migration is very small.
 
-When it comes to connection migration there is still a lot of functionality
-which is not supported. This would not present extra complexity to the application,
-but would lead to quite a bit of internal CTaps complexity. For example, if
+While the benchmark shows that connection migration is currently supported
+with little overhead, there are however still many scenarios which are not
+supported by CTaps. These would not present extra complexity to the
+application, but 
+would lead to quite a bit of internal CTaps complexity.
+
+For example, if
 the clients binds to a specific local endpoint with a specific port, there is no support
 in the client currently for migrating away from this. This is passed to \mono{bind()}
 and CTaps does not support opening new local sockets for migration. This naturally
 limits the number of situations in which the client is actually able to migrate,
 compared to what is desirable.
 
-If adding this feature in the future, it should come as a part of a larger refactor,
-removing the binding between individual connections and sockets in general. This would
-also help listeners listen on several local endpoints, something which is not currently
-supported in CTaps.
-
-
 % Discuss performance in general
-The discussion of the overhead of a networking library often becomes
-quite moot if you are discussing situations in which the applications anyways
-is I/O-bound. This is naturally the case with several of our benchmarks, where
-the actual performance of the library does not matter much, if it will take a
-minimum of \qty{50}{\milli\second} to set up a single QUIC handshake. This can
-very clearly be seen in several ways in the handshake, small file transfer and
-migration benchmarks. As with any library there is overhead to CTaps compared
-to using purely picoquic, however this does not become apparent since those three
-benchmarks are all I/O-bound, and do not place a load on the actual client or server.
+\subsection{Performance}
+The discussion of the overhead of a networking library becomes
+unproductive in situations where applications anyways
+are I/O-bound, which is naturally the case in the CTaps benchmarks.
+They can therefore be used to draw the conclusion that there
+is no significant overhead between CTaps and the underlying protocols,
+but they cannot for example be used that a CTaps client would perform
+under load as a pure QUIC or TCP client.
+
 Since both the Picoquic packet loop client and CTaps interact with the network in
 a asynchronous manner, the system has time to perform any outstanding computation while
 waiting for a response for the network. Since any computationally heavy work performed
-on the data sent to or from the network would be in the domain of the client using CTaps,
+on the data sent to or from the network would be in the domain of the application using CTaps,
 the only way to truly show the overhead of CTaps would be to create a large amount of
 concurrent clients and to transfer large amounts of data, in order to stress CTaps as
 the interface between the network and the client. When it comes to high performance CTaps
@@ -663,6 +630,7 @@ is naturally limited by the single threaded event loop model of libuv and would 
 not be able to fully make use of all the resources available to it on a host system.
 
 % Discuss CTaps client complexity
+\subsection{Client Complexity}
 The complexity of each benchmarking client as seen in \cref{tab:loc_complexity}
 tells a very clear story. CTaps successfully abstracts away the complexity presented
 to client applications interacting with the network. It does so not only when accessing
@@ -671,90 +639,94 @@ selection and the error handling itself. This is the primary aspect which sets
 CTaps apart from other networking libraries, especially ones intending to help
 make use of a single protocol such as QUIC. With CTaps, the complexity is moved
 away from the application and presented in a generic way which can be reused
-by any appliaction using the network. This does not only come with the added
+by any application using the network. This does not only come with the added
 simplicity, but also much easier migration to future protocols.
 
 While CTaps is the most complex
-individual client, it provides TCP and QUIC support, connection racing,
+individual client by lines of code, it provides TCP and QUIC support, connection racing,
 and several QUIC benefits at less than the combined complexity of the QUIC
 and TCP clients. In order to develop a replacement of CTaps, the TCP and QUIC
 clients would not only have to be combined, but would also have to implement
 fallback logic, which is not accounted for in this table.
 
-Several popular libraries exist which has significant feature overlap
-with QUIC such as Valve's GameNetworkingSockets or ENet \cite{ValveGameNetworkingSockets}
+It is clear that the functionality present in QUIC has been desired
+for a long time, and
+several popular libraries exist which have significant feature overlap
+with QUIC. Two examples are Valve's GameNetworkingSockets and ENet \cite{ValveGameNetworkingSockets}
 \cite{Enet}. Both of these predate the finalization of the QUIC RFC in 2021 and
 contain overlapping features which are also implemented through QUIC, such as connection
-management over UDP or multistreaming (referred to as "Channels" in Enet). If a project relying on one of
+management over UDP or multistreaming (referred to as "Channels" in Enet).
+
+If a project relying on one of
 these networking libraries wants to make use of QUIC features it has to switch
 its entire networking stack to use a QUIC library. This is naturally a large
 refactoring and is a limitation on how fast new networking features can propagate.
 If a production ready TAPS-library had existed when the application was originally
-designed, it could have abstracted away the actual underlying transport library desired
-by the application, making switching to QUIC later essentially free. This comes in
+designed, it could have abstracted away the actual underlying transport library,
+making a later switch to a newer protocol with more features such as QUIC essentially free. This comes in
 addition to built-in fallbacks to the previous protocol should connection establishment fail.
 
-This does not mean that CTaps is in a production ready state and should be immediately
-switched to by any library currently utilizin ENet or GameNetworkingSockets. With
+With
 the large amount of complexity which is abstracted away by CTaps, it becomes a very
-heavy dependency in and of itself. Applications may be wise in preffering to handle
-their own networking stacks accepting future refactoring costs should they desire
-to switch transport protocol. CTaps also has an issue of potential refactoring costs.
-With the built in libuv event loop, CTaps forces your software to be written through a
+heavy dependency and therefore quite a large risk for downstream applications,
+as it becomes heavily reliant on the correctness of CTaps.
+With the built in libuv event loop, CTaps forces your software to be written through an
 async model which does its work through callbacks. This means that an application wanting
 to use CTaps for underlying networking operations has to be designed with this in mind,
-creating a very heavy reliancy on a single library and a single point of failure.
+from the very beginning, creating a heavy reliance on a single library.
 
 % Discuss QUIC under TAPS
-Being an important research question it was important to find out if there
-were large swaths of QUIC features which could not intuitively be presented
-to an application through a TAPS system. While there are features which are
-difficult to map, the absolute unavailable features are of a lesser importance.
-The largest amount of missing features from QUIC in TAPS can be found in the
-transport layer, such as with \mono{MAX_STREAM_DATA}, where this is not a
-decision the application should make, but CTaps should make an informed decision.
+\subsection{QUIC under TAPS}
+Since the TAPS RFCs were written before the QUIC design was finalized
+in RFC 9000 \cite{rfc9000}, part of the motivation for developing CTaps
+was to find out which QUIC features could not be presented through the
+TAPS API.
 
 The largest issues with creating a common abstraction for several different protocols like
 TAPS is that there ends up being distinct concepts in each protocol which do
 not necessarily map neatly into the shared abstraction layer concepts. This
-is apparent in the differing behaviour of Connections in CTaps depending on
-whether the underlying protocol is QUIC or not. with QUIC the Connection abstration
+is apparent in the differing behavior of Connections in CTaps depending on
+whether the underlying protocol is QUIC or not.
+
+With QUIC the Connection abstraction
 becomes the connection group and treating individual streams as connections
-leads to unexpected behaviour, such as one-way closing by default except
-when aborting the stream. This issue would likely be shared with any other
-multistreaming protocol as well. This causes the application to have to interact
+leads to unexpected behavior, such as one-way closing by default except
+when aborting the stream. This causes the application to have to interact
 with TAPS in a way which does not reflect how they would interact with TCP,
 for example always closing the entire connection group when done with a logical
-connection to a server, to ensure that if the underlying protocl supports multistreaming
-then the entire connection will be closed. While this is breaks slightly with 
-with the principle of least surprised as described in RFC 9622, it provides
-far greater flexibility and consistent behaviour to the downstream application
-\cite{rfc9622}. It can also be added that
-the only reason for this expectation of how to interact with the network
-exists is due to TCP's long ubiquity as a transport protocol. This is
-purely an appeal to tradition and should not be considered blocking in
-situations where new useful features can be provided.
+connection to a server, to ensure that if the underlying protocol supports multistreaming
+then the entire connection will be closed.
 
-%discuss racing with UDP
+While this breaks slightly with 
+with the principle of least surprise as described in RFC 9622 \cite{rfc9622}, it provides
+greater flexibility and consistent behavior to the downstream application.
+
+\subsection{Racing with UDP}
 When it comes to connection racing, it is a useful feature but can
-be hard to map for non-connection oriented protocols leading to
-unexpected or even undesirable behaviour. In CTaps this becomes an
-issue with UDP. While the default preferences often lead users to TCP or
+be hard to map for non-connection oriented protocols such as UDP, leading to
+unexpected or even undesirable behavior.
+
+While the default preferences in TAPS prefers TCP or
 QUIC over UDP, if UDP is preferred but not required then there is no way for
-racing to function properly. CTaps has chosen to assume that a UDP connection
+racing to function properly.
+
+Since UDP has no handshake to complete, CTaps has chosen to assume that a UDP connection
 is established as soon as local endpoint has been set up. This means that
-if the remote is not actually genuinely UDP, the racing will tell the user
-that the connection is ready, but the remote will be unreachable. An alternative
+if the remote is does not support UDP, the racing will be unable to detect
+this and UDP can potentially win the candidate racing,
+but the remote will be unreachable.
+
+An alternative
 solution would be to send a test message and to wait for a reply, but
-this relies on knowledge of the remote endpoint and that it will actually reply
-to a ping. This risks designating legitimate endpoints as unresponsive. Since
+this relies on the remote peer having implemented this functionality and
+therefore  risks designating legitimate endpoints as unresponsive. Since
 the default preferences rank UDP lower than other supported protocols, it was
-deemed that the risk of UDP being ranked higher than other protocols when
+deemed that for CTaps, the risk of UDP being ranked higher than other protocols when
 the endpoint does not support it was low enough that the simpler solution
-of assuming an estbalished connection on opening the socket.
+of assuming an established connection on opening the socket.
 
 \section{Security}
-The security of a TAPS system is reliant on the secuirity of the underlying protocols.
+The security of a TAPS system is reliant on the security of the underlying protocols.
 While there are several key security measures which should be taken before
 CTaps could be used in a security-sensitive production context, such as adding support
 for TLS, it also shows that it is possible to achieve equivalent security benefits
@@ -763,7 +735,7 @@ in a TAPS system as when using the underlying protocols directly.
 % Handling of underlying credentials
 Despite TAPS being designed before the official release of QUIC, it supports
 the same security settings due to QUIC using TLS under the hood. It supports
-both 0-RTT handshakes and the necesary client and server certicates for both
+both 0-RTT handshakes and the necessary client and server certificates for both
 clients and servers using TLS. In addition it supports the required ALPNs and
 and makes them accessible through Security Parameters. Security Parameters as
 designed in TAPS and implemented by CTaps are by nature extensible, without
@@ -778,14 +750,14 @@ to via a file name, then that could not be supported by CTaps as of the current
 implementation. The TAPS API does however support this since it is generic
 and only specifies server and client certificates through the use of
 certificate bundles, but does not mandate the form which these bundles should take.
-CTaps has chosen the form of referrring to files on disk, but there is no reason why
-it could not be adopted into taking the memory aeddress of a buffer instead.
+CTaps has chosen the form of referring to files on disk, but there is no reason why
+it could not be adopted into taking the memory address of a buffer instead.
 
 %TAPS downgrading security
 The user of a TAPS system is also reliant on TAPS not silently downgrading
 the required security of the application. Here TAPS needs to follow sane defaults
 which default to mandating security, otherwise TAPS would not only be liable
-to downgrade security, but the unsecure variants of protocols would be at
+to downgrade security, but the insecure variants of protocols would be at
 an advantage during candidate racing, since they would require fewer RTTs
 to set up completely. For this case, TAPS would be wise in assuming that
 there are few situations where it both secure and insecure protocols can
@@ -793,7 +765,7 @@ be used over the same link and should be raced together.
 
 A secure connection
 should be mandated by default and TAPS should only allow racing with only
-secure protocols or with only insecure protocls. Security parameters should
+secure protocols or with only insecure protocols. Security parameters should
 then naturally be mandatory by default, only allowing insecure protocols if
 explicitly enabled by the user. This is the ideology taken by TAPS as can be
 seen in the Allowed Security Protocols security parameter, which mandates
@@ -807,7 +779,7 @@ should use common safe defaults for security parameters
 default should be requiring an encrypted connection. RFC 9622 also describe
 the difference between disabled Security Parameters and opportunistic
 Security Parameters. Disabled Security Parameters are an option in order
-to support compatability with endpoints that do not support transport security
+to support compatibility with endpoints that do not support transport security
 protocols, such as a pure HTTP website, while opportunistic Security Parameters
 allow for the coexistence of secure and insecure transport layer protocols.
 It is natural to assume that in cases where both insecure and secure transport
@@ -847,13 +819,13 @@ leads to a bit of an chicken and the egg problem, as no one wants to utilize
 a library if no-one has verified the security of it, while no-one has any incentive
 to verify the security of a library that no-one uses.
 
-This purposefuly rather vague phrasing is typical of TAPS future-proofing, as 
+This purposefully rather vague phrasing is typical of TAPS future-proofing, as 
 it allows future implementations to update their defaults, if new security
 protocols have arrived which are considered more secure than for example TLS 1.3
 which is at the forefront at the time of writing.
 
 Although TAPS aims to be as secure as possible by default, there are of course
-tradeoffs to be made between the default configuration of an application
+trade-offs to be made between the default configuration of an application
 when it comes to feature-richness and security. With the relative complexity
 and large number of configurations available within TAPS there is a genuine risk
 of unknown unknowns. Security minded applications may not have combed through all
@@ -870,8 +842,8 @@ software libraries, and is the reason behind sane defaults being extremely impor
 for open source libraries such as TAPS. TAPS strikes a balance between being extremely
 cautious and being secure by default by allowing certain configurations to be the most
 performant by default instead of necessarily the most secure. For most applications,
-avoiding accidentally using unencrypted communication is extremely imporant, while
-potential client fingreprinting is not as important. Since a choice has to be made
+avoiding accidentally using unencrypted communication is extremely important, while
+potential client fingerprinting is not as important. Since a choice has to be made
 for TAPS, it can be assumed that extremely security conscious applications where
 issues like fingerprinting are absolutely unacceptable will perform a careful comb
 through of the security parameters, making the most cautious decision at every step.
@@ -883,10 +855,10 @@ gains to be made with relatively small security trade-offs.
 For applications where fingerprinting are absolutely unacceptable there are
 also other issues related to TAPS, which cannot necessarily be traded away.
 First of all, using a networking library which standardizes the interaction
-with the network to a certain degree would naturally lead to potential fingreprinting
+with the network to a certain degree would naturally lead to potential fingerprinting
 of clients. This is not something which can be configured away and is an
 inherent property of software libraries whose behavior are exposed to the internet.
-Without a large and diverse enough userbase, fairly accurate assumptions can
+Without a large and diverse enough user base, fairly accurate assumptions can
 be made about the users behind a connection, if the underlying library being
 used can be ascertained. This can be seen in real world examples such as with TOR,
 where one of the key motivations behind it being open is the crowd effect.
@@ -916,7 +888,7 @@ in a production context.
 The nature of CTaps being an exploratory work naturally brings with it
 certain limitations unique to this kind of work. First of all, CTaps
 has throughout had a larger focus on exposing as much as possible of
-the TAPS api, without necessarily implementing the internal logic associated with
+the TAPS API, without necessarily implementing the internal logic associated with
 the actual API settings. Since CTaps is the first known TAPS implementation
 since the RFCs were finalized, this was done to see exactly how the designed TAPS
 RFC would actually map into code and that the different settings could actually be
@@ -935,7 +907,7 @@ be wise to first strip away the parts of the external API which currently have
 no support in the internal implementation. This would allow a gradual addition of
 features as they were supported, making it more clear to downstream applications exactly
 which parts of the external library is mature enough to be used. This would also allow
-future development to focus on more imporant improvements, instead of implementing
+future development to focus on more important improvements, instead of implementing
 as much of the API as possible in order to make the features exposed by the API actually
 real. The highest priority future work is described in \cref{sec:future-work}.
 
@@ -953,17 +925,17 @@ several other smaller features and quality of life pieces of the API not feature
 CTaps. Among the actual features, which present an actual lacking feature are that CTaps
 cannot add endpoints in during the lifetime of a connection, CTaps does not feature
 listening on more than a single connection and inaccuracies like that sent-callbacks
-does not represent when a packet has been actully transeferred to the network,
-but instead when a packet has been handed over to picoquic if QUIC is the underlying
+does not represent when a packet has been actually transferred to the network,
+but instead when a packet has been handed over to Picoquic if QUIC is the underlying
 protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.
 
 Not being able to add endpoints to an active Connection places a real limitation on
-a Connetion's ability to migrate, as there is no way to dynamically administer the
+a Connection's ability to migrate, as there is no way to dynamically administer the
 endpoints which can be migrated to or from. All Local and Remote endpoints has to be
 passed to the Preconnection. QUIC connections can still migrate to new remote endpoints,
 if migration is initiated by the peer, but there is no way to for example dynamically
 add a new endpoint. It is not difficult to imagine a scenario where being able to add a
 new endpoint dynamically would be useful for an application using CTaps. For example,
-the underlying device could have connected to a wi-fi network during the lifetime of
+the underlying device could have connected to a Wi-Fi network during the lifetime of
 the connection.

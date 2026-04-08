@@ -33,7 +33,7 @@ NEATPy \cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
 is a Python library developed as part of a master's thesis at UiO in 2020.
 It was developed as an attempt to create a
 Python layer to bridge the growing gap between NEAT and TAPS. Among
-the goals was to move away from specifiying the protocol at design time
+the goals was to move away from specifying the protocol at design time
 instead using Selection Properties as specified by TAPS.
 
 Because NEATPy is a Python shim on top of NEAT, certain parts of it is
@@ -58,7 +58,7 @@ endpoint when creating a Preconnection. This is done when the application
 wants to indicate that several endpoints are eligible for the connection
 or provide the same service.
 
-In addition, there are severeal new selection properties that have been added
+In addition, there are several new selection properties that have been added
 to TAPS. These are:
 \begin{itemize}
     \item Keep-Alive Packets
@@ -80,7 +80,7 @@ For example, in the final RFC TAPS has loosened the required
 order of operations when working with selection properties.
 Previously, there was a strict precedence in the order of
 which preference values were to be applied. This has since been
-relaxed, and the prioritzation has been moved from being
+relaxed, and the prioritization has been moved from being
 related to the preference level, to being ordered by which
 selection properties will affect the path selection.
 
@@ -105,7 +105,7 @@ racing across multiple remote endpoints or across different transport protocols,
 \section{PyTAPS}
 PyTAPS \cite{frankePythonasynciotaps2025} is a Python library aiming
 to be fully compliant with TAPS. Unlike NEATPy, PyTAPS is not built
-on top of NEAT, and therefore does not suffer from the samme limitations
+on top of NEAT, and therefore does not suffer from the same limitations
 that NEATPy does. However, PyTAPS is based on the fourth version of the TAPS
 interface draft \cite{frankePythonasynciotaps2025} and has not had active
 development since 2020. As such, it naturally suffers from the same
