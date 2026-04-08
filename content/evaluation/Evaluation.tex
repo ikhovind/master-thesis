@@ -35,27 +35,37 @@ Kernel     & 6.1.0-44-amd64 \\
 
 \subsubsection{Software Tools} \label{sec:softwaretools}
 Netem is a Linux kernel module which allows users to emulate network conditions such
-as RTT packet loss and bandwidth limitations. For the benchmarks in this thesis, netem
-was used to set RTT times and bandwidth limitations to show TAPS, Picoquic and TCP
-behavior in different network conditions. Netem could be invoked programmatically
-from the Python testing script, which allowed easy creation of sets of benchmarks
-while varying the underlying network conditions, such as the varying RTT times seen
-in the handshake benchmark. Netem was also used to vary the bandwidth for the different
-benchmarks. For example, in the migration test bandwidth was set to \qty{625}{\kilo\byte\per\second}
-in order to
-ensure that the test had adequate time to reach its steady state transfer speed before the
-path was blocked.
+as RTT packet loss and bandwidth limitations \cite{tc-netem}. 
 
-In the migration test, iptables was used in order to block a specific path based on
-source IP, destination IP, protocol and destination port. When a packet matches the
-assigned rule, netfilter rejects it and propagates \mono{-EPERM} back through the network
+As mentioned, all the benchmarks in this thesis were performed on the machine listed in
+\cref{tab:machine-specs} on localhost. In order to provide network emulation the
+Linux utility \mono{tc-netem} was used \cite{tc-netem}. This enabled the benchmarks
+to emulate a link with delay, limited bandwidth and jitter.
+
+Netem could be invoked programmatically
+from the Python testing script, which allowed varying network conditions to be used for
+a single benchmark, for example with the varying RTT times
+in the handshake benchmark.
+
+In the migration test, iptables \cite{iptables_man} was used in order to block a specific path based on
+source IP, destination IP, protocol and destination port. The specific command
+used when blocking a local path can be seen in \cref{lst:iptables-command}.
+An equivalent command blocking
+TCP data was also run, in order to illustrate the TCP connection failing after a path event.
+
+This command adds a packet filter rule to the OUTPUT chain in the Linux kernel.
+This chain is
+run for locally generated packets \cite{iptables_man}, and when a packet
+matches the assigned rule, netfilter rejects it and propagates \mono{-EPERM} back through the network
 stack \cite{LinuxKernelNfHookSlow}. \mono{sendmsg} then returns -1 with
 errno set to \mono{EPERM} according to POSIX conventions.
 
-For CTaps this worked well, as we could
-report any \mono{sendmsg()} failure directly to Picoquic as the path being unavailable.
+For CTaps this worked well, as it could
+report any \mono{sendmsg()} failure directly to Picoquic.
+Picoquic would then communicate back to CTaps that the path has become unavailable through
+a callback, and CTaps could start probing new paths.
 
-For the Picoquic socket loop client, a small patch had to be applied in order to achieve
+For the Picoquic client, a small patch had to be applied in order to achieve
 the expected behavior in this specific benchmark. The Picoquic in packet loop only
 notifies the QUIC engine of a path failure if the \mono{sendmsg()} fails with errno set to a value which implies
 that the remote is unreachable, which means one of the following errors: \mono{EAFNOSUPPORT},
@@ -65,8 +75,17 @@ to treat \mono{EPERM} as implying that the remote is unreachable. Picoquic was t
 for this benchmark and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
 unreachable \cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
-for the Picoquic packet loop client when benchmarking, all other instances of Picoquic,
+for the Picoquic client when benchmarking, all other instances of Picoquic,
 including the one used in CTaps, were fetched from the main Picoquic repository.
+
+\begin{listing}[htbp]
+    \begin{minted}[fontsize=\small]{bash}
+iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
+\end{minted}
+\caption{iptables command to block UDP data from local endpoint to file server on localhost with port 8080.}
+\label{lst:iptables-command}
+\end{listing}
+
 
 \subsubsection{Measurement Approach}
 All benchmarks were gathered through a Python script and the specific invocation
@@ -110,33 +129,33 @@ biased result.
 \end{figure}
 
 \subsubsection{Connection Establishment with Slow and Fast Endpoint}
-In order to show the added benefit of candidate racing, the benchmark in \cref{fig:handshake-kde}
-was created.
+This benchmark intends to show the benefits of candidate racing, and
+how it can mitigate the effects of for example a bad ordering of endpoints in
+a DNS resolution. This benchmark was modelled after the theoretical
+scenario described in \cref{fig:racingSeqDiagram} in \cref{chap:impl},
+with a fast and a slow endpoint where the slow endpoint is attempted
+first.
 
-This benchmark is designed to reflect the theoretical scenario described in 
-in \cref{fig:racingSeqDiagram} in \cref{chap:impl}.
+Two possible paths were used, with different remote endpoints.
+The slow endpoint had a delay of \qty{150}{\milli\second}
+while the fast endpoint had a delay of \qty{50}{\milli\second}.
+Bandwidth was limited to \qty{50}{\mega\bit\per\second}, although
+this has no effect on the handshake times.
 
-A ping server was set up and the clients measured the handshake time to
-reach the server. Two possible paths were used, with one slow and one fast endpoint
-reaching the server. The slow endpoint had a delay of 150 \qty{150}{\milli\second}
-while the fast endpoint had a delay of \qty{50}{\milli\second}. Both the Picoquic
-and the CTaps client were given the slow endpoint as a first alternative, with
-CTaps supporting racing and therefore being the second faster endpoint as a second
-alternative.
+Both the Picoquic client \todo{picoquic -> Picoquic}
+and CTaps were given the slow endpoint as a first alternative.
+Since CTaps supports racing, it was also given the fast endpoint
+as a second alternative.
 
-This benchmark is intended to emulate a DNS resolution where the slower
-endpoint is given first in the list of results. For any library not supporting racing
-this means that the client will likely attempt connection to the first resolved
-address. This connection does succeed, but the appliaction will have to
-accept not only slower handshake times but
-significantly higher latency throughout the entire connection lifetime. For a more
-realistic output, a jitter of 7 ms and a latency correlation of 25 \% on localhost
-using the \mono{tc} linux utility was added. The test was run 200 times to gather a distribution
-of handshake times.
+In order to gather a distribution of handshake times, the test was run 200 times, with a
+jitter of 7 ms and a latency correlation of 25 \%.
+The resulting graph can be seen in \cref{fig:handshake-kde}. While this
+graph only shows the handshake times, candidate racing would in this case lead to not only shorter
+handshake times, but also a significantly smaller delay throughout the entire connection lifetime.
 
 The theoretical ideal handshake times for each endpoint are featured
-in the graph, witha 250 ms racing delay accounted for in the fast endpoint.
-With 2 RTTs for a full handshake and delays of 50 and 150 milliseconds this works out to 
+in the graph. With a 250 ms racing delay, 2 RTTs for a full handshake and delays of 50 and 150
+milliseconds, the theoretical minimum handshake times work out to 
 $\qty{50}{\milli\second} \cdot 4 + \qty{250}{\milli\second} = \qty{450}{\milli\second}$
 and
 $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively. 
@@ -213,22 +232,12 @@ time to reach its steady-state and to still have data left
 to transfer after recovering from the path failure. For this test, the CTaps
 client was given two local ip addresses \mono{127.0.0.1} and \mono{127.0.0.2}. It successfully connects
 from \mono{127.0.0.1} and begins the transfer. After
-five seconds the benchmark script blocks the data from and to the local endpoint using
-the iptables command seen in \cref{lst:iptables-command}.
+five seconds the benchmark script blocks the local endpoint, as
+described in \cref{sec:softwaretools}.
 
-This command adds a packet filter rule to the OUTPUT chain in the Linux kernel.
-This chain is
-run for locally generated packets \cite{iptables_man}, causing
-system calls which send matching data to fail and return \mono{-EPERM}.
-CTaps detects this failure and notify picoquic that the path has
-become unavailable, starting the connection migration process.
-The picoquic client had to be adapted slightly in order to treat
-this exact failure as a condition for connection migration,
-the exact required modifications and the reasons behind them
-are described in \cref{sec:softwaretools}.
-
-An equivalent command blocking
-TCP data was run, in order to illustrate the TCP connection failing after a path event.
+After the local endpoint is blocked both CTaps and the Picoquic client
+detect this failure and
+start the connection migration process, while TCP fails and cannot recover.
 
 The resulting comparison of a local endpoint becoming unavailable for TCP, QUIC and CTaps
 can be seen in \cref{fig:migration-throughput}. This figure shows how both CTaps and the picoquic
@@ -238,14 +247,6 @@ the transfer.
 This benchmark was gathered with the CTaps and QUIC client described in \cref{sec:client-complexity},
 showing that connection migration is made available through CTaps with minimal complexity
 for the application.
-
-\begin{listing}[htbp]
-    \begin{minted}[fontsize=\small]{bash}
-iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
-\end{minted}
-\caption{iptables command to block UDP data from local endpoint to file server on localhost with port 8080.}
-\label{lst:iptables-command}
-\end{listing}
 
 \begin{figure}[p]
     \input{./resources/migration_throughput.pgf}
@@ -267,10 +268,15 @@ This means that even more advanced features such as migration are achieved with
 minimal code changes, simply by stating the intention to migrate if issues
 arise.
 
-When collecting these benchmarks, the same picoquic, CTaps and TCP clients have
-been used for the small file transfer and the connection migration benchmarks.
+When collecting these benchmarks, the same Picoquic, CTaps and TCP clients
+were used for the small file transfer and the connection migration benchmarks.
 Their relative complexity measured in lines of code
 can be seen in \cref{tab:loc_complexity}. \todo{Update the counts to match to slightly modified clients}
+The handshake benchmarks used custom clients which immediately
+terminated the connection after the handshake had completed, in order
+to optimize the benchmark execution time
+\footnote{All clients used for benchmarking can be found in the \mono{benchmark/src/client/} folder
+in the CTaps repository.}
 
 \begin{table}[p]
 \centering
@@ -301,8 +307,8 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 \end{threeparttable}
 \end{table}
 
-% TODO kom hit. les gjennom Connection Establishment with Slow and Fast Endpoint.
-% nevn hvorfor man brukte andre klienter til handshakes og så fiks resten av tilbakemeldingene
+% TODO kom hit.
+% så fiks resten av tilbakemeldingene
 % fra michael, inkludert det arket vi har hjemme.
 % Så les gjennom alt selv. Så print ut. Så les gjennom print igjen og se om man ser noe.
 % Gi alle figures og tabeller etc. mye mer beskrivende captions.
@@ -311,88 +317,98 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 TAPS has been designed with QUIC in mind from the very start,
 but there are several aspects of QUIC which do not map directly
 to a control flow presented to the application via the standardized
-TAPS interface. As the first TAPS implmentation to feature QUIC as
+TAPS interface.
+
+As the first TAPS implementation to feature QUIC as
 an underlying protocol option, finding out exactly which featues of
 QUIC are available through the default TAPS interface was one of the
-key research questions for this thesis. In order to fit the concepts of QUIC
-into the concepts presented in TAPS, terminology and intented functionality
-does not map 1 to 1. This is a comprise which had to made when creating
-an API which is supposed to map neatly to both TCP and QUIC. Since the
-intention of TAPS is to create an API which reflects how most users
-actually interact with the network, so it is only natural that compromises
-has to be made in terms of QUIC, in order to reflect the ubiquity of
-TCP.
+key research questions for this thesis. Since TAPS is an interface to
+a generic transport layer, TAPS concepts, terminology and intended functionality
+naturally does not map one to one onto concepts, terminology and functionality
+of QUIC.
 
-The primary differences when it comes to QUIC and TAPS concepts is
-the Connection and the Connection Group. a TAPS Connection maps to an
+The largest differences when it comes to the expected behavior when
+for QUIC and TAPS stems from the
+the Connection and the Connection Group. A TAPS Connection maps to an
 individual transfer of data, which naturally maps to a single TCP connection
 but maps to a QUIC stream. Since multistreaming is handled through connection
 groups in TAPS, a single QUIC connection maps to a connection group in TAPS.
-This means that the underlying behaviour of the TAPS API is affected by the
-underlying transport protocol, where the closing of a single connection to
-a specific endpoint with QUIC happens through closing a connection group.
-This differing in concepts leads to the first major hurdle in mapping QUIC
-to TAPS. A QUIC stream is designed with HTTP/3 in mind, intended to transfer
+
+This has an especially large effect in when it comes to closing TAPS Connections,
+since QUIC has no support for a graceful teardown of a single stream, without
+either closing the entire Connection or waiting for the transfer to complete.
+A QUIC stream is designed with HTTP/3 in mind, intended to transfer
 a single object, with both the client and the server marking the transfer
 from their respective ends as independently completed to close the stream.
+
 While TCP connections can be closed one way, the typical behaviour is that
 when it closed by one peer, then the other peer closes the connection
-in conjunction. This does not reflect the typical behaviour of streams in QUIC.
+in conjunction, which differs from the expected one-way closing of QUIC
+streams.
+
 This means that a TAPS system has to make a choice for how to close individual
-TAPS connectoins when QUIC is the underlying protocol. The expected behaviour
-from TCP is that closing an individual connection will close both the sending
-and receiving side and start teardown. This can be achieved by sending a \mono{FIN}
+TAPS connections when using QUIC as the underlying protocol. Based on TCP, the 
+expected behaviour
+is that closing an individual Connection will close both the sending
+and receiving side and start teardown. For QUIC, this can in theory be emulated by sending a \mono{FIN}
 flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
 frame if their stream is in a ready or sending state \cite{iyengarQUICUDPBasedMultiplexed2021}.
-A \mono{RESET_STREAM} frame teards down a QUIC stream in the sending direction, but has
-no effect on the receiving direction. It must therefore be combined with
-to close the stream in the receving connection, to complete stream teardown.
+A \mono{RESET_STREAM} frame tears down a QUIC stream in the sending direction,
+which in combination with the \mono{FIN} flag sent would completely close the frame.
+
 Even though this handling of underlying QUIC streams in TAPS is superficially
-closer to the expected behavior from TCP, is it not a graceful close is
-expected to happen on error conditions. For a graceful teardown of a single
+closer to the expected behavior from TCP, \mono{STOP_SENDING} is not a graceful close and is
+only
+expected to be used on error conditions. For a graceful teardown of a single
 stream only, the expected behaviour is both sides sending \mono{FIN} flags when
 they are done sending.
 
-In order to avoid unexpected error behaviour for QUIC, the most natural mapping
-for a TAPS Connection with QUIC as an underlying protocol is therefore to simply
+In order to avoid unecessary error behaviour for QUIC the most natural mapping
+for closing a TAPS Connection over QUIC is therefore to simply
 send a \mono{FIN} flag in the sending direction and remain open in the receving direction.
-This will reflect to the appication in the form of it still having to monitor
-the connection for incoming messages and it not invoking a closed()-callback until
-after the peer has finished sending its data. If a peer wants to gracefully close
-a connection before all data has been received, the only way of handling it is to
+This will appear to the appication in the form of it still having to monitor
+the connection for incoming messages and it not receiving a closed()-callback until
+after the peer has finished sending its data.
+
+If a peer wants to gracefully close
+a connection before all data has been received, the only way of handling it gracefully is to
 close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
 functionality form RFC9622 \cite{trammellAbstractApplicationProgramming2025}.
+
 If the application takes care of performing TAPS connection cloning in a consistent way,
 it can constently use \mono{ConnectionGroup.close()} and achieve the same
 expected behaviour no matter the underlying protocol in the TAPS system, this
-is however an example of underlying functionality leaking through to how the user
+is however an example of underlying functionality leaking through to how the application 
 should interact with the API.
 
 This mapping of QUIC connections to TAPS connection groups also affects how
-CTaps handles the notification of path changes. In CTaps, the \mono{path_change}
-callback is registered per-Connection, while QUIC cannot migrate single streams.
-This means that for each path change event, every CTaps Connection is notified
+CTaps handles the notification of path changes. In TAPS, the PathChange 
+event is per-Connection \cite[Sec. 8.3.2]{trammellAbstractApplicationProgramming2025},
+while QUIC migration happens for an entire Connection Group.
+
+For CTaps this means that for each path change event every CTaps Connection is notified
 separately for each change event, even though the event is always common for
 the entire Connection Group. This could be mitigated by allowing registration
-of callbacks on a per-Connection Group basis, but this is not currently supported
-by the TAPS API.
+of callbacks on a per-Connection Group basis, but this does not match the current
+TAPS API.
 
-As mentioned above QUIC streams do not map perfectly into the expected behavior
-if TAPS Connections. This also means that not all functionality in a QUIC stream
-is available through a TAPS Connection. For example, the one-way abort mentioned
-earlier thorugh \mono{STOP_SENDING}, which requests that the peer abort their
-sending, and \mono{RESET_STREAM} which aborts the local sending side has no
-mapping through the TAPS API. An individual stream can be aborted through
-\mono{Connection.abort()}, however TAPS has no way of knowing whether the application
-wants to abort sending, receiving or both. The only natural conclusion is
-therefore to abort both sending and receiving, leaving QUIC functionality
+There are also features related to streams in QUIC which are not available
+through a TAPS Connection.
+One example of this is the one-way abort mentioned
+earlier through \mono{STOP_SENDING}, which requests that the peer abort their
+sending, and \mono{RESET_STREAM}
+which aborts the local sending side \cite[Sec. 19.4, 19.5]{iyengarQUICUDPBasedMultiplexed2021}.
+For aborting Connections, the TAPS API presents only the generic
+\mono{Connection.abort()} \cite[Sec. 10]{trammellAbstractApplicationProgramming2025},
+so a TAPS implementation has no way of knowing whether the application
+wants to abort sending, abort receiving, or both. The only natural conclusion is
+therefore to abort both sending and receiving, leaving the granular QUIC control 
 unavailable to the application.
 
-In addition, when opening a new TAPS Connection, unidirectional QUIC
-streams are not available through the TAPS API. While a stream can be
-immediately opened and be immediately for sending, QUIC allows
-applications to open streams to be used purely for unidiraction sending,
-with stream IDs denominating whether the stream was opened by the client
+Another stream functionality which is not exposed through CTaps is
+initiating unidirectional streams. QUIC allows
+applications to open streams to be used purely for unidiraction sending.
+Here, the stream IDs denominating whether the stream was opened by the client
 or the server and whether or not the stream is unidirectional on bidirectional.
 A TAPS system has to assume that every new stream opened via \mono{Connection.clone()}
 is bidirectional, although since the TAPS API is extensible a parameter to
