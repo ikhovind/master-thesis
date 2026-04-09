@@ -363,57 +363,6 @@ Due to its simplicity, there is fairly little logic required to integrate
 UDP into CTaps. The relative protocol complexity is discussed further in
 in \cref{sec:protocolComplexity}.
 
-\begin{listing}[tbp]
-\begin{minted}{C}
-const ct_protocol_impl_t
-    udp_protocol_interface =
-        {
-            .name = "UDP",
-            .protocol_enum = CT_PROTOCOL_UDP,
-            .supports_alpn = false,
-            .selection_properties =
-                {.list =
-                     {
-                         [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
-                         [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = REQUIRE}},
-                         [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
-                         [PRESERVE_ORDER] = {.value = {.simple_preference = PROHIBIT}},
-                         [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
-                         [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
-                         [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
-                         [CONGESTION_CONTROL] = {.value = {.simple_preference = PROHIBIT}},
-                         [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
-                                                                        NO_PREFERENCE}},
-                         [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
-                                                                    NO_PREFERENCE}},
-                     }},
-            .init = udp_init,
-            .init_with_send = udp_init_with_send,
-            .send = udp_send,
-            .listen = udp_listen,
-            .close_listener = udp_close_listener,
-            .close_connection = udp_close,
-            .close_socket = udp_close_socket,
-            .abort = udp_abort,
-            .clone_connection = udp_clone_connection,
-            .free_connection_state = udp_free_state,
-            .free_socket_state = udp_free_socket_state,
-            .close_connection_group = udp_close_connection_group,
-            .free_connection_group_state = udp_free_connection_group_state,
-};
-\end{minted}
-\caption{UDP protocol implementation struct}
-\label{lst:udp-protocol-impl-struct}
-\end{listing}
-
 UDP does however not fit perfectly into the model assumed by
 TAPS, which is that of a Connection-based system. There is therefore
 several pieces of logic in the CTaps UDP implementation which adapt
@@ -447,8 +396,54 @@ Connection itself contains the destination remote endpoint,
 meaning that the Listener does not have to look up any state
 in this case.
 
-The implementation of the UDP protocol implementation struct can be seen in
-\cref{lst:udp-protocol-impl-struct}.
+The list of selection properties set for UDP by CTaps can be
+seen in the extract of the UDP implementation struct in
+\cref{lst:udp-protocol-impl-struct}. The remaining implementation
+for the function pointer implementations follow the same patterns
+as the QUIC implementation seen in \cref{lst:quic-protocol-impl-struct}.
+
+\begin{listing}[hptb]
+\begin{minted}{C}
+const ct_protocol_impl_t
+udp_protocol_interface =
+{
+    .name = "UDP",
+    .protocol_enum = CT_PROTOCOL_UDP,
+    .supports_alpn = false,
+    .selection_properties =
+    {
+        .list =
+        {
+        [RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+        [PRESERVE_MSG_BOUNDARIES] = 
+            {.value = {.simple_preference = REQUIRE}},
+        [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+        [PRESERVE_ORDER] = {.value = {.simple_preference = PROHIBIT}},
+        [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+        [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+        [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+        [CONGESTION_CONTROL] = {.value = {.simple_preference = PROHIBIT}},
+        [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [USE_TEMPORARY_LOCAL_ADDRESS] = 
+            {.value = {.simple_preference = NO_PREFERENCE}},
+        [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [ADVERTISES_ALT_ADDRESS] = 
+            {.value = {.simple_preference = NO_PREFERENCE}},
+        [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+        [ACTIVE_READ_BEFORE_SEND] = 
+            {.value = {.simple_preference = NO_PREFERENCE}},
+        }
+    },
+};
+\end{minted}
+\caption{Extract of CTaps UDP implementation struct.}
+\label{lst:udp-protocol-impl-struct}
+\end{listing}
+
 
 \subsubsection{TCP}
 TCP is one of the three protocols currently supported by CTaps, and has native
@@ -481,57 +476,50 @@ closed immediately when the listener is closed. The new TCP handles which
 have been spawned from this Listener will have received their own separate
 Socket Managers, since they are connected to separate sockets.
 
-The implementation of the TCP protocol implementation struct can be seen in
+The list of selection properties set for TCP by CTaps can be
+seen in the extract of the TCP implementation struct in
 \cref{lst:tcp-protocol-impl-struct}.
+The remaining implementation
+for the function pointer implementations follow the same patterns
+as the QUIC implementation seen in \cref{lst:quic-protocol-impl-struct}.
 
-\begin{listing}[tbp]
+\begin{listing}[hptb]
   \begin{minted}{C}
 const ct_protocol_impl_t
     tcp_protocol_interface =
+{
+    .name = "TCP",
+    .protocol_enum = CT_PROTOCOL_TCP,
+    .supports_alpn = false,
+    .selection_properties =
+    {
+        .list =
         {
-            .name = "TCP",
-            .protocol_enum = CT_PROTOCOL_TCP,
-            .supports_alpn = false,
-            .selection_properties =
-                {.list =
-                     {
-                         [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
-                         [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = PROHIBIT}},
-                         [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
-                         [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
-                         [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
-                         [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
-                         [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
-                         [CONGESTION_CONTROL] = {.value = {.simple_preference = REQUIRE}},
-                         [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
-                                                                        NO_PREFERENCE}},
-                         [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
-                         [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
-                                                                    NO_PREFERENCE}},
-                     }},
-            .init = tcp_init,
-            .init_with_send = tcp_init_with_send,
-            .send = tcp_send,
-            .listen = tcp_listen,
-            .close_listener = tcp_close_listener,
-            .close_connection = tcp_close,
-            .close_socket = tcp_close_socket,
-            .abort = tcp_abort,
-            .clone_connection = tcp_clone_connection,
-            .free_connection_state = tcp_free_state,
-            .free_socket_state = tcp_free_socket_state,
-            .close_connection_group = tcp_close_connection_group,
-            .free_connection_group_state = tcp_free_connection_group_state,
+            [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
+            [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = PROHIBIT}},
+            [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+            [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+            [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+            [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+            [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+            [CONGESTION_CONTROL] = {.value = {.simple_preference = REQUIRE}},
+            [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [INTERFACE] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [PVD] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
+                                                           NO_PREFERENCE}},
+            [MULTIPATH] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [DIRECTION] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+            [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
+                                                        NO_PREFERENCE}},
+        }
+    },
 };
   \end{minted}
-  \caption{TCP protocol implementation struct}
+  \caption{Extract of CTaps TCP implementation struct.}
   \label{lst:tcp-protocol-impl-struct}
 \end{listing}
 

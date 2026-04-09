@@ -236,7 +236,7 @@ between the CTaps Socket Manager and the protocol implementation when an applica
 
 \subsection{QUIC to TAPS mapping}
 While the TAPS RFCs were designed with QUIC in mind, it was written before the
-QUIC design was finalized in RFC 9000. This means that RFC 9623 does not
+QUIC design was finalized in RFC 9000 \cite{rfc9000}. This means that RFC 9623 does not
 feature any specific transport protocol consideratoins for mapping QUIC into
 a TAPS system \cite{brunstromImplementingInterfacesTransport2025}.
 There exists a draft for mapping Transport Services to QUIC, but this has
@@ -246,7 +246,44 @@ Because of RFC 9623 not featuring a mapping of transport services
 onto QUIC, CTaps has had to make certain design decisions in order
 to expose as much QUIC functionality as possible through the TAPS API.
 
-Write more etc. etc.
+In this process making as many QUIC features available
+as possible through TAPS was prioritized above an absolute
+uniformity of the behavior of the API no matter what underlying
+protocol was selected. This meant that it was deemed acceptable
+for any downstream applications to have to make certain
+design decisions based on the underlying protocol, or to have
+to handle Connections in a slightly unintuitive way, if it
+wanted to write CTaps code common for all underlying protocols.
+
+The most important design decision was to map a QUIC Connection
+to a TAPS Connection Group instead of to a Connection. Since
+Connection Groups are populated by Connection cloning, and RFC
+9622 \say{if the underlying protocol supports multi-streaming, it is natural to use this functionality to
+implement \mono{Clone}} \cite[Sec. 7.4]{rfc9622}. Because
+Connection cloning creates separate Connection objects, the most
+intuitive way to allow an application to interact with a single
+stream is by having a single Connection represent a single
+Connection, when this is applicable.
+
+The model of a single Connection only mapping to a single
+stream fits with TCP, as each TCP Connection only presents
+a single stream of data. The model does however break down
+slightly when introducing Connection cloning. Since Connections
+utilizing TCP can also be cloned in TAPS, this allows the application
+to create a Connection Group containing several TCP connections.
+From the point of view of TCP there is no relation between the
+TCP connections in this Connection Group, and within TAPS, each
+of them can be torn down individually. This differs from the
+QUIC behavior, where individual QUIC streams are only torn
+down gracefully when both sides indicate that they are finished
+sending.
+
+As part of this mapping of TAPS Connections to QUIC streams,
+closing a Connection which uses QUIC in CTaps only sends a FIN
+on the associated stream instead of tearing it down completely,
+unless the Connection was already closed for receiving, and it
+was the last open Connection in the Connection Group.
+This is discussed in detail in \cref{sec:quicUnderTaps}.
 
 \section{API Design}
 \subsection{Object Orientation}
@@ -295,6 +332,16 @@ since the objects in the external CTaps API are relatively small, so the simplic
 of deep copying was deemed more important than the efficiency of reference
 counting.
 
+QUIC also affected the architecture and ownership model of CTaps, as it
+was the only supported protocol which where the per-Connection Group
+state differs from the per-Connection state, it forced CTaps to introduce
+a clearer separation of conecerns with a separate void pointers to be
+used for internal protocol state in the Connection, Connection Group and
+Socket Manager structures. It also caused CTaps to make every Connection a
+part of a Connection Group, even if it has not been used for cloning. This
+was done in order to both present a unified interface to applications using
+CTaps, as well as avoiding internal checks for whether a Connection was
+part of a Connection Group or not.
 
 \begin{listing}[phtb]
 \begin{minted}{C}
