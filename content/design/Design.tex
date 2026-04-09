@@ -38,13 +38,108 @@ and pure C implementation, making it easy to integrate
 with CTaps.
 
 \section{Scope}
-CTaps is not a complete implementation of the TAPS standard,
-instead aiming to present the core of a TAPS system and show
-how the most important functionality of QUIC and other protocols
-can be exposed through TAPS.
+Since one of the key reseach questions motivating the development of CTaps is exactly
+how well the TAPS API as it exists currently can be presented programmatically,
+it follows that CTaps aims to be a as complete an implementation of the TAPS
+API as possible.
 \todo{Check in on this later, describe how large of a subset}
 
+While presenting a complete functional implementation of TAPS where
+all Transport Properties are respected is naturally out of scope, it was however determined
+that CTaps should present as much of the TAPS API described in RFC 9622 \cite{rfc9622} as
+possible, even if most of the options presented were implemented as a no-op in CTaps.
+
+Despite the desire to present as much of the API as possible, certain sections of
+the TAPS API are not present in CTaps, with the only major feature not available
+through the CTaps API being peer to peer connections. This was deemed to be
+too orthogonal to the CTaps internal functionality, and presenting this as
+a no-op would present little value, since CTaps would not be able to predict
+if any internal functionality of the rendezvouz functionality would cause changes
+in the TAPS API. Other functionality which is not present is primarily some
+forms of error error handling such as soft errors in addition certain 
+functionality such as being able to add endpoints to an active Connection.
+These are excluded because implementing
+them would not drive any research question forward,
+and were therefore deemed to be out of scope.
+
 \section{Architecture}
+The overarching architecture of CTaps is primarily affected by it being
+an asyncrhonous library and the desire to utilize a common protocol API
+in order to make additions of future protocols as simple as possible.
+
+An overview of the architecture of CTaps can be seen in \cref{fig:ctaps-arch}.
+Here, all the core aspects of CTaps can be seen, with the Socket Manager
+as an intermediary intenral object responsible for managing the lifetimes of
+the network sockets and internal protocol state, together with the protocol
+implementation interface, which is responsible for providing a common API
+presented to the Socket Manager. Communication between the Socket Manager
+and the protocol implementations and the Socket Manager is asynchronous,
+and the Socket Manager is responsible for invoking the callbacks registered 
+by the application when necessary.
+
+\begin{figure}[hptb]
+\centering
+\begin{tikzpicture}[
+    node distance=0.5cm,
+    layer/.style={
+        draw, 
+        line width=0.8pt, 
+        minimum width=8cm, 
+        minimum height=1.2cm, 
+        align=center, 
+        fill=gray!5,
+        font=\sffamily\bfseries
+    },
+    sublayer/.style={
+        draw, 
+        line width=0.6pt, 
+        minimum width=3.8cm, 
+        minimum height=1cm, 
+        fill=white,
+        font=\sffamily\small
+    }
+]
+
+% 1. User Application Layer
+\node [layer, fill=blue!10] (app) {Application};
+
+% 2. CTaps API Layer
+\node [layer, below=of app] (api) {CTaps API\\ \mdseries\small (TAPS interface, Callback Registration)};
+
+% 3. Socket Manager / Abstraction
+\node [layer, below=of api] (manager) {Socket Manager\\ \mdseries\small (Owns network socket)};
+
+% 3. Socket Manager / Abstraction
+\node [layer, below=of manager] (interface) {Protocol Abstraction\\ \mdseries\small (Common interface to network protocols)};
+
+% % 4. Implementation Engines (Split)
+\node [sublayer, below=0.5cm of interface.south west, anchor=north west] (uv) {libuv \mdseries\small (TCP/UDP)};
+\node [sublayer, below=0.5cm of interface.south east, anchor=north east] (pico) {Picoquic \mdseries (QUIC)};
+
+\node [sublayer, below=0.5cm of pico.south east, anchor=north east] (libuvraw) {libuv \mdseries (raw UDP socket)};
+
+% % 5. OS Layer
+\node [layer, below=1cm of libuvraw.south west, fill=gray!20] (os) {Network Stack};
+
+% Connectors
+\draw[->, thick] (app) -- (api);
+\draw[->, thick] (api) -- (manager);
+\draw[->, thick] (manager) -- (interface);
+\draw[->, thick] (interface.south) -- ++(0,-0.15) -| (uv);
+\draw[->, thick] (interface.south) -- ++(0,-0.15) -| (pico);
+\draw[->, thick] (uv) -- (uv |- os.north);
+\draw[->, thick] (pico) -- (pico |- libuvraw.north);
+\draw[->, thick] (libuvraw) -- (libuvraw |- os.north);
+\end{tikzpicture}
+\caption[CTaps Architecture Overview]
+{
+An overview of the architecture of CTaps, featuring the Socket Manager as common as a
+mediator between the external functions and the API, with the common protocol interface 
+and how it interacts with Picoquic and libuv.
+}
+\label{fig:ctaps-arch}
+\end{figure}
+
 \subsection{Protocol Interface}
 In order to make the CTaps design as modular as possible,
 CTaps uses an internal interface to interact with the underlying protocol.
@@ -234,7 +329,7 @@ between the CTaps Socket Manager and the protocol implementation when an applica
 \label{fig:async-close-flow}
 \end{figure}
 
-\subsection{QUIC to TAPS mapping}
+\subsection{QUIC to TAPS mapping} \label{sec:quic-arch-mapping}
 While the TAPS RFCs were designed with QUIC in mind, it was written before the
 QUIC design was finalized in RFC 9000 \cite{rfc9000}. This means that RFC 9623 does not
 feature any specific transport protocol consideratoins for mapping QUIC into
@@ -284,6 +379,42 @@ on the associated stream instead of tearing it down completely,
 unless the Connection was already closed for receiving, and it
 was the last open Connection in the Connection Group.
 This is discussed in detail in \cref{sec:quicUnderTaps}.
+
+\subsection{Internal Error Handling} \label{sec:internal-error-handling}
+Since CTaps is asynchronous it has two primary forms of errors,
+synchronous and asynchronous, both of which need to be propagated
+throughout the system. While all error states of asynchronous functions
+could in theory be handled asynchronously, CTaps has chosen to differentiate
+between synchronous errors which are propagated through return value,
+and asynchronous errors which are propagataed through callbacks.
+
+CTaps expects the parameters passed to internal functions
+to be valid, and therefore does not consider functions where the only
+error condition to be invalid input parameter to be fallible, as long
+as the external application is not responsible for the paramaters.
+If a function has a genuine failure path then it will return an
+value which will reflect this.
+
+If the function would return
+a pointer in its success path then it returns a NULL pointer in
+the failure path. Otherwise if the function can fail then it
+returns an error code. CTaps follows the convention of libuv
+of using negative numbered constants matching the errno set by
+Linux \cite{libuv_errors}. If an error condition is encountered
+which does not not an errno then a matching negative errno is
+selected manually by CTaps.
+
+If a function returns a synchronous error then any error callback
+will never be invoked.
+
+In certain situations errors cannot be discovered until after some
+asynchronous handling has completed. In these cases,
+CTaps invokes a callback in order to notify of the error. Internally
+in CTaps, the same callback is used for both success and error states,
+with the value of the parameters indicating whether the operation
+completed successfully or not, usually through passing a NULL parameter
+on error where a value is otherwise expected.
+
 
 \section{API Design}
 \subsection{Object Orientation}
@@ -389,6 +520,20 @@ int ct_remote_endpoint_with_hostname(
 \label{lst:using-remote-endpoint}
 \end{listing}
 
+\subsection{External Error Handling}
+The error handling presented to the application largely follows
+the same structure as described in \cref{sec:internal-error-handling}
+with two major differences. Firstly, CTaps verifies the input parameters
+of functions presented in the external API, meaning that they return an
+error value, usually -EINVAL, if a NULL pointer or othervise invalid value
+is passed to a mandatory parameter. The second change is that in the
+external API CTaps features dedicated error callbacks.
+
+This is done to present a more intuitive API to the application and
+to fail early, making it easier to detect for example when a mandatory parameter
+is omitted. Having dedicated error callbacks also allows the application to not
+have to write error handling code in the success callbacks.
+
 \subsection{Library Lifetime}
 Internally, CTaps uses a global event loop, which has to be initialized
 before operation can be performed. The application has to do this through the
@@ -443,390 +588,74 @@ start executing the event loop.
 
 
 \section{API overview}
-\subsubsection{\texttt{ct\_preconnection\_t}}
-As described in TAPS, Preconnections are used as sources to both servers
-and clients in taps. They are created synchronously via \mono{ct_preconnection_new()},
-where the user can pass local endpoints, remote endpoints, transport properties and
-security parameters which will affect all connections and listeners spawned from
-the given preconnection.
+This section will describe a subset of the most imporant parts of the API.
+A full overview of the API, which objects are available and how they
+map to TAPS can be seen in the in the attached doxygen output in the
+appendix. \todo{Add to appendix}
 
-\subsubsection{\texttt{ct\_transport\_properties\_t}}
-Whenever the user creates a new Preconnection they have the option of passing
-a Transport Properties object. Internally, this object consists of Connection
-Properties and Selection Properties. In a slight deviation from RFC 9622
-CTaps does not feature generic setters or getters, instead all selection
-and transport properties are set through dedicated function in the format
-\mono{ct_transport_properties_set_*} \cite{rfc9622}.
-This is a deliberate design choice, made to make it possible to move away from
-the current enum-based properties in the future, and also ensure type safety on
-all \mono{get()} and \mono{set()} operations.
+\subsection{\texttt{ct\_preconnection\_t}}
+In CTaps, all connections are started through a Preconnection. Preconnections
+contain basic parameters such as desired Transport Properties as well as Local
+and Remote Endpoints. Preconnections can either be used to initiate a Connection
+or to start a Listener, in order to receive incoming Connections.
 
-\subsubsection{\texttt{ct\_security\_parameters\_t}}
-When setting up a connection using QUIC, TLS is required. The application
-therefore has to pass one or more ALPN values as well as a set of certificates for a connection.
-An example of setting up security parameters for a client can be seen in \cref{lst:using-sec-params-client}.
+\subsection{\texttt{ct\_connection\_t}}
+In TAPS, Connections are created asynchronously through initiating
+a connection to a remote endpoint through a Preconnection.
+If the Connection attempt succeeds then the Connection is
+passed back to the application through the registered \mono{ready()}
+callback.
 
-\begin{listing}[tbp]
-\begin{minted}{C}
-    ct_security_parameters_t* security_parameters = ct_security_parameters_new();
-    if (!security_parameters) {
-      return -1;
-    }
-    const char* alpn_strings = "simple-ping";
-    ct_security_parameters_add_alpn(security_parameters, alpn_strings);
-    ct_security_parameters_add_client_certificate(security_parameters, TEST_RESOURCE_DIR "/cert.pem", TEST_RESOURCE_DIR "/key.pem");
+If the Connection cannot be established
+then the \mono{establishment_error()} callback
+is invoked instead of the \mono{ready()} callback.
 
-    // ... Then use it in a preconnection for example...
+\subsection{\texttt{ct\_listener\_t}}
+The Listener is the object in TAPS responsible for receiving
+incoming connections and is created asynchronously through
+invoking \mono{listen()} on a Preconnection. Listeners are
+created asynchronously because they share the Candidate Gathering
+process as normal Connection initiation.
 
-    // And free when done!
-    ct_security_parameters_free(security_parameters);
-
-\end{minted} 
-\caption{Example of client security parameters}
-\label{lst:using-sec-params-client}
-\end{listing}
-
-
-\subsubsection{Endpoints}
-In CTaps endpoints are divided into remote endpoints and local endpoints.
-Remote endpoints are required when initiating a preconnection, while
-local endpoints are required when initiating a listener. Both can either
-be bound to specific IP addresses or more loosely to local interfaces
-or remote hostnames. The addresses will then be resolved when invoking
-\mono{ct_preconnection_initiate()} to create a client connection or
-\mono{ct_preconnection_listen()} to create a server.
-
-\paragraph{\texttt{ct\_local\_endpoint\_t}}
-As mentioned, local endpoints are required for listeners
-while they are optional for client connections. If unspecified
-then the client connection will bind to an ephemeral local socket.
-A list of the functions to create and set up local endpoints can be
-seen in \cref{lst:local-endpoint-api-functions}.
-
-\begin{listing}[tbp]
-\begin{minted}{C}
-ct_local_endpoint_t* ct_local_endpoint_new(void);
-int ct_local_endpoint_with_interface(ct_local_endpoint_t* local_endpoint,
-                                     const char* interface_name);
-void ct_local_endpoint_with_port(ct_local_endpoint_t* local_endpoint,
-                                 uint16_t port);
-int ct_local_endpoint_with_service(ct_local_endpoint_t* local_endpoint,
-                                   const char* service);
-int ct_local_endpoint_with_ipv4(ct_local_endpoint_t* local_endpoint,
-                                in_addr_t ipv4_addr);
-int ct_local_endpoint_with_ipv6(ct_local_endpoint_t* local_endpoint,
-                                struct in6_addr ipv6_addr);
-void ct_local_endpoint_free(ct_local_endpoint_t* local_endpoint);
-\end{minted} 
-\caption{List of local endpoint API setup functions}
-\label{lst:local-endpoint-api-functions}
-\end{listing}
-
-\paragraph{\texttt{ct\_remote\_endpoint\_t}}
-As mentioned, remote endpoints are optional for listeners
-while they are required for client connections. If unspecified
-then the listener will accept all remote connections to the given
-local endpoint.
-A list of the functions to create and set up local endpoints can be
-seen in \cref{lst:remote-endpoint-api-functions}.
-
-\begin{listing}[tbp]
-\begin{minted}{C}
-ct_remote_endpoint_t* ct_remote_endpoint_new(void);
-int ct_remote_endpoint_with_hostname(ct_remote_endpoint_t* remote_endpoint,
-                                               const char* hostname);
-void ct_remote_endpoint_with_port(ct_remote_endpoint_t* remote_endpoint, uint16_t port);
-int ct_remote_endpoint_with_service(ct_remote_endpoint_t* remote_endpoint,
-                                    const char* service);
-int ct_remote_endpoint_from_sockaddr(ct_remote_endpoint_t* remote_endpoint,
-                                     const struct sockaddr_storage* addr);
-int ct_remote_endpoint_with_ipv4(ct_remote_endpoint_t* remote_endpoint,
-                                 in_addr_t ipv4_addr);
-int ct_remote_endpoint_with_ipv6(ct_remote_endpoint_t* remote_endpoint,
-                                 struct in6_addr ipv6_addr);
-void ct_remote_endpoint_free(ct_remote_endpoint_t* remote_endpoint);
-\end{minted} 
-\caption{List of remote endpoint API setup functions}
-\label{lst:remote-endpoint-api-functions}
-\end{listing}
-
-\subsection{Establishing Connections}
-While RFC 9622 features information on how to establish rendezvous
-connections this has been deemed to be out of scope for CTaps.
-
-\subsubsection{\texttt{ct\_connection\_t}}
-Unlike previously mentioned objects Connections cannot be created directly by the
-application. Instead they are returned to the user upon establishment through
-the callbacks seen in \cref{lst:preconnection-initiate-callbacks}.
-
-Upon receiving a Connection the application takes ownership over it,
-and must make sure to close it and free it using the appropriate functions
-provided by CTaps when needed.
-
-Every Connection belongs to a Connection Group and can be
-operated on with Connection Group-functions, even if it is 
-the only Connection in the Connection Group. Connection
-Groups are discussed further in \cref{sec:managing-cloning}.
-
-\subsubsection{Active Open}
-In order to establish a connection, the application has to initiate
-a preconnection. The CTaps function signature for doing this be
-seen in \cref{lst:preconnection-initiate}. When initiating a
-preconnection. Internally, this creates a connection object
-and when the connection to the remote endpoint has been
-successfully established this connection object is passed
-to the application through the \mono{ready()} callback.
-A full list of the callbacks passed when initiating a Preconnection
-can be seen in \cref{lst:preconnection-initiate-callbacks}.
-
-If the connection cannot be created or the remote endpoint
-cannot be reached, then the establishment error callback
-is invoked instead of the ready callback. Here a null parameter
-may be passed to signal that the error happened before it
-would make sense to let the user know which connection failed.
-
-\begin{listing}[tbp]
-\begin{minted}{C}
-int ct_preconnection_initiate(
-const ct_preconnection_t* preconnection,
-const ct_connection_callbacks_t* connection_callbacks);
-\end{minted}
-\caption{Function signature for initiating a preconnection}
-\label{lst:preconnection-initiate}
-\end{listing}
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-typedef struct ct_connection_callbacks_s {
-    /** @brief Called when a connection error occurs after establishment. */
-    void (*connection_error)(ct_connection_t* connection);
-
-    /** @brief Called when connection establishment fails. */
-    void (*establishment_error)(ct_connection_t* connection);
-
-    /** @brief Called when a connection expires (e.g., idle timeout). */
-    void (*expired)(ct_connection_t* connection);
-
-    /** @brief Called when the connection's network path changes (multipath). */
-    void (*path_change)(ct_connection_t* connection);
-
-    /** @brief Called when connection is established and ready for data transfer. */
-    void (*ready)(ct_connection_t* connection);
-
-    /** @brief Called when connection is established and ready for data transfer. */
-    void (*closed)(ct_connection_t* connection);
-
-    /** @brief Called when a message send operation fails. */
-    void (*send_error)(ct_connection_t* connection,
-                       ct_message_context_t* message_context,
-                       int reason_code);
-
-    /** @brief Called when a sent message is acknowledged by the transport. */
-    void (*sent)(ct_connection_t* connection,
-                 ct_message_context_t* message_context);
-
-    /** @brief Called when a non-fatal error occurs (e.g., congestion). */
-    void (*soft_error)(ct_connection_t* connection);
-
-    /**
-     * Per connection context accessible whenever a given connection is
-     * passed to a callback. */
-    void* per_connection_context; ///< User-provided context for the connection lifetime
-} ct_connection_callbacks_t;
-  \end{minted}
-  \caption{Connection callbacks when initiating a preconnection}
-  \label{lst:preconnection-initiate-callbacks}
-\end{listing}
-
-\subsubsection{Passive Open}
-To listen on a local endpoint the application must first
-initiate a Preconnection and then listen. The signature
-of the listen function can be seen in \cref{lst:preconnection-listen-signature}.
-This function
-initiates a listener and open a socket on the most
-desirable protocol and the first local endpoint from
-the preconnection.
-This function takes two parameters,
-callbacks for the listener, which is used to notify the application
-of new connections
-and errors associated with the listener, secondly a set
-of connection callbacks. These connection callbacks are used
-for every received connection, letting the user know when
-the connection has been closed, for example. The structure
-containing listener callbacks which is passed to the \mono{listen()}
-function can be seen in \cref{lst:preconnection-listen-callbacks},
-while the structure passed as connection callbacks can be seen in
-\cref{lst:preconnection-initiate-callbacks}.
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-int ct_preconnection_listen(const ct_preconnection_t* preconnection,
-                            const ct_listener_callbacks_t* listener_callbacks,
-                            const ct_connection_callbacks_t* connection_callbacks);
-  \end{minted}
-  \caption{Preconnection listen function signature}
-  \label{lst:preconnection-listen-signature}
-\end{listing}
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-typedef struct ct_listener_callbacks_s {
-
-    /** @brief Called when the listener starts listening and is ready to accept connections. */
-    void (*listener_ready)(ct_listener_t* listener);
-
-    /** @brief Called when a new connection is received. */
-    void (*connection_received)(ct_listener_t* listener,
-                                ct_connection_t* new_conn);
-
-    /** @brief Called when connection establishment fails for an incoming connection. */
-    void (*establishment_error)(ct_listener_t* listener, int error_code);
-
-    /** @brief Called when the listener has been closed and will accept no more connections. */
-    void (*listener_closed)(ct_listener_t* listener);
-    void* per_listener_context;
-} ct_listener_callbacks_t;
-  \end{minted}
-  \caption{Listener callbacks when starting listening from a preconnection}
-  \label{lst:preconnection-listen-callbacks}
-\end{listing}
-
-\paragraph{\texttt{ct\_listener\_t}}
-Like Connections, Listeners cannot be created directly by the application,
-but is instead created through callback after invoking \mono{ct_preconnection_listen()}.
-Upon receiving a Listener the application takes ownership of it and must make sure to
-close it and free the structure using the appropriate functions when needed.
-
-
-\subsection{Managing Connections}
-
-\subsubsection{Cloning} \label{sec:managing-cloning}
-Cloning a Connection in TAPS yields a Connection Group. A Connection Group
-is represented as an array of connections. The client operates on each individual
-Connection, with certain operations, such as aborting/closing all being able
-to operate on all connections in a connection group. For CTaps,
-all Connections
-have an associated Connection Group, with each Connection Group
-only containing a single Connection until the original Connection has been cloned.
+\subsection{Cloning} \label{sec:managing-cloning}
+In CTaps, cloning a Connection will create a new Connection and add it to the
+source Connection's Connection Group and pass the new Connection back to the
+Application.
+The client operates on each individual
 
 Invoking \mono{connection_clone} can lead to either a \mono{Ready} event or
-a \mono{CloneError} event. Connection Cloning is primarily used to create
-multiple logical Connections, and how this maps internally depends on the
-underlying protocol being used. For protocols which support multistreaming,
-such as QUIC, the connection group comes to represent a single overarching
-Connection, while the individual connections in the group represents single
-streams. The overarching connection can either be closed by a single operation
-on the connection group or by closing each Connection individually.
+a \mono{CloneError} event.
+For protocols which support multistreaming Connection cloning can be
+used to utilize multiple streams over a single Connection.
 
 For underlying protocols which do not support multistreaming, each cloned
-Connection becomes functionally independent, while still supporting the
-operations on Connection Groups. For a TCP Connection an independent Connection
-will be established from an ephemeral local port, while UDP connections will
-start listening on an ephemeral local port, immediately generate a \mono{Ready}
-event, being ready to send messages from this ephemeral port.
-
-\subsubsection{Connection Properties}
-In a full feature TAPS system the application would be able to
-dynamically set Connection Properties on Connections. This would
-involve for example setting the capacity profile in order to
-manipulate the underlying DSCP values in the IP header
-\cite{rfc9622}. CTaps
-has very limited support for this, with the only Connection Property
-that can be dynamically set being Connection Priority. This decides,
-if applicable, the relative priority of Connections within a Connection
-Group, and is only applicable if the underlying protocol is QUIC and
-the application is using multistreaming.
+Connection becomes functionally independent, but still belong to the
+same Connection Group.
 
 \subsection{Data Transfer}
 Due to the asynchronous nature of the library, users can request to
-receive messages at any time, and the library can receive messages
-over the network and cache them at any time. When a user requests
-to receive a message they pass a callback to the application, if a
-message is available, that is, the library has received a message
-over the network and has cached it, the callback is invoked immediately,
-passing the first cached message as a parameter to the callback.
+receive messages at any time, and CTaps can receive messages
+over the network and cache them at any time.
+
 If no message has been received by the library, then the callback
-itself is cached. The callback is then invoked the next time a message
-is received over the network. This way, the user does not have to
-spin while waiting for messages and is perform other work while
-waiting for incoming messages. Each invocation only receives
+is cached and is then invoked the next time a message
+is received. Each invocation only receives
 a single message, and will always receive the first message in
 the message queue.
 
 When sending messages the message is not cached, instead
-immediately passed to the libuv event loop. The message
-may queue here for a while, depending on the number of tasks
-in the loop.
+immediately passed to the libuv event loop or Picoquic.
 
-\subsubsection{\texttt{ct\_message\_t}}
-Messages are created using constructors following the same pattern as other
-CTaps objects. Here too does the application keep ownership over the created
-Message object, even after passing it to CTaps. The message must therefore
-be freed, and can be freed immediately after \mono{send_message()} returns.
+\subsection{\texttt{ct\_framer\_impl\_t}}
+Framer interface consists of a structure of function pointers,
+which are expected to be implemented by the application.
 
-\subsubsection{\texttt{ct\_message\_properties\_t}}
-Message properties can be passed when sending a message to influence the
-underlying behaviour of the Message. Several API functions are available
-through CTaps, but currently only \mono{final} and \mono{safely_replayable}
-are supported, where final is used to close sending on a connection and
-safely replayable is required for 0-rtt.
+Since the Connection takes a deep copy of passed Messages the
+Message data itself is owned by the protocol stack. Therfore
+Framer can modify the message in place and does not have to allocate new
+memory unless it is extending the length of the message.
 
-\subsubsection{\texttt{ct\_message\_context\_t}}
-In TAPS Message Context is additional information which is passed alongside
-the received message when receiving data. This can be used to fetch the
-Local and Remote Endpoint associated with the message as well as read the Message Properties
-of the incoming message.
-
-\subsubsection{Receiving data}
-In order to stop the client from being overwhelmed on receiving data, TAPS
-requires the application to register a callbacks every time it want to receive
-a callback. If a callback is registered on a Connection which has not received
-any messages, the Connection will queue the callback and invoke it the next
-time a message is received. If the Connection already has received a message,
-then the callback will be invoked immediately. The function signature for
-receiving messages on a connection can be seen in \cref{lst:connection-queue-receive}
-and the structure of the passed callbacks can be seen in \cref{lst:connection-receive-callback}.
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-int ct_receive_message(ct_connection_t* connection,
-                       const ct_receive_callbacks_t* receive_callbacks);
-  \end{minted}
-  \caption{Function signature for queuing a receive on a connection}
-  \label{lst:connection-queue-receive}
-\end{listing}
-
-\begin{listing}[tbp]
-  \begin{minted}{C}
-typedef struct ct_receive_callbacks_s {
-  /** @brief Called when a complete message is received. */
-    void (*receive_callback)(ct_connection_t* connection, ct_message_t* received_message,
-                            ct_message_context_t* ctx);
-
-    /** @brief Called when a receive error occurs. */
-    void (*receive_error)(ct_connection_t* connection, ct_message_context_t* ctx,
-                         const char* reason);
-
-    /** @brief Per-receive user context accessible when this specific callback is invoked. */
-    void* per_receive_context;
-} ct_receive_callbacks_t;
-  \end{minted}
-  \caption{Callback structure passed when receiving on a connection}
-  \label{lst:connection-receive-callback}
-\end{listing}
-
-\subsubsection{\texttt{ct\_framer\_impl\_t}}
-In CTaps, the Framer interface consists of a structure of function pointers,
-which are implemented by the application. These are then passed to a preconnection
-and are invoked at appropriate times during the lifetime of the Connection.
-Along with the Connection, Message and MessageContext, the framer is also
-passed a callback, which has to be invoked when the Framer is done modifying
-the message. Since the Connection takes a deep copy of the message, the
-Message data itself is owned by the protocol stack. This means that the
-framer can modify the message in place and does not have to allocate new
-memory, unless it is extending the length of the message.
-
-The framer interface as defined in CTaps can be seen in \cref{lst:framer-struct-def},
+The Framer interface as defined in CTaps can be seen in \cref{lst:framer-struct-def},
 while an example implementation from the CTaps framing tests can be seen in \cref{lst:framingTestImpl}.
 
 \begin{listing}[tbp]
@@ -895,36 +724,16 @@ static ct_framer_impl_t length_prepend_framer = {
 \subsection{Connection Termination}
 Since both aborting and closing Connections may involve over-the-wire teardown,
 all Connection termination is treated asynchronously by CTaps, even when it only involves
-closing a socket synchronously as with UDP. Since the application has ownership over
-the Connections it has received, it must be careful to free them when appropriate.
-Connections cannot be received until the underlying state has been successfully closed,
-which is indicated through the application through the \mono{closed()} callback.
-It is recommended that applications register this callback at all times, freeing
-the Connection passed to it to avoid memory leaks. It would be possible for CTaps
-to automatically free the closed Connections when the \mono{closed()} callback
-has not been registered as a quality of life improvement, but this has not been
-implemented at this time.
-
+closing a socket synchronously.
 Connection data and any waiting messages can still be read from a connection after it has
 closed, but the data is invalidated on free.
 
-
-\subsubsection{Closing QUIC connections}
 Since a QUIC Connection maps onto a TAPS Connection Group, the underlying
 behavior when closing a Connection which uses QUIC as its underlying protocol
-may be surprising to some users. QUIC does not have functionality to gracefully
-close a stream both ways without waiting for the peer to send its last data.
-This means that when calling \mono{ct_connection_close()} on a CTaps Connection
-which uses QUIC, it will simply send a \mono{FIN} flag and wait for the peer
-to finish sending before closing the connection. If the application wants to close
+may be surprising as discussed in \cref{sec:quic-arch-mapping}. 
+
+If the application wants to close
 the entire logical Connection it is recommended to close the entire Connection Group.
 If the application wants to avoid having unique Connection handling based on the
 underlying protocol then it can rely on using only \mono{ct_connection_close_group()}
-in all situations. This differing behavior and the reasoning behind it is discussed
-in more detail in \cref{sec:quicUnderTaps}.
-
-\subsection{logging}
-For the external API, CTaps wraps the internal functionality of log.c
-through the \mono{ct_set_log_level()} and
-\mono{ct_add_log_file()} which allows an application to control the logs
-output by CTaps.
+in all situations.
