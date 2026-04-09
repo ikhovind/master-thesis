@@ -342,6 +342,83 @@ multiplexing.}
 \label{fig:connection-clone-gains}
 \end{figure}
 
+\section{Framers}
+Framers in CTaps consists of a structure with two function
+pointers,
+which are expected to be implemented by the application.
+
+Since the Connection takes a deep copy of passed Messages the
+Message data itself is owned by the protocol stack. Therfore
+Framer can modify the message in place and does not have to allocate new
+memory unless it is extending the length of the message.
+
+The Framer interface as defined in CTaps can be seen in \cref{lst:framer-struct-def},
+while an example implementation from the CTaps framing tests can be seen in \cref{lst:framingTestImpl}.
+
+\begin{listing}[tbp]
+\begin{minted}{C}
+// Message Framer Implementation Interface
+struct ct_framer_impl_s {
+  // Encode outbound message
+  // Implementation should call the callback when encoding is complete
+  void (*encode_message)(struct ct_connection_s* connection,
+                        ct_message_t* message,
+                        ct_message_context_t* context,
+                        ct_framer_done_encoding_callback callback);
+
+  // Decode inbound data into messages
+  // Implementation should call ct_connection_deliver_to_app() for each complete message
+  void (*decode_data)(struct ct_connection_s* connection,
+                     const void* data,
+                     size_t len,
+                     ct_framer_done_decoding_callback callback);
+};
+\end{minted}
+\caption{Framer structure definition from ctaps.h}
+\label{lst:framer-struct-def}
+\end{listing}
+
+\begin{listing}[tbp]
+  \begin{minted}{C}
+static void length_prepend_encode(ct_connection_t* connection,
+                                   ct_message_t* message,
+                                   ct_message_context_t* context,
+                                   ct_framer_done_encoding_callback callback) {
+    // Prepend the message length as a single ascii character
+    // First byte is the length
+    message->content = (char*)realloc(message->content, message->length + 1);
+    memmove(message->content + 1, message->content, message->length);
+    // Get ascii representation of length (as long as it is <= 9 bytes)
+    message->content[0] = '0' + (char)(message->length);
+    message->length += 1;
+
+    callback(connection, message, context);
+}
+
+static void passthrough_decode(struct ct_connection_s* connection,
+                     const void* data,
+                     size_t len,
+                     ct_framer_done_decoding_callback callback) {
+    // Just pass through - deliver as-is
+    ct_message_t* msg = (ct_message_t*)malloc(sizeof(ct_message_t));
+    msg->content = (char*)malloc(len);
+    msg->length = len;
+    memcpy(msg->content, data, len);
+
+    callback(connection, msg, NULL);
+}
+
+static ct_framer_impl_t length_prepend_framer = {
+    .encode_message = length_prepend_encode,
+    .decode_data = passthrough_decode
+};
+
+  \end{minted}
+\caption{Example Framer implementation structure from the CTaps framing tests}
+\label{lst:framingTestImpl}
+\end{listing}
+
+
 \section{Protocol Implementations}
 
 \subsection{Supported protocols}
@@ -731,6 +808,44 @@ to the application.
 \caption{Overview of Lines of Code (LoC) on a per-protocol basis}
 \label{tab:protocolLoc}
 \end{table}
+
+\section{Internal Error Handling} \label{sec:internal-error-handling}
+\todo{place me better?}
+Since CTaps is asynchronous it has two primary forms of errors,
+synchronous and asynchronous, both of which need to be propagated
+throughout the system. While all error states of asynchronous functions
+could in theory be handled asynchronously, CTaps has chosen to differentiate
+between synchronous errors which are propagated through return value,
+and asynchronous errors which are propagataed through callbacks.
+
+CTaps expects the parameters passed to internal functions
+to be valid, and therefore does not consider functions where the only
+error condition to be invalid input parameter to be fallible, as long
+as the external application is not responsible for the paramaters.
+If a function has a genuine failure path then it will return an
+value which will reflect this.
+
+If the function would return
+a pointer in its success path then it returns a NULL pointer in
+the failure path. Otherwise if the function can fail then it
+returns an error code. CTaps follows the convention of libuv
+of using negative numbered constants matching the errno set by
+Linux \cite{libuv_errors}. If an error condition is encountered
+which does not not an errno then a matching negative errno is
+selected manually by CTaps.
+
+If a function returns a synchronous error then any error callback
+will never be invoked.
+
+In certain situations errors cannot be discovered until after some
+asynchronous handling has completed. In these cases,
+CTaps invokes a callback in order to notify of the error. Internally
+in CTaps, the same callback is used for both success and error states,
+with the value of the parameters indicating whether the operation
+completed successfully or not, usually through passing a NULL parameter
+on error where a value is otherwise expected.
+
+
 
 \section{Testing} \label{testing}
 A core tenet since the very start of development was that the library should be
