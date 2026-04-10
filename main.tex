@@ -14,6 +14,7 @@
 \usepackage[cache=true]{minted}
 \usepackage{xr}
 \usepackage{amssymb}
+\usepackage{placeins}
 
 \usepackage{silence}
 \usepackage{pgf}
@@ -34,8 +35,10 @@
 \usetikzlibrary{fit}
 \usetikzlibrary{arrows}
 \usepackage{xcolor}
+\usepackage{colortbl}
 \usepackage{amsmath}
 \usepackage{dirtytalk}
+\usepackage{appendix}
 \usepackage{listings}
 \usepackage{siunitx}
 \sisetup{per-mode=symbol}
@@ -74,6 +77,8 @@
 
 \addbibresource{references/masterthesis.bib}            %% ... or whatever
 
+\input{codesettings.tex}
+
 \begin{document}
 
 \uiomasterfp[
@@ -110,6 +115,8 @@
 \import{./content/implementation/}{Implementation}
 \import{./content/evaluation/}{Evaluation}
 \import{./content/conclusion/}{Conclusion}
+\appendix
+\import{./content/appendix/}{Appendix}
 
 \backmatter{}
 \setcounter{biburlnumpenalty}{9000}

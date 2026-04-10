@@ -117,8 +117,7 @@ log.c was specifically chosen because of its simplicity
 and pure C implementation, making it easy to integrate
 with CTaps.
 
-\todo{What is the architecture and why did we choose it.}
-\section{Architecture of CTaps}
+\section{Architecture of CTaps} \label{sec:ctaps-arch-design}
 As mentioned, CTaps aims to conform to the asynchronous TAPS API described
 in RFC 9622 \cite{rfc9622}. Since CTaps is asynchronous it has
 to rely on the result of any asynchronous operation being passed via
@@ -143,7 +142,7 @@ of support in libuv.
 This section will now expand on these key concepts which have shaped the
 architecture of CTaps and the reasoning behind each of them.
 
-\begin{figure}[ph]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     node distance=0.5cm,
@@ -291,7 +290,7 @@ The figure also shows that crucially the Socket Manager keeps
 the socket open, so that it can be used by the remaining Connections.
 
 \definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
-\begin{figure}[ph]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\sffamily,
     block/.style={rectangle, draw, text centered, rounded corners, fill=white, font=\bfseries},
@@ -351,25 +350,25 @@ between the CTaps Socket Manager and the protocol implementation when an applica
 \label{fig:async-close-flow}
 \end{figure}
 
-\begin{listing}[p]
-    \begin{minted}{C}
+\begin{listing}[htbp]
+\begin{minted}{C}
 typedef struct ct_socket_manager_callbacks_s {
-    void (*closed_connection)(ct_connection_t* connection);
-    void (*aborted_connection)(ct_connection_t* connection);
-    void (*establishment_error)(ct_connection_t* connection);
-    void (*connection_ready)(ct_connection_t* connection);
-    void (*message_sent)(ct_connection_t* connection, ct_message_context_t* message_context);
-    void (*message_send_error)(ct_connection_t* connection, ct_message_context_t* message_context,
-                               int reason_code);
-    void (*socket_closed)(struct ct_socket_manager_s* socket_manager);
-    void (*connection_received)(ct_listener_t* listener, ct_connection_t* connection);
-    void (*listener_ready)(ct_listener_t* listener);
-    void (*closed_listener)(struct ct_socket_manager_s* socket_manager);
+void (*closed_connection)(ct_connection_t* connection);
+void (*aborted_connection)(ct_connection_t* connection);
+void (*establishment_error)(ct_connection_t* connection);
+void (*connection_ready)(ct_connection_t* connection);
+void (*message_sent)(ct_connection_t* connection, ct_message_context_t* message_context);
+void (*message_send_error)(ct_connection_t* connection, ct_message_context_t* message_context,
+                           int reason_code);
+void (*socket_closed)(struct ct_socket_manager_s* socket_manager);
+void (*connection_received)(ct_listener_t* listener, ct_connection_t* connection);
+void (*listener_ready)(ct_listener_t* listener);
+void (*closed_listener)(struct ct_socket_manager_s* socket_manager);
 } ct_socket_manager_callbacks_t;
-    \end{minted}
-    \caption[Socket Manager Internal Callbacks]{The internal callbacks used for communication between
-    the Socket Manager and the protocol implementation.}
-    \label{lst:socket-manager-callbacks}
+\end{minted}
+\caption[Socket Manager Internal Callbacks]{The internal callbacks used for communication between
+the Socket Manager and the protocol implementation.}
+\label{lst:socket-manager-callbacks}
 \end{listing}
 
 \subsection{Protocol Interface}
@@ -390,7 +389,7 @@ Transport Services desired by the application, while
 the implemented function pointers present a generic
 interface to protocol-specific behavior.
 
-\begin{listing}[ph]
+\begin{listing}[htbp]
 \begin{minted}{C}
 typedef struct ct_protocol_impl_s {
     ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
@@ -412,7 +411,6 @@ typedef struct ct_protocol_impl_s {
 \end{listing}
 
 
-\todo{What do we present to the user and why}
 \section{API Design}
 The external API of CTaps is designed according to the TAPS API
 described in RFC 9622 \cite{rfc9622}.
@@ -459,7 +457,9 @@ allowed to interact with, and which fields are only used internally in CTaps. Th
 also allowed CTaps to differentiate between read-only Connection Properties and writable
 Connection Properties as described in the TAPS API \cite[Sec. 8.1.11]{rfc9622}.
 
-\begin{listing}[ph]
+\begin{listing}[htbp]
+\caption[Remote Endpoint Structure]
+{The internal definition of a Remote Endpoint in CTaps, with example functions from the CTaps API.}
 \begin{minted}{C}
 typedef struct ct_remote_endpoint_s {
     ///< Port number set by user
@@ -486,12 +486,10 @@ void ct_remote_endpoint_free(
     ct_remote_endpoint_t* remote_endpoint
 );
 \end{minted}
-\caption[Remote Endpoint Structure]
-{The internal definition of a Remote Endpoint in CTaps, with example functions from the CTaps API.}
 \label{lst:remote-endpoint}
 \end{listing}
 
-\begin{listing}[ph]
+\begin{listing}[htbp]
 \begin{minted}{C}
     // Step one allocate object on the heap
     ct_remote_endpoint_t* remote_endpoint = ct_remote_endpoint_new();
@@ -563,7 +561,10 @@ A synchronous error is any error
 that is picked up before work is added to the event loop and any
 function in the external CTaps API which can fail synchronously
 returns an integer return code with a negative value matching
-an errno corresponding to the given error. If a function 
+an errno corresponding to the given error. This matches the
+error convention used by libuv \cite{libuv_errors}.
+
+If a function 
 can fail asynchronously then it also takes error callbacks as
 parameters, which can for example be invoked if a remote endpoint
 rejects an connection attempt.
@@ -599,7 +600,7 @@ start executing the event loop. Multi-threading is avoided in order to
 minimize complexity and it would not add much value to the nature of CTaps
 as a reference implementation of TAPS.
 
-\begin{listing}[ph]
+\begin{listing}[htbp]
     \begin{minted}{C}
 ct_preconnection_t* preconnection = ct_preconnection_new(
     NULL,
@@ -630,6 +631,20 @@ In addition to the objects allocated synchronously using a \mono{ct_*_new()} fun
 also gain ownership of Connection and Listener objects which are created asynchronously.
 Since these may require teardown over the network, the application must close them first and not free
 them until the associated \mono{closed()} callback is invoked.
+
+CTaps does not free the Connections which do not have a \mono{closed()} callback registered,
+since even if the 
+application does not register a \mono{closed()} callback it could potentially be storing 
+received Connections and later free them on shutdown, which would cause a double free
+if CTaps had already freed the Connection on close.
+
+Connection data and any waiting messages can still be read from a connection after it has
+closed, but the data is invalidated on free.
+
+The only location where the application does not gain ownership over an object is in
+the receive callbacks passed to CTaps when an application wants to receive a message. 
+Here, the recevied Message object and Message Context only remain valid for the duration
+of the callback, and must be deep copied if they are to be referenced outside of this scope.
 
 CTaps assumes that the application owns the created objects, even in the cases where
 CTaps is unable to pass the object to the application because it has not registered the
