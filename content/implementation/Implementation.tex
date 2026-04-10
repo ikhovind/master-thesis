@@ -1,27 +1,38 @@
 \chapter{Implementation}  \label{chap:impl}
+This chapter will cover how the design decisions described
+in \cref{chap:design} are implemented in CTaps.
+This chapter will focus on how the internal architecture and
+internal TAPS functionality were realized, in addition
+to describing how CTaps is built and tested, and how it
+could be used in an external application.
 
-\section{Socket Manager} \label{sec:socketManager}
+\section{Internal Architecture}
+This section will describe the key implemenations
+for achieving the internal architecture of
+CTaps as described in \cref{chap:design}.
+
+\subsection{Socket Manager} \label{sec:socketManager}
 The need for a Socket Manager was described in \cref{sec:socket-manager-design},
 with the most important responsibilities being managaing the lifetimes
 of sockets as well as acting as an intermediary between Connections
 and the various protocol implementations.
 
-The reference counter is however decremented when the
-memory associated with one of the objects using the Socket Manager is
-freed. If this counter reaches 0, then the entire Socket Manager structure
-is freed, as can be seen in \cref{lst:socketManagerRefCount}.
+Since a single socket can be shared between many Connections,
+the socket manager keeps track of the number of open Connections
+in order to ensure that the underlying socket is only closed when
+the last Connection using it is closed. The underlying protocol
+implementation notifies the Socket Manager that a Connection has
+been closed asynchronously, at which point the Socket Manager
+considers whether the socket should be closed or not, as seen
+in the callback in
+\cref{lst:socket-manager-close-callback}.
 
-Socket Managers
-are also responsible for closing sockets when the final associated Connection
-or Listener has been closed. This is done through a separate functionality from
-the reference counting. Instead, a Socket Manager maintains a list of Connections
-and Listeners using its socket, only closing the socket when the last of these
-Connections or the last Listener is closed. Freeing the internal state and closing
-of the socket are implemented as two separate operations so that the application
-can still query for internal state, such as the underlying protocol, after
-a Connection or Listener has been closed.
+Separately from keeping track of the number of open Connections,
+the Socket Manager is also reference counted in order to ensure
+that the internal state remains valid as long as at least one associated
+object remains valid, as can be seen in \cref{lst:socketManagerRefCount}.
 
-\begin{listing}[tbp]
+\begin{listing}[htbp]
   \begin{minted}{C}
 void socket_manager_decrement_ref(SocketManager* socket_manager) {
   socket_manager->ref_count--;
@@ -39,8 +50,77 @@ void socket_manager_decrement_ref(SocketManager* socket_manager) {
   \label{lst:socketManagerRefCount}
 \end{listing}
 
+\begin{listing}[hptb]
+  \begin{minted}{C}
+void ct_socket_manager_listener_closed_cb(ct_socket_manager_t* socket_manager) {
+    log_debug("Socket manager listener closed callback invoked");
+    ct_listener_t* listener = socket_manager->listener;
+    int num_open = ct_socket_manager_get_num_open_dependents(socket_manager);
 
-\section{Candidate Gathering} \label{sec:candidateGathering}
+    if (num_open == 1) {
+        log_debug("Socket manager now has no open connections, closing entire socket manager");
+        socket_manager->close_reason = CT_CLOSE_TYPE_GRACEFUL;
+        ct_socket_manager_close(socket_manager);
+        return;
+    } else {
+        log_debug("Socket manager has %d open connections after stopping listener, not closing "
+                  "socket manager",
+                  num_open);
+    }
+
+    ct_listener_mark_as_closed(listener);
+    ct_socket_manager_notify_of_listener_close(socket_manager, listener);
+}
+  \end{minted}
+  \caption[Socket Manager Connection Closed Callback]
+  {Socket Manager invoked on connection close, showing how it only closes the underlying socket when the last Connection closes.}
+  \label{lst:socket-manager-close-callback}
+\end{listing}
+
+\subsection{Protocol Interface}
+
+\subsection{Error Handling} \label{sec:internal-error-handling}
+\todo{place me better?}
+Since CTaps is asynchronous it has two primary forms of errors,
+synchronous and asynchronous, both of which need to be propagated
+throughout the system. While all error states of asynchronous functions
+could in theory be handled asynchronously, CTaps has chosen to differentiate
+between synchronous errors which are propagated through return value,
+and asynchronous errors which are propagataed through callbacks.
+
+CTaps expects the parameters passed to internal functions
+to be valid, and therefore does not consider functions where the only
+error condition to be invalid input parameter to be fallible, as long
+as the external application is not responsible for the paramaters.
+If a function has a genuine failure path then it will return an
+value which will reflect this.
+
+If the function would return
+a pointer in its success path then it returns a NULL pointer in
+the failure path. Otherwise if the function can fail then it
+returns an error code. CTaps follows the convention of libuv
+of using negative numbered constants matching the errno set by
+Linux \cite{libuv_errors}. If an error condition is encountered
+which does not not an errno then a matching negative errno is
+selected manually by CTaps.
+
+If a function returns a synchronous error then any error callback
+will never be invoked.
+
+In certain situations errors cannot be discovered until after some
+asynchronous handling has completed. In these cases,
+CTaps invokes a callback in order to notify of the error. Internally
+in CTaps, the same callback is used for both success and error states,
+with the value of the parameters indicating whether the operation
+completed successfully or not, usually through passing a NULL parameter
+on error where a value is otherwise expected.
+
+
+
+
+
+\section{Connection Lifetime}
+\subsection{Candidate Gathering} \label{sec:candidateGathering}
 Before a Connection can be established, a list of possible Local and Remote
 need to be generated based on the data passed to the associated Preconnection.
 In CTaps this candidate gathering follows the procedure described in RFC 9623
@@ -57,7 +137,7 @@ are not compatible with the required or prohibited selection properties. After p
 the tree is sorted according to the stated selection properties, as described in RFC 9623 
 \cite{brunstromImplementingInterfacesTransport2025}.
 
-\section{Candidate Racing} \label{sec:candidateRacing}
+\subsection{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered when initiating a Preconnection, CTaps
 will race them according to the specification from RFC 9623
 \cite{brunstromImplementingInterfacesTransport2025}. The combination
@@ -194,6 +274,10 @@ presented to the application.
 but the fast endpoint still wins.}
 \label{fig:racingSeqDiagram}
 \end{figure}
+
+\subsection{Data Transfer}
+
+\subsection{Connection Teardown}
 
 \section{Connection Cloning}
 CTaps support connection cloning through the \mono{ct_connection_clone()}
@@ -342,6 +426,8 @@ multiplexing.}
 \label{fig:connection-clone-gains}
 \end{figure}
 
+\section{Connection Migration}
+
 \section{Framers}
 Framers in CTaps consists of a structure with two function
 pointers,
@@ -417,6 +503,8 @@ static ct_framer_impl_t length_prepend_framer = {
 \caption{Example Framer implementation structure from the CTaps framing tests}
 \label{lst:framingTestImpl}
 \end{listing}
+
+
 
 
 \section{Protocol Implementations}
@@ -808,44 +896,6 @@ to the application.
 \caption{Overview of Lines of Code (LoC) on a per-protocol basis}
 \label{tab:protocolLoc}
 \end{table}
-
-\section{Internal Error Handling} \label{sec:internal-error-handling}
-\todo{place me better?}
-Since CTaps is asynchronous it has two primary forms of errors,
-synchronous and asynchronous, both of which need to be propagated
-throughout the system. While all error states of asynchronous functions
-could in theory be handled asynchronously, CTaps has chosen to differentiate
-between synchronous errors which are propagated through return value,
-and asynchronous errors which are propagataed through callbacks.
-
-CTaps expects the parameters passed to internal functions
-to be valid, and therefore does not consider functions where the only
-error condition to be invalid input parameter to be fallible, as long
-as the external application is not responsible for the paramaters.
-If a function has a genuine failure path then it will return an
-value which will reflect this.
-
-If the function would return
-a pointer in its success path then it returns a NULL pointer in
-the failure path. Otherwise if the function can fail then it
-returns an error code. CTaps follows the convention of libuv
-of using negative numbered constants matching the errno set by
-Linux \cite{libuv_errors}. If an error condition is encountered
-which does not not an errno then a matching negative errno is
-selected manually by CTaps.
-
-If a function returns a synchronous error then any error callback
-will never be invoked.
-
-In certain situations errors cannot be discovered until after some
-asynchronous handling has completed. In these cases,
-CTaps invokes a callback in order to notify of the error. Internally
-in CTaps, the same callback is used for both success and error states,
-with the value of the parameters indicating whether the operation
-completed successfully or not, usually through passing a NULL parameter
-on error where a value is otherwise expected.
-
-
 
 \section{Testing} \label{testing}
 A core tenet since the very start of development was that the library should be
