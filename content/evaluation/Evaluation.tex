@@ -487,6 +487,81 @@ so that there is no need to expose them in a TAPS system.
 In the TAPS API ECN is marked as an UDP-lite specific feature, though this
 is also useful for QUIC \cite{rfc9622}.
 
+An overview over the most important features in QUIC
+and how they may into CTaps and TAPS in general can be seen in
+\cref{tab:quic-taps-mapping}.
+
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
+\label{tab:quic-taps-mapping}
+\small
+\begin{tabularx}{\textwidth}{l||X}
+\toprule
+\rowcolor{gray!25}
+\textbf{QUIC Feature} & \textbf{TAPS Mapping} \\
+\midrule
+\multicolumn{2}{l}{\textit{Supported in CTaps with expected behavior\tnote{1}}} \\
+\midrule
+ALPN negotiation & Security Parameter \\
+0-RTT establishment & Message Property\\
+TLS certificates & Security Parameter\\
+Connection Migration & Multiple Local Endpoints\\
+Bidirectional streams & \mono{Clone()}\\
+Stream Priority & Connection Property\\
+\midrule
+\multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior\tnote{1}}} \\
+\midrule
+QUIC connection\tnote{2} & Connection Group\\
+QUIC stream & Connection\\
+Unidirectional stream close (FIN) & Connection \mono{Close()}\\
+Connection migration\tnote{7} & Selection Property\\
+Path change events & Per-Connection callback\\
+\mono{initial_max_streams_bidi} & Connection Property \\
+\midrule
+\multicolumn{2}{l}{\textit{Supprted through TAPS, but not implemented in CTaps}} \\
+\midrule
+Multipath & Selection Property\\
+QUIC Datagrams \cite{rfc9221} & Message Property \\
+PING Frames & Connection Property \\
+Key Update \cite[Sec. 6]{rfc9001} & Security Parameter Callback \\
+ECN & Message Property \\
+\mono{max_udp_payload_size}\tnote{3} & Connection Property \\
+\midrule
+\multicolumn{2}{l}{\textit{Not supported through TAPS}} \\
+\midrule
+Unidirectional stream init & --- \\
+\mono{STOP_SENDING} & --- \\
+\mono{RESET_STREAM} & ---\\
+\mono{disable_active_migration} & Kanskje denne dekkes av multipath?\\
+\mono{initial_max_data} & ---\\
+\mono{initial_max_stream_data\_*} & ---\\
+Idle Timeout\tnote{6} & ---\\
+\mono{ack_delay_exponent} & ---\\
+\mono{max_ack_delay} & ---\\
+Directional \mono{initial_max_streams_*} & ---\\
+\texttt{preferred\_address} & ---\\
+\mono{Stateless reset}     & --- \\
+Connection ID handling\tnote{4} & ---\\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}
+\footnotesize
+\item[1] Expected Behavior is defined to be a
+mapping which behaves consistently with the protocol-agnostic TAPS API. Generally this means matching 
+or exceeding the behavior of CTaps when using TCP as the underlying protocol.
+\item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
+\item[3] Requires that recvMsgMaxLen is communicated to the peer.
+\item[4] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
+\item[6] CTaps can set Connection timeout, but only when \say{trying to reliably deliver data to the Remote Endpoint} \cite[Sec. 8.1.3]{rfc9622}.
+\item[7] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+\todo{Fix ordering of notes}
+
 \section{Discussion} \label{sec:discussion}
 \subsection{Single Endpoint Handshake Benchmark}
 When it comes to CTaps, the results in \cref{fig:racing-handshake} are promising
