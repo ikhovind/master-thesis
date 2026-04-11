@@ -55,8 +55,8 @@ the path from the connection itself. More details about this can be found in
 \cref{sec:quic}.
 
 \section{Network Sockets}
-Socket programming today exists in several forms and can
-in several forms, and can be used for both inter-process communication
+Socket programming today exists in several forms
+and can be used for both inter-process communication
 and network communication.
 
 When it comes to network programming,
@@ -188,8 +188,9 @@ connection \cite{google2026transparency}.
 \section{QUIC} \label{sec:quic}
 QUIC is a protocol intended to be a replacement for TCP.
 It was developed by Google and released to the
-public in 2013 described in RFC 9000
-\cite{rfc9000}.
+public in 2013, but formally defined through RFC 9000
+in 2021\cite{rfc9000}.
+
 Like TCP, QUIC is a connection-oriented protocol and provides reliability,
 despite being implemented in user-space on top of
 UDP. QUIC enables several features which either are not available
@@ -1138,8 +1139,3 @@ Picoquic \cite{christianhuitemaPicoquic} is a C library which aims to be a minim
 Picoquic features a built-in event loop, but applications can also integrate it with their
 own event loops,
 querying for Picoquic for new data to send through \mono{picoquic_prepare_next_packet}.
-
-\section{log.c}
-Log.c \cite{logc} is a small logging library which provides a simple API for
-formatting log messages of different levels of severity, either to
-stdout or to a dedicated logging file.

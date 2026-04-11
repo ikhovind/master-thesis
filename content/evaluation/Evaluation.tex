@@ -13,10 +13,15 @@ The performance seen in the benchmarks would likely not change much
 on a more performant system, as they are all I/O-bound to a large
 degree.
 
-\begin{table}[hp]
+\begin{table}[htbp]
 \centering
-\begin{tabular}{ll}
+\begin{threeparttable}
+\caption{Specifications of machine running benchmarks.}
+\label{tab:machine-specs}
+\small
+\begin{tabular}{l||l}
 \toprule
+\rowcolor{gray!25}
 \textbf{Component} & \textbf{Details} \\
 \midrule
 Model      & ThinkPad X1 Carbon 6th Gen (2018) \\
@@ -26,8 +31,7 @@ OS         & Debian GNU/Linux 12 \\
 Kernel     & 6.1.0-44-amd64 \\
 \bottomrule
 \end{tabular}
-\caption{Specifications of machine running benchmarks.}
-\label{tab:machine-specs}
+\end{threeparttable}
 \end{table}
 
 
@@ -292,8 +296,9 @@ in the CTaps repository.}
 \begin{threeparttable}
 \caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
 \label{tab:loc_complexity}
-\begin{tabular}{lrrrr}
+\begin{tabular}{l||rrrr}
 \toprule
+\rowcolor{gray!25}
 \textbf{Component} & \textbf{TCP} & \textbf{QUIC} & \textbf{TCP \& QUIC} & \textbf{CTaps} \\
 \midrule
 Initialization \& context setup  & 33  &  69 & 102  & 73  \\
@@ -645,7 +650,11 @@ simplicity, but also much easier migration to future protocols.
 While CTaps is the most complex
 individual client by lines of code, it provides TCP and QUIC support, connection racing,
 and several QUIC benefits at less than the combined complexity of the QUIC
-and TCP clients. In order to develop a replacement of CTaps, the TCP and QUIC
+and TCP clients. A combined TCP and QUIC client would likely feature
+some shared logic, so the naive sum in \cref{tab:loc_complexity} can
+be viewed as an upper bound for the non-CTaps clients. 
+
+However, in order to develop a replacement of CTaps the TCP and QUIC
 clients would not only have to be combined, but would also have to implement
 fallback logic, which is not accounted for in this table.
 
