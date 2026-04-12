@@ -8,7 +8,7 @@ where a laptop may be connected to both a Wi-Fi network and a wired Ethernet.
 Each separate network is interacted with through a separate network interface,
 although these are often virtualized, for example with the loopback interface.
 Since each network interface is connected to a different network, each one
-feature a different IP address, and therefore may be used as a source
+features a different IP address, and therefore may be used as a source
 address for outgoing traffic, if packets can be routed through the associated network.
 
 Given that a machine features more than one network interface which can reach
@@ -20,7 +20,7 @@ be used to reach the same destination.
 Within QUIC, a network path is a term used for the combination of
 source IP, source port, destination IP and destination port
 \cite{rfc9000}.
-This term has become necessary in since QUIC decouples
+This term has become necessary since QUIC decouples
 the path from the connection itself. More details about this can be found in
 \cref{sec:quic}.
 
@@ -119,7 +119,7 @@ UDP is designed to be a very lightweight protocol with as little
 overhead as possible. It features a very simple 8 byte header, featuring
 only the source port, destination port, length and checksum.
 Since UDP does not mandate
-advanced features such as in-order delivery or reliability, it is
+advanced features such as in-order delivery or reliability, it
 allows protocols using it as a substrate
 to develop their own algorithms for congestion control
 or reliable delivery as needed.
@@ -163,11 +163,11 @@ also encrypts its header, unlike TLS over TCP.
 
 While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream
-A stream is an either either
+A stream is an either
 unidirectional or bidirectional ordered stream of data, much
 like what an application sees when using TCP. Streams can be created and
 closed by either endpoint, and multiple streams can exist over a
-single QUIC connection. QUIC mandates support for in-order deliver within a single
+single QUIC connection. QUIC mandates support for in-order delivery within a single
 stream, but not between streams. This way a new stream can be
 used for each object transferred, solving the issue of
 head-of-line blocking which is present in TCP.
@@ -923,7 +923,7 @@ of this algorithm for TAPS is described in section \ref{happyEyeballs}.
 
 Failover racing is the process of racing a single candidate
 at a time, only attempting the next candidate if the previous
-fails. This can be used when an application has a string preference
+fails. This can be used when an application has a strong preference
 of one branch over another.
 
 Connection establishment has been completed when a single candidate,
@@ -990,8 +990,8 @@ built on top of IP, its adoption has struggled likely due
 to network ossification.
 
 SCTP over UDP has
-struggled with adoption, showing that not only network ossification
-prevents the adoption of new protocols, but also that
+struggled with adoption, showing that not only does network ossification
+prevent the adoption of new protocols, but also that
 the backing of major actors, such as Google backing QUIC,
 is required for major innovations on the transport layer.
 
