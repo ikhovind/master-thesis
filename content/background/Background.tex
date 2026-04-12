@@ -1,35 +1,5 @@
 \chapter{Background} \label{chap:background}
 
-\section{Object Orientation in C} \label{sec:object-orientation-in-c}
-The abstract interface described by the TAPS WG is very clearly object
-oriented, C is a procedural programming language, and does not feature
-the concept of classes or objects, which would most neatly map to the
-TAPS interface. Instead, the object orientation and division of responsibility
-featured in an object-oriented language has to be emulated through the use of
-structs, and dedicated functions which operate on them.
-
-\begin{listing}[phtb]
-\begin{minted}{C}
-typedef struct ct_example_object_s {
-    uint8_t value;
-} ct_example_object_t;
-
-ct_example_object_t* ct_example_object_new(uint8_t value);
-ct_example_object_t* ct_example_object_free(ct_example_object_t* obj);
-uint8_t ct_example_object_get_value(const ct_example_object_t* obj);
-void ct_example_object_set_value(ct_example_object_t* obj, 
-                                 uint8_t new_value);
-\end{minted}
-\caption{Example of using a struct in C to emulate an object}
-\label{lst:example-object}
-\end{listing}
-
-By creating dedicated constructors, destructors and other utility functions
-object orientation can be largely emulated in C, with the same advantages
-of encapsulation of responsibilities
-as seen in higher level languages. An example of this pattern can be seen in
-\cref{lst:example-object}.
-
 \section{Network Interfaces and Paths}
 A machine is considered to be multihomed if it is connected to more than
 one network. In practice, this is often the case for modern devices,
@@ -43,22 +13,18 @@ address for outgoing traffic, if packets can be routed through the associated ne
 
 Given that a machine features more than one network interface which can reach
 the same destination, this can be used to improve reliability and performance
-of a connection, if it supports sending from multiple source addresses. Each
-local interface therefore represents a different network path, but can
+of a connection. Each
+local interface represents a different network path, but can
 be used to reach the same destination.
 
 Within QUIC, a network path is a term used for the combination of
 source IP, source port, destination IP and destination port
 \cite{rfc9000}.
-This term has become necessary in the context of QUIC, as unlike TCP, QUIC decouples
+This term has become necessary in since QUIC decouples
 the path from the connection itself. More details about this can be found in
 \cref{sec:quic}.
 
 \section{Network Sockets}
-Socket programming today exists in several forms
-and can be used for both inter-process communication
-and network communication.
-
 When it comes to network programming,
 the network socket in its most basic definition is an abstraction
 for a network connection, through which an application can send
@@ -66,7 +32,7 @@ and receive data \cite[p. 8]{donahooTCPIPSockets2009}.
 First mentioned in 1970 in relation to ARPANET, the
 simplicity of sockets and their ubiquity in all UNIX distributions
 since version 4.2 of the Berkeley Software Distribution have
-led to them becoming the de facto standard for low-level network
+led to them becoming the de facto standard for network
 programming \cite{crockerNewHostHostProtocol1970}\cite[p. 502]{tanenbaumComputerNetworks2011}.
 
 Modern sockets are standardized across UNIX-like systems through
@@ -94,11 +60,11 @@ The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
 \section{Barriers to Protocol Adoption} \label{sec:transport-protocol-barriers}
-The fact that the application has to specify both the domain
+The fact that an application has to specify both the domain
 and the type of the socket means that both the
 underlying addressing and the protocol are bound at compile time.
 The underlying transport protocol is therefore tightly
-coupled to the design of the application, and barring fairly
+coupled to the design of an application, and barring fairly
 advanced logic when setting up
 the necessary sockets, the application will be bound to a single 
 protocol and addressing scheme. Updating
@@ -107,12 +73,10 @@ probably a fairly large refactoring of the application.
 This naturally makes adopting new protocols difficult, even
 if the new protocol is better suited to the application's requirements.
 
-Another challenge with new transport-layer protocols apart
-from TCP and UDP is that developing them has proven to be challenging, 
-in part because of TCP and UDP's ubiquity. 
-
+Another challenge with new transport-layer protocols
+is that
 Network middleboxes have have been
-optimized to support TCP and UDP, and may sometimes
+optimized to support TCP and UDP and may sometimes
 even drop packets if they contain another transport layer protocol.
 The resulting difficulty in innovating on the transport-layer
 is known as network ossification. Several new protocols such
@@ -120,7 +84,7 @@ as UDP-lite and QUIC are built on top of UDP in order to combat
 this ossification.
 
 While using UDP as a substrate does present some overhead,
-it is fairly minimal with only an 8 bytes.
+it is fairly minimal with only a header of 8 bytes.
 
 Applications can themselves implement needed features
 such as reliability and congestion control.
@@ -132,8 +96,8 @@ the best practices for implementing congestion control on top of UDP
 \section{TCP}
 TCP is by far the most common transport layer protocol used on the
 internet today. It is a connection-oriented protocol and provides
-a reliable, in-order transfer of a stream of bytes to the application layer,
-however it has also become common to use TCP for message-based applications,
+a reliable, in-order transfer of a stream of bytes to the application layer.
+It has also become common to use TCP for message-based applications,
 using a framing protocol on top of TCP to divide the TCP byte stream into
 discrete messages. A description of TCP was first published as an RFC in 1974
 \cite{cerfSpecificationInternetTransmission1974} and it has since grown to become
@@ -153,12 +117,11 @@ prioritize low latency over reliability, such as real-time applications.
 
 UDP is designed to be a very lightweight protocol with as little
 overhead as possible. It features a very simple 8 byte header, featuring
-only the source port, destination port, length and checksum. Due to
-the lightweight nature of UDP, it is often used as a substrate
-for other transport layer protocols. Since UDP does not mandate
+only the source port, destination port, length and checksum.
+Since UDP does not mandate
 advanced features such as in-order delivery or reliability, it is
-often used as a substrate for other transport layer protocols, which
-then are free to develop their own algorithms for congestion control
+allows protocols using it as a substrate
+to develop their own algorithms for congestion control
 or reliable delivery as needed.
 
 The primary reason for why protocols choose to use UDP as a substrate
@@ -175,27 +138,28 @@ in order to exchange the cryptographic parameters needed for the connection.
 This means that connections using TLS have to perform an additional round trip time (RTT)
 during connection establishment, compared to a non-secure TCP connection.
 
-As a mitigation for this TLS 1.3 features support for 0-RTT handshakes,
+TLS 1.3 also supports for 0-RTT handshakes
 which allow a client to send data during the initial handshake when resuming
 a previous connection to a server \cite{rfc8446}. This can be a source
-of replay attacks for non-idempotent requests, and is often, such as
-when first introduced by Cloudflare, not enabled by default \cite{sullivan20170rtt}.
+of replay attacks if the message being sent is not idempotent.
 
-As of 2026, TLS adoption has been very widespread, especially when it comes
-to HTTPS, with 95 \% of all connections in Chrome on Windows using an encrypted
+As of 2026 TLS adoption has been very widespread,
+with 95 \% of all connections in Chrome on Windows using an encrypted
 connection \cite{google2026transparency}.
 
 \section{QUIC} \label{sec:quic}
-QUIC is a protocol intended to be a replacement for TCP.
-It was developed by Google and released to the
-public in 2013, but formally defined through RFC 9000
-in 2021\cite{rfc9000}.
+QUIC is a protocol developed by Google and formalized
+through RFC 9000 in 2021 \cite{rfc9000}.
+Intended to be a replacement for TCP, it has achieved
+a fairly high adoption, for example with over 75 \%
+of traffic to Meta servers using QUIC in 2020 \cite{joras2020quic}.
 
-Like TCP, QUIC is a connection-oriented protocol and provides reliability,
+QUIC is a connection-oriented protocol and provides reliability,
 despite being implemented in user-space on top of
 UDP. QUIC enables several features which either are not available
 or do not have a wide adoption in TCP, among these are 0-RTT connection establishment,
-multistreaming, along with TLS being a mandatory part of the protocol.
+multistreaming. TLS is a mandatory part of the protocol and QUIC
+also encrypts its header, unlike TLS over TCP.
 
 While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream
@@ -204,7 +168,7 @@ unidirectional or bidirectional ordered stream of data, much
 like what an application sees when using TCP. Streams can be created and
 closed by either endpoint, and multiple streams can exist over a
 single QUIC connection. QUIC mandates support for in-order deliver within a single
-stream, but not between streams. This way, a new stream can be
+stream, but not between streams. This way a new stream can be
 used for each object transferred, solving the issue of
 head-of-line blocking which is present in TCP.
 
@@ -235,16 +199,7 @@ be seen in \cref{lst:stream-frame-format}.
 
 A given stream can exist in several different states.
 These states differ whether the stream is sending or receiving
-data. For a stream sending data, the states are:
-\texttt{Ready}, \texttt{Send}, \texttt{Data Sent}, \texttt{Reset Sent},
-\texttt{Data Recvd}, and \texttt{Reset Recvd}.
-A receiving streams states maps the perceived states of the
-sending stream. This means that there are some states
-which are not represented in the receiving stream, as they
-cannot be inferred from the data received. The states of a
-receiving stream are: 
-\texttt{Recv}, \texttt{Size Known}, \texttt{Data Recvd}, \texttt{Reset Recvd},
-\texttt{Data Read}, and \texttt{Reset Read}.
+data.
 A bidirectional stream consists of both sending and receiving parts,
 and can therefore exist in states belonging to both sending and
 receiving streams as described previously.
@@ -290,11 +245,6 @@ seen in \cref{fig:stream_states}.
     \label{fig:stream_states}
 \end{figure}
 
-Another important abstraction presented by QUIC is the connection.
-A QUIC connection is a shared state between a client and a server 
-\cite{rfc9000}
-and is established through a handshake.
-
 Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
@@ -339,21 +289,16 @@ a destination ID for an outgoing packet.
 
 Since the connection ID is in the unencrypted part of the header,
 QUIC makes use of multiple Connection IDs in order to, among other things,
-ensure that connections cannot be linked by outside observers through a single connection ID,
-for example after path migration.
+ensure that connections cannot be linked by outside observers through a single connection ID.
 
 Connection IDs make addressing in QUIC independent of addressing in lower layer
 protocols \cite{rfc9000}. This allows QUIC to survive
 changes in the underlying four-tuple and therefore enables connection migration.
 
 \subsection{Connection Migration} \label{sec:connection-migration}
-As mentioned, thanks to the use of connection IDs, QUIC connections are able to
-survive changes in the underlying four-tuple,
-unlike TCP which relies on these to identify the connection.
-
-For example, if a local interface goes down, QUIC is able to attempt
-sending on another interface. If the peer validates the path, then
-the transfer can continue without interruption.
+For a QUIC connection if a local interface goes down then it is able to attempt
+sending on another interface. If the peer is reachable over the path, then
+the transfer can continue with minor interruption.
 
 After a change of address in a QUIC connection, the peer receiving the
 new address will perform
@@ -467,9 +412,8 @@ At its core, a protocol is an abstraction which provides a set of
 services to an upper-layer protocol or application. In the context of
 networking, these services encompass transporting data from one endpoint
 to another, with the individual features of a transport service deciding the behavior of
-this service, for example when experiencing packet loss, packet reordering
-or other issues. For example, TCP provides a guarantee of reliable
-delivery, while UDP provides no such guarantee.
+this service. For example, TCP provides a guarantee of reliable
+delivery.
 
 At their core, transport layer protocols are chosen based
 on the services provided to the application, not because of the
@@ -479,8 +423,6 @@ any protocol offering that as a service to the application layer
 could function as a transport layer protocol, and swapping the
 underlying transport layer protocol should in theory be simple.
 
-This concept of exactly which services each transport layer protocol
-provides to the application layer is known as Transport Services.
 Exactly which Transport Services are provided by which transport
 protocols has been mapped by the IETF in RFC8095, as part of the
 TAPS working group \cite{fairhurstServicesProvidedIETF2017}.
@@ -493,7 +435,7 @@ focusing on Transport Services. This is intended to allow faster adaptation
 of new protocols and abstract away network-layer details from the
 application layer.
 
-From the application's point of view, this
+From the application's point of view this
 means that it will be able to gain access to new protocols, such
 as QUIC, without having to implement its own fallback logic
 in cases where the new protocol is not supported by the remote.
@@ -690,7 +632,7 @@ by cloning. Connections in the same connection group can be
 multiplexed together if this is supported by the underlying protocol.
 
 \subsection{Framer}
-A Framer is another key concept within TAPS. A Framer is responsible for bridging the TAPS concept
+In TAPS a Framer is responsible for bridging the TAPS concept
 of a Message, with the underlying protocols concept of either a data stream
 or a datagram. In their simplest form, a Framer is responsible for encoding
 or decoding outgoing and incoming data, as well as sending any data necessary
@@ -705,8 +647,8 @@ framers are also asynchronous. They are therefore callback-based and need
 to notify their associated connection when the processing of a given message
 has completed.
 
-The concept of a framing protocol exists outside of TAPS. Because most
-application-level protocols are both message-based and run over TCP, several
+The concept of a framing protocol also exists outside of TAPS because most
+application-level protocols are both message-based and run over TCP. Several
 ways of converting TCP's byte-stream into usable messages has been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
@@ -757,10 +699,6 @@ underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
 \label{fig:tpsStack}
 \end{figure}
 
-Framers can also be configured on a per-message basis using a MessageContext.
-This MessageContext can for example be used to pass the type of a message
-to a Framer if the framer needs it to follow a TLV format.
-
 \subsection{Transport Properties}
 Transport Properties are properties which are set in TAPS in order to either
 influence which transport protocol should be used, or how the select transport
@@ -795,10 +733,9 @@ Connection Properties are the subset of Transport Properties which
 are used to control the behavior of the underlying protocol after
 a Connection has been established.
 
-An example of a connection property is Timeout for Aborting Connection.
+An example of a connection property is Timeout for Aborting Connection \cite[Sec. 8.1.3]{rfc9622}.
 This property is used to specify the how long to wait before deciding that an
 active connection has failed when trying to reliably deliver data to the Remote Endpoint.
-This naturally can only take effect if the underlying protocol supports reliability.
 
 \subsection{Message Properties}
 Message properties are settings set on an
@@ -808,9 +745,7 @@ not affect any other messages transferred by the Connection.
 
 An example of a Message Property is \mono{Safely Replayable}.
 This property is used to let TAPS know that a message is idempotent
-and does not pose a risk if it is replayed to the endpoint. This
-is for example a requirement for QUIC 0-RTT, in order to mitigate
-the risk of replay attacks.
+and does not pose a risk if it is replayed to the endpoint.
 
 \subsection{TAPS configurations explained}
 As mentioned above, TAPS allows the application to control
@@ -827,15 +762,13 @@ application would prefer multiple Connections within a
 Connection Group to be provided by streams of a single
 underlying transport connection where possible
 \cite{paulyArchitectureRequirementsTransport2025}.
+
 Multistreaming in this context is the act of providing multiple
-streams of data over a single underlying connection. This is
-advantageous as it allows for more efficient use of the network,
+streams of data over a single underlying connection. This
+allows for more efficient use of the network
 since the connection will better saturate the available
-bandwidth. This avoids long convergence times for the connection
-and allows fresh connection to utilize the large congestion
-window already achieved, without having to wait for slow start
-to ramp up. This is especially useful for applications with many
-small streams of data, such as web browsers.
+bandwidth avoiding long convergence times for the connection
+for subsequent connections.
 
 The \mono{Full Checksum Coverage on Sending} and equivalent
 Selection Property for receiving,
@@ -883,12 +816,6 @@ property decides which scheduler is used within a given
 connection group, to divide the available capacity between the
 connections. \cite{paulyArchitectureRequirementsTransport2025}.
 
-The \texttt{Capacity Profile} connection property is used to
-select a capacity profile, which will be a trade-off between
-delay, delay variation, and efficient use of the available
-capacity based on the capacity profile specified
-\cite{paulyArchitectureRequirementsTransport2025}.
-
 The \texttt{Isolate Session} connection property set in order to
 have new connections use as little cached information as
 possible from previous connections not in the same connection
@@ -911,7 +838,7 @@ supported by an implementation of QUIC, but it is not mandatory.
 
 \subsection{Candidate Gathering} \label{sec:candidate-gathering}
 When initiating a Preconnection, a TAPS system will gather a
-list of candidates for establishing a connection. This process
+list of candidates for establishing a Connection. This process
 is known as Candidate Gathering. The candidates are based on
 the specified local and remote endpoints of the Preconnection,
 as well as the protocols which are available to use. 
@@ -923,7 +850,7 @@ addresses when building the tree \cite{brunstromImplementingInterfacesTransport2
 The second level of the candidate tree represent the possible protocol
 options which can be used. This includes not only the protocol
 itself, but also any combination of options for this protocol which
-influence connection establishment, such as ALPN values.
+influence Connection establishment.
 
 The third and final level of child nodes represent any resolved
 Remote Endpoints, which have been resolved into specific IP addresses.
@@ -947,17 +874,17 @@ eventual connection higher in the conceptual tree.
 After all the candidates have been gathered, a TAPS implementation
 has to sort them according to the requirements of the user. The
 candidates are sorted from most to least preferred, with the
-leaf nodes representing the candidates that are most desirable.
+leaf nodes representing the a single possible connection attempt.
 
 After all the candidates have been gathered and sorted, a single candidate
 needs to be selected to be used for this connection. This is done
-through Candidate Racing.
+through candidate racing.
 
 \subsection{Candidate Racing} \label{candidateRacing}
 When a tree or other representation of the candidates has
 been constructed, a single candidate needs to be selected for use
 by the final application. This is done through
-Candidate Racing. Candidate Racing is the process of establishing
+candidate racing. Candidate racing is the process of establishing
 a connection using a single protocol over a single path with
 a single endpoint as quickly as possible, optimizing for the
 user requirements while minimizing the network load
@@ -990,7 +917,8 @@ can be chosen if it connects successfully thereby limiting the
 number
 of needed attempts to find a connection. When racing IP addresses,
 TAPS implementations should follow the algorithm described
-in RFC 8305 \cite{schinaziHappyEyeballsVersion2017}. The relevance
+in RFC 8305 \cite{schinaziHappyEyeballsVersion2017}, also known
+as Happy Eyeballs. The relevance
 of this algorithm for TAPS is described in section \ref{happyEyeballs}.
 
 Failover racing is the process of racing a single candidate
@@ -1005,12 +933,12 @@ when all candidates have failed.
 \section{Happy Eyeballs} \label{happyEyeballs}
 Happy Eyeballs, which is described in RFC 8305 is an algorithm
 for racing IPv4 and  IPv6 addresses on dual-stack hosts
-\cite{schinaziHappyEyeballsVersion2017}. The Candidate Gathering
-and Candidate Racing algorithm found in TAPS is based on Happy Eyeballs,
+\cite{schinaziHappyEyeballsVersion2017}. The candidate gathering
+and candidate racing algorithm found in TAPS is based on Happy Eyeballs,
 so they share a lot of central features.
 Happy Eyeballs implements a staggered racing algorithm with a preference for
 IPv6, but uses interleaved IPv6 and IPv4 addresses in order to maximize
-IPv6 usage but minimize latency due to IPv6 brokenness.
+IPv6 usage but minimize potential latency caused if IPv6 is broken.
 
 The first version of Happy Eyeballs was published in 2012 and describes an algorithm
 for racing an IPv4 and IPv6 connection to a server, giving a preferential
@@ -1023,7 +951,7 @@ This concept of racing is a central concept of TAPS, where it is
 taken one step further to also races all combinations of local interface,
 remote endpoint and underlying transport protocol which fit with the
 specifications of the user. RFC 8305 lists four steps for protocol racing,
-which conceptually divide into Candidate Gathering and Candidate Racing 
+which conceptually divide into candidate Gathering and candidate Racing 
 TAPS system.
 
 \begin{enumerate}
@@ -1033,16 +961,8 @@ TAPS system.
   \item Establishment of one connection, which cancels all other attempts
 \end{enumerate} \cite{schinaziHappyEyeballsVersion2017}
 
-Here, step one and two map into the TAPS concept of Candidate gathering
-while step two and three map into the TAPS concept of Candidate Racing.
-By expanding the racing from only to IP-version to also include transport
-protocol, TAPS makes use of techniques originally used to help IPv6
-adoption and user experience, to also help transport protocol adoption.
-TAPS cannot only discover that whether a link can be made using IPv6
-or only IPv4, but also whether the connection could be made by QUIC
-or if it has to made by TCP for example. This will not only lead to
-an improved user experience, but also handle fallback-logic which otherwise
-would have to be written on a per-application basis.
+Here, step one and two map into the TAPS concept of candidate gathering
+while step two and three map into the TAPS concept of candidate racing.
 
 \section{ALPN}
 Application layer protocol negotiation is a feature in
@@ -1050,8 +970,8 @@ TLS where the application layer protocol which will be
 used is negotiated between the server and the client on
 the transport layer.
 ALPN is featured
-in in TLS, and is therefore mandatory
-in QUIC.
+in in TLS, and a QUIC mandates that endpoints
+use some mechanism to agree on application protocol \cite[Sec. 8.1]{rfc9000}
 ALPN allows the client and server to negotiate a common protocol
 without adding network round trips. The client features
 a list of supported protocols in its client hello message
@@ -1100,7 +1020,7 @@ program to modeled sequentially, allowing the structure to be more similar
 to a normal CPU-bound program, but it requires multithreading, which gives
 can be complex in the form of forcing synchronization of shared data structures,
 as well as potential overhead when creating a large amount of threads. 
-An async model with a single worker thread avoids both of these issues
+An asynchronous model with a single worker thread avoids both of these issues
 by using a single thread, but requires a very different mental model
 from normal sequential programming.
 

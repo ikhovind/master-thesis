@@ -23,3 +23,12 @@ to give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
 
 \todo{Describe more flexible socket manager handling}
+
+If CTaps were to be developed into a fully featured TAPS library, it would likely
+be wise to first strip away the parts of the external API which currently have
+no support in the internal implementation. This would allow a gradual addition of
+features as they were supported, making it more clear to downstream applications exactly
+which parts of the external library is mature enough to be used. This would also allow
+future development to focus on more important improvements, instead of implementing
+as much of the API as possible in order to make the features exposed by the API actually
+real. The highest priority future work is described in \cref{sec:future-work}.

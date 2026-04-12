@@ -8,7 +8,7 @@ of CTaps, before expanding on the chosen dependencies, internal architecture
 and the external API presented to applications.
 
 \section{Choice of Scope}
-One of the key reseach questions motivating the development of CTaps is exactly
+One of the key research questions motivating the development of CTaps is exactly
 how well the TAPS API as it exists currently can be presented programmatically.
 CTaps is therefore to present as much of the TAPS API as possible, despite
 implementing several features as no-ops.
@@ -38,7 +38,7 @@ Certain parts of the TAPS API are not present in CTaps, the
 largest of which is the peer to peer connection functionality.
 Implementing this was deemed to be out of scope, while presenting
 the API as a no-op was deemed to be of little value, since CTaps would not be able to predict
-how the internal rendezvouz implementation would affect the external API.
+how the internal rendezvous implementation would affect the external API.
 
 Other functionality which is not present in the CTaps API is, among others,
 being able to add endpoints to an active Connection.
@@ -54,17 +54,16 @@ be exposed through TAPS.
 \subsection{libuv} \label{sec:dependency-libuv}
 Since TAPS is an asynchronous API at its core, CTaps needed to
 reflect this. This could have been achieved in several ways,
-primarily through internal threading or an event loop. For
-CTaps, the event loop was found to have several advantages
+with the primary alternatives being internal threading or an event loop. For
+CTaps, the event loop was found to have several advantages,
 primarily avoiding race conditions and not having to guard shared
 state, since a single threaded event loop ensures that state
 is never accessed concurrently.
 
 When selecting a specific event loop library libuv \cite{Libuv2025} presented
-several advantages such as built-in protocol handles such as TCP
+several advantages such as built-in protocol handles for TCP
 and UDP, in addition to being a mature library which is already
 used in production systems such as Node.js \cite{nodejsEventLoop}.
-
 Libuv is also the event loop engine behind
 NEAT, which influenced the decision of CTaps \cite{neatCode}.
 
@@ -74,32 +73,30 @@ a timer, which is used to query Picoquic at given intervals
 for new packets to send.
 
 \subsection{Picoquic}
-Since QUIC is not currently supported by libuv or by the Linux kernel
-an additional external library was needed in order to add QUIC support
-to CTaps. Here, the largest priority was not performance but instead
-exploring how QUIC features map onto TAPS.
+CTaps has been developed on Linux kernel version 6.1.0, which
+features no kernel-level QUIC support.
+Since QUIC is also not supported natively by libuv an external library
+was needed to add QUIC support to CTaps.
+For this the largest priority was ease of use, in order
+to assist in exploring how to QUIC features map onto TAPS.
 
 Picoquic \cite{christianhuitemaPicoquic} was therefore chosen because
 of its simplicity and was
 prioritized over larger and more performance-oriented libraries such as
-MsQuic \cite{MsQuic} or \cite{XQUIC} from Alibaba.
+MsQuic \cite{MsQuic} from Microsoft.
 
 A large advantage of Picoquic is that it features two modes of operation.
 It can either be used independently with its own event loop, or be
 integrated with an existing one by querying at given timer intervals.
 The first mode allowed the benchmarking to be performed with a Picoquic
 client completely independent of CTaps, while the second mode allowed Picoquic
-to integrate with libuv, without having to manage two event loops.
-
-Internally in CTaps Picoquic serves as a quic engine, being responsible
-for generating the QUIC packets which CTaps then sends across the network
-through libuv.
+to integrate with libuv without having to manage two event loops.
 
 \subsection{GLib} \label{sec:glib-design-reason}
 CTaps uses GLib \cite{GLibGitLab} for implementations of
-hash maps, linked lists and arrays.
+hash maps, linked lists, trees and arrays.
 
-GLib was added as a dependency as C has a small standard library
+GLib was added as a dependency since C has a small standard library
 which does not feature any of the data structures mentioned.
 If CTaps were to implement all the data structures internally
 it would create a large surface area liable for bugs requiring
@@ -124,12 +121,12 @@ to rely on the result of any asynchronous operation being passed via
 callback, which affects the look of the external API and
 the internal architecture.
 
-In addition to this, CTaps is designed to be extensible when it comes to
-adding new protocols, and therefore relies on a shared protocol API internally.
+CTaps features a shared protocol API internally and is therefore extensible
+when it comes to adding support for new protocols.
 In order to keep the implementations as small as possible, common logic such as
 state tracking
-is extracted to the Socket Manager, which acts as an intermediary and
-maintains the lifetime of the sockets.
+is extracted to the Socket Manager, which is an internal data structure
+responsible for network sockets.
 
 An overview of the architecture of CTaps can be seen in \cref{fig:ctaps-arch}.
 Here, all the core aspects of CTaps can be seen, with the Socket Manager
@@ -206,15 +203,12 @@ and how it interacts with Picoquic and libuv.
 \end{figure}
 
 \subsection{Mapping QUIC to TAPS} \label{sec:quic-arch-mapping}
-While the TAPS RFCs were designed with QUIC in mind, it was written before the
+While the TAPS RFCs were designed with QUIC in mind, they were written before the
 QUIC design was finalized in RFC 9000 \cite{rfc9000}. This means that RFC 9623 does not
-feature any specific transport protocol consideratoins for mapping QUIC into
+feature any specific transport protocol considerations for mapping QUIC into
 a TAPS system \cite{brunstromImplementingInterfacesTransport2025}.
 There exists a draft for mapping Transport Services to QUIC, but this has
 not made it into the official RFC \cite{transportServicesMappingForQuic}.
-CTaps has
-therefore had to make independent design decisions on exactly how to
-map QUIC into TAPS.
 
 The most important design decision made in CTaps in regards
 to QUIC was to map a QUIC Connection
@@ -239,13 +233,12 @@ delivered after the \mono{closed()} callback has been invoked.
 
 Since QUIC features no way of gracefully closing
 a single stream other than both peers sending a FIN flag,
-CTaps potentially has to let a Connection remain open
-and cannot invoke the \mono{closed()} callback until
-the peer has closed the sending side. This means
-that an application has to monitor a Connection for
-incoming data, until the peer finishes sending.
+CTaps has to let a Connection remain open to receiving data
+after an application has invoked \mono{closed()} until the
+peer has indicated that it has finished writing, which breaks
+with the expected behavior from TCP.
 
-This differing behavior can also be mitigated by only interacting
+This differing behavior can be mitigated by only interacting
 with Connection Groups when wanting to shut down a logical connection,
 which is compatible with how TCP support is implemented.
 This is discussed in detail in \cref{sec:quicUnderTaps}.
@@ -263,12 +256,12 @@ Therefore, the Socket Manager is
 referenced on the Connection level and a single shared Socket Manager is created
 for each used Socket.
 Since UDP Connections in CTaps can share a single socket the 
-Socket Manager is also responsible for demultiplexing incoming messages
+Socket Manager is also responsible for demultiplexing incoming messages,
 as UDP is not connection-oriented.
 
 Since several functions within the various protocol implementations
 are asynchronous, communication between the protocol implementation
-and the socket manager has to be asynchronous as well. The Socket
+and the Socket Manager has to be asynchronous as well. The Socket
 Manager features a structure with internal callbacks which are invoked by the protocol
 implementation at appropriate times, for example to notify
 the Socket Manager that a Connection has been closed after teardown
@@ -404,9 +397,10 @@ typedef struct ct_protocol_impl_s {
     int (*init)(ct_connection_t* connection);
     /** @brief Send a message over the protocol. */
     int (*send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+    // ... Remaining protocol interface function pointers ...
 } ct_protocol_impl_t;
 \end{minted}
-\caption{Excerpt from the protocol Implementation interface}
+\caption{Excerpt from the protocol implementation interface}
 \label{lst:protocol-impl-struct}
 \end{listing}
 
@@ -423,16 +417,14 @@ These concerns, in addition to a consistent ownership model which helps
 prevent memory leaks, are the largest influences on the external
 CTaps API. This section will describe these design decisions,
 while a full API overview, which objects are available and how they
-map to TAPS can be seen in the attached doxygen output in the
+map to TAPS can be seen in the attached Doxygen output in the
 appendix. \todo{Add to appendix}
 
 \subsection{Object Orientation}
-As mentioned, CTaps matches the object oriented API presented
-in RFC 9622 \cite{rfc9622} and CTaps emulates object
-orientation as described in \cref{sec:object-orientation-in-c}.
-
-An example of this
-is the struct representing Remote Endpoints which can be seen in \cref{lst:remote-endpoint}.
+Since TAPS itself is object oriented CTaps aims to emulate this.
+This affects how CTaps presents data structures to external application
+and how it structures them internally. An example can be 
+seen with the Remote Endpoint object in \cref{lst:remote-endpoint}.
 This object contains all the context related to remote endpoints, which then is used
 in Connections and Listeners. The object has dedicated functions to operate
 on it, and therefore encapsulates all responsibilities related to Remote Endpoints.
@@ -442,7 +434,7 @@ An example of this is that
 in CTaps every Connection belongs to a Connection Group,
 even if it has not been used for cloning. This
 was done in order to both present a unified interface to applications using
-CTaps, as well as avoiding internal checks for whether a Connection was
+CTaps. This also allows CTaps to avoid internal checks for whether a Connection was
 part of a Connection Group or not.
 
 In order to hide internal state from applications, the public CTaps API only
@@ -516,9 +508,8 @@ void ct_remote_endpoint_free(
 \end{listing}
 
 \subsection{Asynchrony} \label{asynchrony}
-As mentioned previously, CTaps is an asynchronous, callback-based library
-in order to match the API described in RFC 9622 \cite{rfc9622}. This has
-several implications for the external API, with the most important being
+Being asynchronous and built around an event loop has
+several implications for the external CTaps API, with the most important being
 that most CTaps functions return immediately, with the results given 
 through a callback invoked later.
 
@@ -541,26 +532,24 @@ When initiating a Connection, the void pointer will be stored in the Connection
 structure and it can be fetched when the Connection is for example passed
 to the \mono{ready()} callback.
 
-In addition to notifying the application of the state
-of its Connections, CTaps uses callbacks to create Connection and Listener
+CTaps uses callbacks to create Connection and Listener
 objects themselves. Both of these objects require asynchronous operations
 to instantiate, and therefore require the resulting object to be passed
 through the application through callback.
-The Connection is asyncrhonous both
-because Candidate Gathering is asyncrhonous, but
+The Connection is asynchronous both
+because Candidate Gathering is asynchronous, but
 also because it is only created after an actual connection has
 been created over the network, in the case of connection-oriented
 protocols. The Listener is asynchronous because it uses the
 same candidate gathering as normal Connection initiation, which
 is asynchronous in CTaps.
 
-In addition to passing successful results to the application through
-callbacks, CTaps notifies on errors, either through error callbacks or
-return values.
-A synchronous error is any error
-that is picked up before work is added to the event loop and any
-function in the external CTaps API which can fail synchronously
-returns an integer return code with a negative value matching
+CTaps has two ways of notifying an application of errors, either
+through a return code or an error callback.
+Return codes are used for synchronous error while callbacks
+are used for asynchronous errors.
+Error codes in CTaps are
+negative values matching
 an errno corresponding to the given error. This matches the
 error convention used by libuv \cite{libuv_errors}.
 
@@ -629,32 +618,28 @@ In order to make this as intuitive and consistent as possible, CTaps has a clear
 where the application retains ownership of any allocated objects and is responsible for freeing them.
 In addition to the objects allocated synchronously using a \mono{ct_*_new()} function, applications
 also gain ownership of Connection and Listener objects which are created asynchronously.
-Since these may require teardown over the network, the application must close them first and not free
-them until the associated \mono{closed()} callback is invoked.
 
-CTaps does not free the Connections which do not have a \mono{closed()} callback registered,
-since even if the 
-application does not register a \mono{closed()} callback it could potentially be storing 
-received Connections and later free them on shutdown, which would cause a double free
-if CTaps had already freed the Connection on close.
+CTaps passes ownership to the created objects, even in the cases where
+the application has not registered the
+correct callbacks for receiving the object.
+This will lead to a memory leak if an application is registered without
+a \mono{ready()} callback, since the Connection will never be freed.
+
+When freeing object which require teardown, the application must first
+invoke the associated \mono{close()} function, as the object
+will only be safe to free after the associated \mono{closed()}
+callback has been invoked by CTaps.
 
 Connection data and any waiting messages can still be read from a connection after it has
 closed, but the data is invalidated on free.
 
 The only location where the application does not gain ownership over an object is in
 the receive callbacks passed to CTaps when an application wants to receive a message. 
-Here, the recevied Message object and Message Context only remain valid for the duration
+Here, the received Message object and Message Context only remain valid for the duration
 of the callback, and must be deep copied if they are to be referenced outside of this scope.
-
-CTaps assumes that the application owns the created objects, even in the cases where
-CTaps is unable to pass the object to the application because it has not registered the
-correct callback. This will lead to a memory leak if an application is registered without
-a \mono{ready()} callback, since the Connection will never be freed.
-
-Whenever an object is passed as a parameter to a CTaps function, CTaps takes a deep copy internally
-and the application can free the passed object immediately after the function returns if desired.
-CTaps will free its own copies when appropriate.
+CTaps decided to deviate from the standard model here because of the frequency
+of receiving Messages and that they would very rarely have to be stored for long term use.
 
 An alternative to deep copying objects would be for CTaps
-to implement reference counting for all objects, but this was decided to be too complex
+to implement reference counting for all objects, but this was decided to be unnecessarily complex
 when compared to deep copying.

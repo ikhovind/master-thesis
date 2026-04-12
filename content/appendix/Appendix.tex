@@ -154,7 +154,8 @@ static int ct_quic_send_packet_with_pktinfo(ct_udp_poll_handle_t* poll_handle,
     \end{minted}
     \caption[Sending Message Over UDP for QUIC]
     {
-Function used to send QUIC packets over UDP for Picoquic, using cmesg
+Function used to send QUIC packets over UDP for Picoquic, manually
+building the message header
 to control
 the from address to match what is specified by Picoquic.
     }
