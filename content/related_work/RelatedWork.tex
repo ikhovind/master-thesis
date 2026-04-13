@@ -110,3 +110,39 @@ American technology company F5 \cite{dukeDynamictaps2025}. It
 is in the very early stages of development and has not had
 active development since 2021, several years before the
 finalzation of the TAPS RFCs.
+
+\section{Comparison of TAPS implementations}
+\todo{Discuss and finish table}
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Overview of Lines of Code (LoC) on a per-protocol basis}
+\label{tab:comparison}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\rowcolor{gray!25}
+                                            & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.fwork}     & \textbf{CTaps}\\
+\midrule
+\multicolumn{1}{l||}{Targeting RFC 9622\tnote{2}}    & \xmark                   & \xmark          & \xmark                     & \cmark         \\
+\multicolumn{1}{l||}{Language}                       & Python                   & Python          & Switf/Obj. C?               & C         \\
+\multicolumn{1}{l||}{Candidate Racing}               & ?                        & ?               & \xmark                     & \cmark         \\
+\multicolumn{1}{l||}{TLS support}                    & ?                        & ?               & \cmark                     & \xmark         \\
+\multicolumn{1}{l||}{QUIC support}                   & \xmark                   & \xmark          & \cmark                     & \cmark         \\
+\multicolumn{1}{l||}{Connection Migration}           & \xmark                   & \xmark          & ?                          & \cmark         \\
+\multicolumn{1}{l||}{0-RTT support}                  &  ?                       & \xmark          & ?                          & \cmark         \\
+\multicolumn{1}{l||}{Multistreaming}                 & \xmark                   & \xmark          & ?                          & \cmark         \\
+\multicolumn{1}{l||}{Rendezvouz}                     & ?                        & ?               & \cmark                     & \xmark         \\
+\multicolumn{1}{l||}{OS support\tnote{3}}            & W, L, M                  & W, L, M         & L, M(?)                    & L         \\
+\multicolumn{1}{l||}{Open source}                    & \cmark                   & \cmark          & \xmark                     & \cmark         \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+    \small
+    \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
+    \item[2] Whether the project was developed after the full release of the TAPS RFCs and is meant to be an implementation of TAPS.
+    \item[3] W = Windows, L = Linux, M = MacOs.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
