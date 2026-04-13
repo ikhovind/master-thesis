@@ -993,3 +993,93 @@ does not represent when a packet has been actually transferred to the network,
 but instead when a packet has been handed over to Picoquic if QUIC is the underlying
 protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.
+
+\section{Alternative QUIC Backends} \todo{This section is valuable but needs to be tightened by a lot}
+Since QUIC is an exploratory work an prioritized simplicity over raw performance
+when selecting the QUIC library to use there are likely large performance gains
+to be made by selecting a more performance oriented library than Picoquic. While
+CTaps maintains a generic interface to the underlying protocols and the switch
+would therefore in theory consist of only rewriting the two QUIC files themselves,
+This requires that the QUIC library would be compatible with the "QUIC engine"
+mode of operation as epected by CTaps, in order to integrate it into the libuv
+event loop.
+
+An alternative more performance-oriented QUIC library in C is for example
+be MsQuic \cite{MsQuic}. MsQuic is a cross-platform C implementation of QUIC
+developed by Microsoft. With MsQuic being a cross-platform library it would
+further enable CTaps to become cross-platform as well, since the core dependencies
+of Libuv and MsQuic would be cross-platform. For CTaps, the QUIC
+implementation of the protocol interface is already by far the most complicated
+of the current protocol implementations as seen in \cref{tab:loc_complexity}.
+MsQuic is a far larger library than Picoquic at $\sim135~000$ LoC compared to
+Picoquic's $\sim84~000$. While this means that more features and performance
+is available, this would also likely lead to a larger amount of complexity
+in the configuration from CTaps' point of view, inflating the difference
+in the complexity in the various protocol implementations even further.
+
+In normal execution mode MsQuic owns the event loop, notifying
+the application of updates and asking for input through registered
+callbacks. This mirrors how CTaps interacts with its downstream
+applications. In theory this execution mode could be integrated
+into CTaps, but it would require using async handles in libuv [cite], since
+MsQuic specifically require that the callback functions do not
+introduce significant delay \cite{msquic_execution}. This would
+be a significant architectural change in CTaps and introduce
+a large amount of complexity.
+
+MsQuic also features an alternative execution mode where the
+application, in this case CTaps, creates the threads it will
+run on and periodically call into MsQuic to perform thhe necessary
+actions. This mirrors the timed wakeups required by Picoquic
+and could be integrated with the existing functionality in
+CTaps. The largest difference with the current implementation
+is that CTaps would use create a event queue object
+through picoquic instead of using a timer to wake up at set times.
+CTaps would then have to monitor this event queue object with \mono{uv_poll_t}
+instead of using a \mono{uv_timer_t} handle as with Picoquic.
+Examples from the MsQuic documentation creating a event
+queue object and draining it can be seen in \cref{lst:msquicCustomEpoll}
+and \cref{lst:msquicCustomLoop}.
+
+While this shows that CTaps is not very tightly bound
+to Picoquic itself, it is very tightly bound to libuv and
+requires any additional libraries to be able to integrate
+well with an existing event loop. For example if 
+MsQuic did not feature the alternative execution mode
+then integrating it with CTaps would be a large undertaking,
+likely changing the entire internal architecture to
+make the updates form QUIC flow through libuv async
+handles.
+
+\begin{listing}[htbp]
+  \begin{minted}{C}
+HANDLE IOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 1);
+QUIC_EXECUTION_CONFIG ExecConfig = { 0, &IOCP };
+
+QUIC_EXECUTION* ExecContext = nullptr;
+QUIC_STATUS Status = MsQuic->ExecutionCreate(QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NONE, 0, 1, &ExecConfig, &ExecContext);
+\end{minted}
+\caption{MsQuic code to create an event queue object \cite{msquic_execution}.}
+\label{lst:msquicCustomEpoll}
+\end{listing}
+
+\begin{listing}[htbp]
+  \begin{minted}{C}
+bool AllDone = false;
+while (!AllDone) {
+    uint32_t WaitTime = MsQuic->ExecutionPoll(ExecContext);
+
+    ULONG OverlappedCount = 0;
+    OVERLAPPED_ENTRY Overlapped[8];
+    if (GetQueuedCompletionStatusEx(IOCP, Overlapped, ARRAYSIZE(Overlapped), &OverlappedCount, WaitTime, FALSE)) {
+        for (ULONG i = 0; i < OverlappedCount; ++i) {
+            QUIC_SQE* Sqe = CONTAINING_RECORD(Overlapped[i].lpOverlapped, QUIC_SQE, Overlapped);
+            Sqe->Completion(&Overlapped[i]);
+        }
+    }
+}
+\end{minted}
+\caption{MsQuic code to poll custom event queue object \cite{msquic_execution}.}
+\label{lst:msquicCustomLoop}
+\end{listing}
+  
