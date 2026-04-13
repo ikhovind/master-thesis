@@ -540,6 +540,15 @@ explicitly binding to 0.0.0.0, before passing 127.0.0.2 as an alternative addres
 \label{lst:explicit-binding-to-ephem}
 \end{listing}
 
+A TAPS system can in support migration to both a new local and a new remote endpoint
+since the application is able to add both multiple Local and multiple Remote Endpoints
+to a Connection.
+Whether a system actually makes use of the multiple endpoints is however left up to the
+underlying transport protocol \cite[Sec. 7.5]{rfc9622}. For QUIC CTaps therefore only 
+supports intitating migrating to new Local Endpoints and only supports
+migration initiated by a client. Migration initiated by the remote
+is supported as long as the \mono{multipath} Selection Property is not
+disabled.
 
 \section{Framers}
 Framers in CTaps consists of a structure with two function
