@@ -19,16 +19,16 @@ degree.
 \caption{Specifications of machine running benchmarks.}
 \label{tab:machine-specs}
 \small
-\begin{tabular}{l||l}
+\begin{tabular}{ll}
 \toprule
 \rowcolor{gray!25}
 \textbf{Component} & \textbf{Details} \\
 \midrule
-Model      & ThinkPad X1 Carbon 6th Gen (2018) \\
-CPU        & Intel Core i5-8350U CPU @ 1.70GHz (4 cores, 8 threads) \\
-RAM        & 16 GB LPDDR3-2133 \\
-OS         & Debian GNU/Linux 12 \\
-Kernel     & 6.1.0-44-amd64 \\
+\multicolumn{1}{l||}{Model}      & ThinkPad X1 Carbon 6th Gen (2018) \\
+\multicolumn{1}{l||}{CPU}        & Intel Core i5-8350U CPU @ 1.70GHz (4 cores, 8 threads) \\
+\multicolumn{1}{l||}{RAM}        & 16 GB LPDDR3-2133 \\
+\multicolumn{1}{l||}{OS}         & Debian GNU/Linux 12 \\
+\multicolumn{1}{l||}{Kernel}     & 6.1.0-44-amd64 \\
 \bottomrule
 \end{tabular}
 \end{threeparttable}
@@ -286,17 +286,17 @@ in the CTaps repository.}
 \begin{threeparttable}
 \caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
 \label{tab:loc_complexity}
-\begin{tabular}{l||rrrr}
+\begin{tabular}{lrrrr}
 \toprule
 \rowcolor{gray!25}
 \textbf{Component} & \textbf{TCP} & \textbf{QUIC} & \textbf{TCP \& QUIC} & \textbf{CTaps} \\
 \midrule
-Initialization \& context setup  & 33  &  69 & 102  & 73  \\
-Connection establishment         & 16  &  37 &  53  & 44  \\
-Data transfer                    & 22  &  29 &  51  & 57  \\
-Error handling                   & 63  &  26 &  89  & 57  \\
-Teardown                         & 15  &  27 &  42  & 30  \\
-Migration                        &  0  &  24 &  24  &  4  \\
+\multicolumn{1}{l||}{Initialization \& context setup}  & 33  &  69 & 102  & 73  \\
+\multicolumn{1}{l||}{Connection establishment}         & 16  &  37 &  53  & 44  \\
+\multicolumn{1}{l||}{Data transfer}                    & 22  &  29 &  51  & 57  \\
+\multicolumn{1}{l||}{Error handling}                   & 63  &  26 &  89  & 57  \\
+\multicolumn{1}{l||}{Teardown}                         & 15  &  27 &  42  & 30  \\
+\multicolumn{1}{l||}{Migration}                        &  0  &  24 &  24  &  4  \\
 \midrule
 \textbf{Total}                   & 149 & 212 & 361 & 265 \\
 \bottomrule
@@ -467,28 +467,24 @@ future version of CTaps.
   \begin{threeparttable}
     \caption{Effective behaviour for \texttt{multipath}/\texttt{multipathPolicy} combinations}
     \label{tab:multipath-combinations}
-    \begin{tabular}{l|l||m{7cm}}
+    \begin{tabular}{llp{7cm}}
       \toprule
       \rowcolor{gray!25}
       \texttt{multipath} & \texttt{multipathPolicy} & Description \\
       \midrule
       \multicolumn{3}{l}{\textbf{\texttt{disabled}}\tnote{1}} \\
-        & ---
+        & \multicolumn{1}{|l||}{---}
         & multipathPolicy has no effect if multipath is disabled. \\
       \midrule
       \multicolumn{3}{l}{\textbf{\texttt{active}}} \\
-        & \texttt{handover}    & Will initiate migration on path failure. \\
-      \cmidrule(l){2-3}
-        & \texttt{interactive} & Will use multiple paths concurrently to minimize latency. \\
-      \cmidrule(l){2-3}
-        & \texttt{aggregate}   & Will use multiple paths concurrently to maximize throughput. \\
+        & \multicolumn{1}{|l||}{\texttt{handover}}    & Will initiate migration on path failure. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{interactive}} & Will use multiple paths concurrently to minimize latency. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{aggregate}}   & Will use multiple paths concurrently to maximize throughput. \\[8pt]
       \midrule
       \multicolumn{3}{l}{\textbf{\texttt{passive}}} \\
-        & \texttt{handover}    & Will accept migration and multipath used by the remote. \\
-      \cmidrule(l){2-3}
-        & \texttt{interactive} & Will accept migration and multipath from the remote, will attempt to minimize latency. \\
-      \cmidrule(l){2-3}
-        & \texttt{aggregate}   & Will accept migration and multipath from the remote, will attempt to maximize throughput. \\
+        & \multicolumn{1}{|l||}{\texttt{handover}}    & Will accept migration and multipath used by the remote. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{interactive}} & Will accept migration and multipath from the remote, will attempt to minimize latency.\\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{aggregate}}   & Will accept migration and multipath from the remote, will attempt to maximize throughput.\\[8pt]
       \bottomrule
     \end{tabular}
     \begin{tablenotes}
@@ -529,53 +525,53 @@ and how they may into CTaps and TAPS in general can be seen in
 \caption{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
 \label{tab:quic-taps-mapping}
 \small
-\begin{tabularx}{\textwidth}{l||X}
+\begin{tabularx}{\textwidth}{lX}
 \toprule
 \rowcolor{gray!25}
 \textbf{QUIC Feature} & \textbf{TAPS Mapping} \\
 \midrule
 \multicolumn{2}{l}{\textit{Supported in CTaps with expected behavior\tnote{1}}} \\
 \midrule
-ALPN negotiation & Security Parameter \\
-0-RTT establishment & Message Property\\
-TLS certificates & Security Parameter\\
-Connection Migration & Multiple Local Endpoints\\
-Bidirectional streams & \mono{Clone()}\\
-Stream Priority & Connection Property\\
+\multicolumn{1}{l||}{ALPN negotiation} & Security Parameter \\
+\multicolumn{1}{l||}{0-RTT establishment} & Message Property\\
+\multicolumn{1}{l||}{TLS certificates} & Security Parameter\\
+\multicolumn{1}{l||}{Connection Migration} & Multiple Local Endpoints\\
+\multicolumn{1}{l||}{Bidirectional streams} & \mono{Clone()}\\
+\multicolumn{1}{l||}{Stream Priority} & Connection Property\\
 \midrule
 \multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior\tnote{1}}} \\
 \midrule
-QUIC connection\tnote{2} & Connection Group\\
-QUIC stream & Connection\\
-Unidirectional stream close (FIN) & Connection \mono{Close()}\\
-Connection migration\tnote{7} & Selection Property\\
-Path change events & Per-Connection callback\\
-\mono{initial_max_streams_bidi} & Connection Property \\
+\multicolumn{1}{l||}{QUIC connection\tnote{2}} & Connection Group\\
+\multicolumn{1}{l||}{QUIC stream} & Connection\\
+\multicolumn{1}{l||}{Unidirectional stream close (FIN)} & Connection \mono{Close()}\\
+\multicolumn{1}{l||}{Connection migration\tnote{7}} & Selection Property\\
+\multicolumn{1}{l||}{Path change events} & Per-Connection callback\\
+\multicolumn{1}{l||}{\mono{initial_max_streams_bidi}} & Connection Property \\
 \midrule
 \multicolumn{2}{l}{\textit{Supported through TAPS, but not implemented in CTaps}} \\
 \midrule
-Multipath & Selection Property\\
-QUIC Datagrams \cite{rfc9221} & Message Property \\
-PING Frames & Connection Property \\
-Key Update \cite[Sec. 6]{rfc9001} & Security Parameter Callback \\
-ECN & Message Property \\
-\mono{disable_active_migration} & Selection Property\\
-\mono{max_udp_payload_size}\tnote{3} & Connection Property \\
+\multicolumn{1}{l||}{Multipath} & Selection Property\\
+\multicolumn{1}{l||}{QUIC Datagrams \cite{rfc9221}} & Message Property \\
+\multicolumn{1}{l||}{PING Frames} & Connection Property \\
+\multicolumn{1}{l||}{Key Update \cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
+\multicolumn{1}{l||}{ECN} & Message Property \\
+\multicolumn{1}{l||}{\mono{disable_active_migration}} & Selection Property\\
+\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{3}} & Connection Property \\
 \midrule
 \multicolumn{2}{l}{\textit{Not supported through TAPS}} \\
 \midrule
-Unidirectional stream init & --- \\
-\mono{STOP_SENDING} & --- \\
-\mono{RESET_STREAM} & ---\\
-\mono{initial_max_data} & ---\\
-\mono{initial_max_stream_data\_*} & ---\\
-Idle Timeout\tnote{6} & ---\\
-\mono{ack_delay_exponent} & ---\\
-\mono{max_ack_delay} & ---\\
-Directional \mono{initial_max_streams_*} & ---\\
-\texttt{preferred\_address} & ---\\
-\mono{Stateless reset}     & --- \\
-Connection ID handling\tnote{4} & ---\\
+\multicolumn{1}{l||}{Unidirectional stream init} & --- \\
+\multicolumn{1}{l||}{\mono{STOP_SENDING}} & --- \\
+\multicolumn{1}{l||}{\mono{RESET_STREAM}} & ---\\
+\multicolumn{1}{l||}{\mono{initial_max_data}} & ---\\
+\multicolumn{1}{l||}{\mono{initial_max_stream_data\_*}} & ---\\
+\multicolumn{1}{l||}{Idle Timeout\tnote{6}} & ---\\
+\multicolumn{1}{l||}{\mono{ack_delay_exponent}} & ---\\
+\multicolumn{1}{l||}{\mono{max_ack_delay}} & ---\\
+\multicolumn{1}{l||}{Directional \mono{initial_max_streams_*}} & ---\\
+\multicolumn{1}{l||}{\texttt{preferred\_address}} & ---\\
+\multicolumn{1}{l||}{\mono{Stateless reset}    } & --- \\
+\multicolumn{1}{l||}{Connection ID handling\tnote{4}} & ---\\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}
