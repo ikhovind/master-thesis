@@ -192,11 +192,48 @@ which is a arbitrary value with no influence on the following candidate racing.
 % ── y positions (y = -t/100 * 1.2) ─────────────────────────────────────────
 
 %  t=0:    y=-0.4 (Query)
-%  t=100:  y=-1.2 (DNS start)
+%  t=50:   y=-1.0
+%  t=100:  y=-1.6 (DNS resolve)
 %  t=200:  y=-2.0
 %  t=300:  y=-2.8
+%  t=350:  y=-3.4
 %  t=400:  y=-4.0
 %  t=500:  y=-5.2
+\tikzmath{
+  \yfiftyms = -0.5;
+  \ytenms = \yfiftyms / 5;
+  \ylifelinestart   = 0.1;
+  \yzero   = -0.4 ;
+  \yfifty = \yzero + \yfiftyms; 
+  \yhundred = \yzero + \yfiftyms * 2; 
+  \yhundredandfifty = \yzero + \yfiftyms * 3; 
+  \ytwohundred = \yzero + \yfiftyms * 4; 
+  \ytwohundredandfifty = \yzero + \yfiftyms * 5; 
+  \ytreehundred = \yzero + \yfiftyms * 6; 
+  \ytreehundredandfifty = \yzero + \yfiftyms * 7; 
+  \yfourhundred = \yzero + \yfiftyms * 8; 
+  \yfourhundredandfifty = \yzero + \yfiftyms * 9; 
+  \yfivehundred = \yzero + \yfiftyms * 10; 
+  \yfivehundredandfifty = \yzero + \yfiftyms * 11; 
+  \ysixhundred = \yzero + \yfiftyms * 12; 
+  \ydnsresolution = \yfifty - \ytenms;
+  \yslowdelay = \yfiftyms * 3;
+  \yfastdelay = \yfiftyms;
+  \ylifelineend = \yfivehundredandfifty; 
+  \yslowstart = \yzero + \yfiftyms;
+  \yfaststart = \yslowstart + \yfiftyms * 5;
+  \yslowend = \yfaststart + \yfastdelay * 4 + \ytenms * 2;
+  \yone = \yslowstart + \yslowdelay * 3;
+  \ytwo = \yslowstart + \yslowdelay * 4;
+  \ythree = \yslowend;
+  \xone = \xE;
+  \xtwo = \xC;
+  \slope = (\ytwo - \yone)/(\xtwo - \xone);
+  \b = \yone;
+  \xslowend = \xone + (\ythree - \b) / \slope;
+} 
+
+
 
 % ── Participant headers ──────────────────────────────────────────────────────
 \node[head]                   at (\xO, 0.4) {Application};
@@ -209,74 +246,87 @@ which is a arbitrary value with no influence on the following candidate racing.
 % \node[font=\scriptsize, gray] at (\xB, -0.05) {(per-candidate)};
 
 % ── Lifelines ───────────────────────────────────────────────────────────────
-\draw[dashed, gray!50] (\xO, 0.1) --  (\xO, -4.9);
-\draw[dashed, gray!50] (\xA, 0.1) --  (\xA, -4.9);
-\draw[dashed, gray!50] (\xB, 0.1) --  (\xB, -4.9);
-\draw[dashed, gray!50] (\xE, 0.1) --  (\xE, -4.9);
+\draw[dashed, gray!50] (\xO, \ylifelinestart) --  (\xO, \ylifelineend);
+\draw[dashed, gray!50] (\xA, \ylifelinestart) --  (\xA, \ylifelineend);
+\draw[dashed, gray!50] (\xB, \ylifelinestart) --  (\xB, \ylifelineend);
+\draw[dashed, gray!50] (\xE, \ylifelinestart) --  (\xE, \ylifelineend);
 
-\draw[dashed, gray!50] (\xC, -1.2) -- (\xC, -4.1);
-\draw[dashed, gray!50] (\xD, -2.4) -- (\xD, -4.9);
+\draw[dashed, gray!50] (\xC, \yslowstart) -- (\xC, \yslowend);
+\draw[dashed, gray!50] (\xD, \yfaststart) -- (\xD, \ylifelineend);
 
 %
 % \draw[gray!20] (-0.2, -0.8) -- (12.2, -0.8);
 
 % ── Time grid and labels ─────────────────────────────────────────────────────
-\foreach \yval/\t in {-0.4/0, -1.2/100, -2.0/200, -2.4/250, -2.8/300, -4.0/500} {
+\foreach \yval/\t in {
+  \yzero/0,
+  \yfifty/50,
+  \yhundred/100,
+  % \yhundredandfifty/150,
+  \ytwohundred/200,
+  % \ytwohundredandfifty/250,
+  \ytreehundred/300,
+  % \ytreehundredandfifty/350,
+  \yfourhundred/400,
+  % \yfourhundredandfifty/450,
+  \yfivehundred/500
+} {
   \node[font=\footnotesize, gray, left] at (-0.4, \yval) {\t\,ms};
   \draw[gray!20] (-0.2, \yval) -- (12.2, \yval);
 }
 
 % ── t≈0: Start Connection attempt ─────────────────────────────────────────────────────────
-\draw[->] (\xO, -0.4) -- node[msglbl, above] {Connect to URL} (\xA, -0.4);
+\draw[->] (\xO, \yzero) -- node[msglbl, above] {Connect to URL} (\xA, \yzero);
 
 % ── t≈0: DNS queries ─────────────────────────────────────────────────────────
-\draw[->] (\xA, -0.4) -- node[msglbl, above] {Query URL} (\xB, -0.4);
+\draw[->] (\xA, \yzero) -- node[msglbl, above] {Query URL} (\xB, \yzero);
 
-% ── t=100: DNS resolves A ────────────────────────────────────────────────────
-\draw[->] (\xB, -0.8) -- node[msglbl, above] {Resolve {C1, C2}} (\xA, -0.8);
+% ── DNS resolves A ────────────────────────────────────────────────────
+\draw[->] (\xB, \ydnsresolution) -- node[msglbl, above] {Resolve {C1, C2}} (\xA, \ydnsresolution);
 
-\draw[fill=black] (\xA,-1.2) circle (1.5pt);
-\draw[->] (\xA, -1.2) -- node[msglbl, above] {Start attempt 1} (\xC, -1.2);
+\draw[fill=black] (\xA,\yslowstart) circle (1.5pt);
+\draw[->] (\xA, \yslowstart) -- node[msglbl, below] {Start attempt 1} (\xC, \yslowstart);
 
 % ── QUIC handshake for candidate A ───────────────────────────────────────────
 % Initial:        SM-A (t=100) → Server (t=175)
-\draw[->] (\xC,-1.2)  -- node[msglbl, above, sloped] {}         (\xE,-2.4);
+\draw[->] (\xC,\yslowstart)  -- node[msglbl, above, sloped] {}         (\xE,{\yslowstart + \yslowdelay});
 % Handshake:      Server(t=175) → SM-A (t=250)
-\draw[->] (\xE,-2.4)  -- node[msglbl, above, sloped] {}       (\xC,-3.6);
+\draw[->] (\xE,{\yslowstart + \yslowdelay})  -- node[msglbl, above, sloped] {}       (\xC,{\yslowstart + \yslowdelay * 2});
+\draw[->] (\xC,{\yslowstart + \yslowdelay * 2})  -- node[msglbl, above, sloped] {}       (\xE,{\yslowstart + \yslowdelay * 3});
 % Finished:       SM-A (t=250) → Server (t=325)
-\draw[-, red!90] (\xC,-3.6)
+\draw[-, red!90] (\xE,{\yslowstart + \yslowdelay * 3})
   -- node[msglbl, above, sloped] {}
      node[pos=1.0, cross out, draw, inner sep=2pt] {}
-  (\xC + 2.08,-4.1);
+     (\xslowend,\yslowend);
 
 % ── t=350: racing timer fires, create SM-B ───────────────────────────────────
-\draw[fill=black] (\xA,-2.4) circle (1.5pt);
+\draw[fill=black] (\xA,\yfaststart) circle (1.5pt);
 %\node[font=\scriptsize, right=3pt] at (\xA,-2.4) {250\,ms timer};
-\draw[->] (\xA,-2.4) -- node[msglbl, above] {Start attempt 2} (\xD,-2.4);
+\draw[->] (\xA,\yfaststart) -- node[msglbl, above] {Start attempt 2} (\xD,\yfaststart);
 
 % ── QUIC handshake for candidate A ───────────────────────────────────────────
-\draw[->] (\xD,-2.4)  -- node[msglbl, above, sloped] {}         (\xE,-2.8);
-\draw[->] (\xE,-2.8)  -- node[msglbl, above, sloped] {}       (\xD,-3.2);
-\draw[->] (\xD,-3.2) -- node[msglbl, above, sloped] {}         (\xE,-3.6);
-\draw[->] (\xE,-3.6) -- node[msglbl, above, sloped] {} (\xD,-4.0);
-\draw[->] (\xD,-4.0) -- node[msglbl, above, sloped] {}   (\xA,-4.0);
+\draw[->] (\xD,\yfaststart)  -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay});
+\draw[->] (\xE,{\yfaststart + \yfastdelay})  -- node[msglbl, above, sloped] {}       (\xD,{\yfaststart + \yfastdelay * 2});
+\draw[->] (\xD,{\yfaststart + \yfastdelay * 2}) -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay * 3});
+\draw[->] (\xE,{\yfaststart + \yfastdelay * 3}) -- node[msglbl, above, sloped] {} (\xD,{\yfaststart + \yfastdelay * 4});
+\draw[->] (\xD,{\yfaststart + \yfastdelay * 4}) -- node[msglbl, above, sloped] {}   (\xA,{\yfaststart + \yfastdelay * 4});
 
 % ── t=400: SM-A wins ─────────────────────────────────────────────────────────
 \node[draw, fill=green!15, font=\scriptsize, rounded corners, inner sep=2pt]
-      at (\xD,-5.2) {Connected \cmark};
+      at (\xD,{\ylifelineend + \ytenms * 2}) {Connected \cmark};
 
 \node[draw, fill=red!15, font=\scriptsize, rounded corners, inner sep=2pt]
-      at (\xC,-5.2) {Closed \xmark};
+      at (\xC,{\ylifelineend + \ytenms * 2}) {Closed \xmark};
 
 % ── t=400: abort SM-B ────────────────────────────────────────────────────────
-\draw[->, red!70, thick] (\xA,-4.1) -- node[msglbl, below] {Close} (\xC,-4.1);
+\draw[->, red!70, thick] (\xA,\yslowend ) -- node[msglbl, below] {close()} (\xC,\yslowend);
 
-\draw[->] (\xA, -4.2) -- node[msglbl, above] {\mono{ready()} CB} (\xO, -4.2);
+\draw[->] (\xA, {\yslowend + \ytenms}) -- node[msglbl, above] {\mono{ready()} CB} (\xO, {\yslowend + \ytenms});
 
 \end{tikzpicture}
 \caption[Example candidate racing with slow and fast endpoint]
 {Example of candidate racing functionality when the order of a DNS resolution causes a slow endpoint to be attempted first,
-but the fast endpoint still wins.}
+but the fast endpoint still wins. Also illustrating the high cost of the stagger delay as it currently exists in CTaps.}
 \label{fig:racingSeqDiagram}
 \end{figure}
 
