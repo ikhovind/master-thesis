@@ -1041,12 +1041,42 @@ This asynchronous event loop model is very common, and is used for example
 in Node.js \cite{nodejsEventLoop} or in Python's asyncio \cite{pythonAsyncio}.
 
 \section{Libuv}
-Libuv \cite{Libuv2025} is an multi-platform event loop library focused on asynchronous I/O,
-primarily developed for Node.js.
-Libuv features built in support for TCP and UDP, while providing generic
-poll handles through \mono{uv_poll_t} if more granular control is needed. In addition to
-this it provides several useful features when interacting with the network, such
-as asynchronous DNS resolution.
+Libuv \cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
+It is primarily developed for Node.js, but is used in several other large projects as well.
+Libuv is centered the \mono{uv_loop_t} structure which represents a single event loop.
+Applications can register work to a loop through the use of handles and requsts \cite{libuv_design}.
+Handles are long-lived objects for certain types of work, while requests are short-lived operations.
+When any intial handles and requests have been registered the application must invoke \mono{uv_run()}. This
+will take over the invoking thread and by default run until all registered handles
+have been closed.
+
+The most
+important libuv handles for CTaps are \mono{uv_udp_t}, \mono{uv_tcp_t}, \mono{uv_poll_t} and
+\mono{uv_timer_t}. 
+Since libuv is cross-platform, the UDP and TCP handles
+are abstractions above OS-specific sockets. On linux, the underlying event
+queue object is epoll. Epoll is a structure which allows an application
+to be notified by the Linux kernel when data is available on a socket.
+This can be used to interact with the network, but also to monitor any other
+file descriptors which are compatible with epoll.
+
+While the libuv \mono{uv_udp_t}
+and \mono{uv_tcp_t} handles mandate the type of the underlying file descriptor,
+the generic \mono{uv_poll_t} can be used to monitor a generic event queue object.
+This allows an application to use libuv for any file descriptor compatible
+with an OS-specific event queue object. Finally, the \mono{uv_timer_t} handle
+can be used to perform work at given intervals.
+
+Handles are initiated and registered to a given event loop through
+\mono{uv_<handle name>_init}. Requests can then be added as discrete
+pieces of work to the given handle. For example \mono{uv_write()} is
+used to add a write request to a \mono{uv_tcp_t} handle. When registering
+a request with the event loop the application must also register an
+associated callback. This callback will be invoked to notify the application
+that execution has completed.
+When
+the application is finished it must close the created handles for
+the event loop to stop execution.
 
 \section{Glib}
 GLib \cite{GLibGitLab} is a general purpose utility library which provides several key
@@ -1054,8 +1084,56 @@ data structures among other features. GLib is used at the core of
 several other larger libraries, such as GTK and GNOME.
 
 \section{Picoquic} \label{sec:picoquic}
-Picoquic \cite{christianhuitemaPicoquic} is a C library which aims to be a minimalist implementation of the QUIC standard.
+Picoquic \cite{christianhuitemaPicoquic} is a C library which aims to be a
+minimalist implementation of the QUIC standard. It is a cross-platform
+library compatible with Windows, Linux, MacOs and BSD.
 
-Picoquic features a built-in event loop, but applications can also integrate it with their
-own event loops,
-querying for Picoquic for new data to send through \mono{picoquic_prepare_next_packet}.
+% Talk about how it functions?
+For a standalone clients and servers Picoquic features a built-in
+event loop through \mono{picoquic_packet_loop()}. This takes
+control over the invoking thread and allows the application to
+control the behavior of the loop through returning values
+from a callback. When using this packet loop Picoquic
+manages its own sockets and interacts with the network
+independently.
+
+In addition to built in event loop, Picoquic also features
+an polling API which integrates with existing event loops.
+For this mode the application is required to manage
+the interaction with the network and call into
+Picoquic at given intervals. These intervals
+are specified by Picoquic and must be fetched through
+\mono{picoquic_get_next_wake_delay()}. A timer
+can then be set to wake at the specified interval
+and perform any work necessary by Picoquic.
+
+When this timer fires, the application has to query
+Picoquic for any new packets to send to the peer.
+This is done through
+\mono{picoquic_prepare_next_packet()}
+which outputs one QUIC packet at a time along with
+the expected from address, expected to address
+and the expected interface index. The application
+is then responsible for actually transferring
+the data over a UDP socket.
+
+Since the application is responsible for interacting
+with the network it is also responsible for passing any
+received QUIC packets to Picoquic. In order to start
+receving or sending QUIC data the application must
+first create a \mono{picoquic_quic_t} object through
+\mono{picoquic_create()}. This is an object which is
+responsible for handling ovarching QUIC state such as
+TLS parameters as well as receving incoming QUIC data.
+This means that it is also responsible for passing
+the incoming data to the correct QUIC connection, or
+creating a new connection and passing it to the application.
+Passing incoming QUIC packets to Picoquic is done through
+\mono{picoquic_incoming_packet()}.
+
+To handle the mandatory TLS for QUIC
+Picoquic integrates with Picotls \cite{picotls}.
+Picoquic can therefore handle all necessary
+TLS setup, only requiring that the application
+provides the necessary parameters, such as
+ALPN values and the various key files.
