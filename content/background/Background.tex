@@ -609,8 +609,8 @@ for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch}~\cit
 A TAPS system consists of two primary parts, the Transport Services
 API and the Transport System Implementation. The Transport Services
 API is the public facing API used by the Application. This contains
-concepts defined in RFC~9622 such as a Preconnection, a Connection
-Messages or Events being transferred between TAPS and the Application.
+concepts defined in RFC~9622 such as a \term{Preconnection}, a \term{Connection}
+\term{Messages} or \term{Events} being transferred between TAPS and the application.
 
 The Transport System Implementation is the internal workings
 of a TAPS system. This consists of services which are provided to the
@@ -671,25 +671,25 @@ represents a \say{shared state of two or more endpoints that persists
 across messages that are transmitted between these endpoints}
 \cite{welzlUsageTransportFeatures2018}.
 When working with Connection objects, TAPS provides five high
-level \textit{groups of actions} that an application can perform:
+level groups of actions that an application can perform:
 \begin{itemize}
-    \item \texttt{Preestablishment}: Pass properties to specify
+    \item Preestablishment: Pass properties to specify
         requirements and preferences for establishing a Connection.
-    \item \texttt{Establishment}: Prepare a Connection object for data
+    \item Establishment: Prepare a Connection object for data
         transfer.
-    \item \texttt{Data transfer}: Sending and receiving messages
+    \item Data transfer: Sending and receiving messages
         over the Connection.
-    \item \texttt{Event handling}: Notifications that an application
+    \item Event handling: Notifications that an application
         can receive from a Connection, and the handling of them.
-    \item \texttt{Termination}: How transmission is stopped and
+    \item Termination: How transmission is stopped and
         a Connection is torn down.
 \end{itemize}
 
 In addition, the lifeline of a Connection is divided into three distinct
-phases, \textit{preestablishment}, the \textit{Established state}, and 
-\textit{termination of a Connection}~\cite{paulyArchitectureRequirementsTransport2025}.
+phases, preestablishment, the established state, and
+termination of a Connection~\cite{paulyArchitectureRequirementsTransport2025}.
 Each of these phases are associated
-with one or more of the \textit{groups of actions} that an application can perform,
+with one or more of the groups of actions that an application can perform,
 as described above. 
 
 After the desired Transport Properties and cryptographic parameters have
@@ -698,22 +698,22 @@ When a Connection is in the established phase the Connection can be used to
 transfer data. 
 
 There are three ways of
-establishing a connection: \textit{initiate}, \textit{listen} and
-\textit{rendezvous}~\cite{paulyArchitectureRequirementsTransport2025}.
+establishing a connection: \term{initiate}, \term{listen} and
+\term{rendezvous}~\cite{paulyArchitectureRequirementsTransport2025}.
 
-\textit{Initiate} is used to establish a connection to a remote endpoint which
+Initiate is used to establish a connection to a remote endpoint which
 is assumed to be listening for incoming connections. How this connection
 is established internally is dependent on the underlying transport
 protocol, which has been selected based on the specified Transport Properties.
 The Created Connection object is passed to the application through a callback.
 
-\textit{Listen} is used to passively open a connection. This is done in order to
+Listen is used to passively open a connection. This is done in order to
 wait for connections from remote endpoints. Listen creates a Listener
-object. When a remote endpoint connects to this listener, a \texttt{ConnectionReceived}
+object. When a remote endpoint connects to this listener, a Connection Received
 event occurs. This event contains a Connection object for the 
 established connection.
 
-\textit{Rendezvous} is used to establish a peer-to-peer connection between two endpoints
+Rendezvous is used to establish a peer-to-peer connection between two endpoints
 simultaneously.
 
 After a Connection has been established, it can either
@@ -809,11 +809,11 @@ to use for a given connection when performing candidate gathering as described
 in \cref{sec:candidate-gathering}.
 
 Typical Selection Properties are specified as
-a \textit{preference}, with the possible values being \textit{require},
-\textit{prefer}, \textit{no preference}, \textit{avoid} and \textit{prohibit}.
-\textit{Require} means that the Connection establishment will fail if the property cannot
-be satisfied, while \textit{prefer} will allow the application to continue.
-This distinction is mirrored in the difference between \textit{prohibit} and \textit{avoid}.
+a \term{Preference}, with the possible values being \term{Require},
+\term{Prefer}, \term{No Preference}, \term{Avoid} and \term{Prohibit}.
+\term{Require} means that the Connection establishment will fail if the property cannot
+be satisfied, while \term{Prefer} will allow the application to continue.
+This distinction is mirrored in the difference between \term{Prohibit} and \term{Avoid}.
 Not all Selection Properties are set as a preference,
 instead specified for example as a boolean, an integer or an enum value.
 
@@ -821,9 +821,9 @@ An example of a selection property is Reliable Data Transfer.
 This property is used to specify whether or not the application
 should use a protocol which ensures that all data is received at 
 a remote endpoint, in order, without loss or duplication. Setting
-this to \textit{require} will force TAPS to use an underlying protocol
+this to \term{Require} will force TAPS to use an underlying protocol
 which guarantees this, such as TCP or QUIC. Setting this as
-\textit{prohibit} will force TAPS to use a protocol which does not
+\term{Prohibit} will force TAPS to use a protocol which does not
 guarantee this, such as UDP.
 
 \subsubsection{Connection Properties}
@@ -848,7 +848,7 @@ and does not pose a risk if it is replayed to the endpoint.
 \subsection{TAPS configurations explained}
 As mentioned above, TAPS allows the application to control
 both the behavior and selection of the underlying transport
-protocol through the use of \textit{Transport Properties}.
+protocol through the use of \term{Transport Properties}.
 
 In addition to the basic Transport Properties such as reliability
 or timeout, TAPS also exposes several more advanced
@@ -926,7 +926,7 @@ These are typically fairly self-explanatory, but do
 include certain properties which can override other properties
 set for the whole Connection.
 
-For example, the \textit{Ordered}
+For example, the \term{Ordered}
 message property can be used to ensure in-order delivery
 of a certain set of messages, even if the connection
 does not require it. This naturally requires that the underlying
