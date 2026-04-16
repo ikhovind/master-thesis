@@ -28,12 +28,12 @@ the path from the connection itself. More details about this can be found in
 When it comes to network programming,
 the network socket in its most basic definition is an abstraction
 for a network connection, through which an application can send
-and receive data \cite[p. 8]{donahooTCPIPSockets2009}. 
+and receive data~\cite[p. 8]{donahooTCPIPSockets2009}. 
 First mentioned in 1970 in relation to ARPANET, the
 simplicity of sockets and their ubiquity in all UNIX distributions
 since version 4.2 of the Berkeley Software Distribution have
 led to them becoming the de facto standard for network
-programming \cite{crockerNewHostHostProtocol1970}\cite[p. 502]{tanenbaumComputerNetworks2011}.
+programming~\cites{crockerNewHostHostProtocol1970}[p.~502]{tanenbaumComputerNetworks2011}.
 
 Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
@@ -43,7 +43,7 @@ the socket API primarily through the \texttt{sys/socket.h} header file
 When creating a socket on an UNIX-like system, the application
 invokes the \texttt{socket} system call. This system call
 \say{creates an endpoint for communication and returns a file 
-descriptor that refers to that endpoint} \cite{Socket2LinuxManual}.
+descriptor that refers to that endpoint}~\cite{Socket2LinuxManual}.
 This system call takes three parameters, the domain, the type
 and the protocol which will be used for the socket.
 
@@ -89,7 +89,7 @@ it is fairly minimal with only a header of 8 bytes.
 Applications can themselves implement needed features
 such as reliability and congestion control.
 This way of designing new protocols has become so common that
-it has prompted an official RFC from the IETF, describing
+it has prompted an official RFC~from the IETF, describing
 the best practices for implementing congestion control on top of UDP 
 \cite{eggertUnicastUDPUsage2008}.
 
@@ -99,7 +99,7 @@ internet today. It is a connection-oriented protocol and provides
 a reliable, in-order transfer of a stream of bytes to the application layer.
 It has also become common to use TCP for message-based applications,
 using a framing protocol on top of TCP to divide the TCP byte stream into
-discrete messages. A description of TCP was first published as an RFC in 1974
+discrete messages. A description of TCP was first published as an RFC~in 1974
 \cite{cerfSpecificationInternetTransmission1974} and it has since grown to become
 ubiquitous across the internet.
 
@@ -140,19 +140,19 @@ during connection establishment, compared to a non-secure TCP connection.
 
 TLS 1.3 also supports for 0-RTT handshakes
 which allow a client to send data during the initial handshake when resuming
-a previous connection to a server \cite{rfc8446}. This can be a source
+a previous connection to a server~\cite{rfc8446}. This can be a source
 of replay attacks if the message being sent is not idempotent.
 
 As of 2026 TLS adoption has been very widespread,
 with 95 \% of all connections in Chrome on Windows using an encrypted
-connection \cite{google2026transparency}.
+connection~\cite{google2026transparency}.
 
 \section{QUIC} \label{sec:quic}
 QUIC is a protocol developed by Google and formalized
-through RFC 9000 in 2021 \cite{rfc9000}.
+through RFC~9000 in 2021~\cite{rfc9000}.
 Intended to be a replacement for TCP, it has achieved
 a fairly high adoption, for example with over 75 \%
-of traffic to Meta servers using QUIC in 2020 \cite{joras2020quic}.
+of traffic to Meta servers using QUIC in 2020~\cite{joras2020quic}.
 
 QUIC is a connection-oriented protocol and provides reliability,
 despite being implemented in user-space on top of
@@ -179,7 +179,7 @@ multiple stream frames can be transmitted in a single packet.
 If a packet is lost, only applications using the streams contained
 in that packet will be affected.
 
-The format of a QUIC stream frame as described in RFC 9000 can
+The format of a QUIC stream frame as described in RFC~9000 can
 be seen in \cref{lst:stream-frame-format}.
 
 \begin{listing}[tbp]
@@ -193,7 +193,7 @@ be seen in \cref{lst:stream-frame-format}.
           Stream Data (..),
         }
     \end{lstlisting}
-	\caption{Format of a QUIC stream frame \cite{rfc9000}}
+	\caption{Format of a QUIC stream frame~\cite{rfc9000}}
 	\label{lst:stream-frame-format}
 \end{listing}
 
@@ -241,7 +241,7 @@ seen in \cref{fig:stream_states}.
    | Recvd |                   | Recvd |
    +-------+                   +-------+
     \end{lstlisting}
-    \caption{States of a QUIC stream sending data \cite{rfc9000}}
+    \caption{States of a QUIC stream sending data~\cite{rfc9000}}
     \label{fig:stream_states}
 \end{figure}
 
@@ -249,7 +249,7 @@ Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
 number spaces are \say{the context in which a packet can be processed
-and acknowledged} \cite{rfc9000}. 
+and acknowledged}~\cite{rfc9000}. 
 This context reflects the level of encryption and there 
 are therefore three separate packet number spaces. Initial space,
 for the initial handshake packets, handshake space, for packets
@@ -297,7 +297,7 @@ when several objects are transferred over a single connection,
 which is treated as a single stream.
 
 \subsection{Frames}
-In QUIC a frame is defined as \mono{a unit of structured protocol information} \cite{rfc9000}.
+In QUIC a frame is defined as \mono{a unit of structured protocol information}~\cite{rfc9000}.
 The payload in QUIC packets after discounting packet protection consists
 of a series of complete frames.
 Different types of frames are used to carry different types of information
@@ -309,7 +309,7 @@ to share new valid connection IDs with the peer.
 In order to uniquely identify a connection QUIC uses connection IDs
 instead of a four-tuple like TCP. Each endpoint generates a list of
 valid IDs which it shares with the peer. The peer can then use one
-of these IDs as a destination when transferring data \cite{rfc9000}.
+of these IDs as a destination when transferring data~\cite{rfc9000}.
 
 Since Connection IDs are needed for routing packets they are
 carried in the cleartext part of both the short and the long QUIC header.
@@ -326,12 +326,12 @@ through its connection IDs, QUIC connections rotate the IDs used.
 A connection can switch the destionation connection ID it is using
 at any time to one of the approved IDs previously shared by the peer. Endpoints
 must also switch connection IDs when transmitting from a new local address, such
-as after a path migration \cite[Sec. 9.5]{rfc9000}.
+as after a path migration~\cite[Sec. 9.5]{rfc9000}.
 New valid connection IDs which the peer can use as destination IDs can be
 shared through the \mono{NEW_CONNECTION_ID} frame.
 
 Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols \cite{rfc9000}. This allows QUIC to survive
+protocols~\cite{rfc9000}. This allows QUIC to survive
 changes in the underlying four-tuple and therefore enables connection migration.
 
 \subsection{Connection Migration} \label{sec:connection-migration}
@@ -352,7 +352,7 @@ data on their remote endpoint the initial
 handshake, an endpoint can initiate local path migration without
 first validating a new path.
 
-In the current version of QUIC, only clients are able to migrate \cite[Sec. 1]{rfc9000}.
+In the current version of QUIC, only clients are able to migrate~\cite[Sec. 1]{rfc9000}.
 This means that a client knows that a server will continue to send
 on the same local endpoint for the lifetime of the connection, while
 a server should support migration from the client. A client can request
@@ -366,7 +366,7 @@ If the server does not
 support migration, for example if it is behind a load balancer which multiplexes
 by source IP instead of the QUIC connection ID, then the server can mandate
 that the client does not change local address by setting the \mono{disable_active_migration}
-transport paramter \cite[Sec. 5.2.3]{rfc9000}.
+transport paramter~\cite[Sec. 5.2.3]{rfc9000}.
 
 If an endpoint recieves new non-probing frames from a new remote endpoint which is
 not associated with the peer then it must initiate path validation in
@@ -388,7 +388,7 @@ is received within a given time period, the endpoints can continue
 communicating using other known addresses. If the connection has no
 viable paths the connection fails. This can be signaled to the peer 
 using a \mono{NO_VIABLE_PATH} connection error, although this is only
-possible if a path exist but does not support the required MTU \cite{rfc9000}.
+possible if a path exist but does not support the required MTU~\cite{rfc9000}.
 
 An endpoint can start sending from a new local endpoint either voluntarily
 or because the previous local path has become unavailable. This means
@@ -402,7 +402,7 @@ Here, a local address becomes unavailable and the TCP connection is therefore br
 as with a new IP address it would be considered a completely new connection. The
 QUIC connection on the other hand is able to survive this change, as the connection
 ID is recognized by the peer, even if it is changed on connection migration to avoid
-linkability as recommended by RFC 9000 \cite{rfc9000}, since
+linkability as recommended by RFC~9000~\cite{rfc9000}, since
 it was picked from the pool of valid IDs generated by the peer.
 
 \begin{figure}[hp]
@@ -486,7 +486,7 @@ unavailable since it relies on connection IDs, but TCP does survive since the un
 In addition to supporting multiple paths through connection migration,
 support for using multiple paths simultaneously through a single QUIC 
 connection is currently actively being
-standardized through the QUIC multipath extension draft \cite{ietf-quic-multipath-21}.
+standardized through the QUIC multipath extension draft~\cite{ietf-quic-multipath-21}.
 Multipath extension builds on the mechanisms of connection migration,
 but introduces a new path ID in order to manage multiple paths.
 Using multiple paths for a single connection at once can be used to
@@ -503,7 +503,7 @@ have already exchanged cryptographic keys, that the
 client remembers critical parameters such as the selected
 ALPN and that the client provides the server with a
 session ticket for the server to recover the same
-information \cite[Sec. 4.6]{rfc9001}.
+information~\cite[Sec. 4.6]{rfc9001}.
 
 \section{Transport Services}
 At its core, a protocol is an abstraction which provides a set of
@@ -523,7 +523,7 @@ underlying transport layer protocol should in theory be simple.
 
 Exactly which Transport Services are provided by which transport
 protocols has been mapped by the IETF in RFC8095, as part of the
-TAPS working group \cite{fairhurstServicesProvidedIETF2017}.
+TAPS working group~\cite{fairhurstServicesProvidedIETF2017}.
 
 \section{TAPS}
 The TAPS WG is an IETF working group which aims to solve the strong
@@ -575,7 +575,7 @@ seen in \cref{fig:socket-programming-api-model} and
         |               Network-Layer Interface               |
         +-----------------------------------------------------+
     \end{lstlisting}
-    \caption{API model for socket programming from RFC 9622\cite{rfc9622}}
+    \caption{API model for socket programming from RFC~9622\cite{rfc9622}}
     \label{fig:socket-programming-api-model}
 \end{figure}
 
@@ -599,17 +599,17 @@ seen in \cref{fig:socket-programming-api-model} and
         |               Network-Layer Interface               |
         +-----------------------------------------------------+
     \end{lstlisting}
-    \caption{API model for TAPS from RFC 9622\cite{rfc9622}}
+    \caption{API model for TAPS from RFC~9622\cite{rfc9622}}
     \label{fig:taps-api-model}
 \end{figure}
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
-RFC 9621 describes the underlying architecture of and a set of requirements
-for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch} \cite{paulyArchitectureRequirementsTransport2025}.
+RFC~9621 describes the underlying architecture of and a set of requirements
+for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch}~\cite{paulyArchitectureRequirementsTransport2025}.
 A TAPS system consists of two primary parts, the Transport Services
 API and the Transport System Implementation. The Transport Services
 API is the public facing API used by the Application. This contains
-concepts defined in RFC 9622 such as a Preconnection, a Connection
+concepts defined in RFC~9622 such as a Preconnection, a Connection
 Messages or Events being transferred between TAPS and the Application.
 
 The Transport System Implementation is the internal workings
@@ -617,7 +617,7 @@ of a TAPS system. This consists of services which are provided to the
 public API, such as data transfer or Candidate Racing. The TAPS RFCs
 do not prescribe an actual detailed implementation of the Transport
 System Implementation, leaving the details up to each TAPS implementation
-itself. RFC 9623 does however offer a set of suggestions to developers
+itself. RFC~9623 does however offer a set of suggestions to developers
 of a TAPS API in order to be in line with the TAPS specification,
 however these are not mandatory, and any TAPS system is therefore
 free to implement its internal workings as it sees fit.
@@ -659,7 +659,7 @@ free to implement its internal workings as it sees fit.
    |               Network-Layer Interface               |
    +-----------------------------------------------------+
     \end{lstlisting}
-    \caption{TAPS architecture as described in RFC 9621 \cite{paulyArchitectureRequirementsTransport2025}.}
+    \caption{TAPS architecture as described in RFC~9621~\cite{paulyArchitectureRequirementsTransport2025}.}
     \label{fig:tapsArch}
 \end{figure}
 
@@ -687,7 +687,7 @@ level \textit{groups of actions} that an application can perform:
 
 In addition, the lifeline of a Connection is divided into three distinct
 phases, \textit{preestablishment}, the \textit{Established state}, and 
-\textit{termination of a Connection} \cite{paulyArchitectureRequirementsTransport2025}.
+\textit{termination of a Connection}~\cite{paulyArchitectureRequirementsTransport2025}.
 Each of these phases are associated
 with one or more of the \textit{groups of actions} that an application can perform,
 as described above. 
@@ -699,7 +699,7 @@ transfer data.
 
 There are three ways of
 establishing a connection: \textit{initiate}, \textit{listen} and
-\textit{rendezvous} \cite{paulyArchitectureRequirementsTransport2025}.
+\textit{rendezvous}~\cite{paulyArchitectureRequirementsTransport2025}.
 
 \textit{Initiate} is used to establish a connection to a remote endpoint which
 is assumed to be listening for incoming connections. How this connection
@@ -751,7 +751,7 @@ ways of converting TCP's byte-stream into usable messages has been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
 delimiter-separated formats, where the beginning and end of a piece of
-data is separated by delimiters. \cite{brunstromImplementingInterfacesTransport2025}
+data is separated by delimiters.~\cite{brunstromImplementingInterfacesTransport2025}
 Examples of the two categories are HTTP/1.1 for a delimiter-separated format
 and DHCP for TLV, specifying the length of the given hardware address, allowing
 parsers which are unfamiliar with the type to skip it, since the length is known
@@ -793,7 +793,7 @@ underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
   |         Transport Protocol Stack         |
   +------------------------------------------+
   \end{lstlisting}
-\caption{Protocol Stack Showing a Message Framer from RFC 9622 \cite{rfc9622}}
+\caption{Protocol Stack Showing a Message Framer from RFC~9622~\cite{rfc9622}}
 \label{fig:tpsStack}
 \end{figure}
 
@@ -831,7 +831,7 @@ Connection Properties are the subset of Transport Properties which
 are used to control the behavior of the underlying protocol after
 a Connection has been established.
 
-An example of a connection property is Timeout for Aborting Connection \cite[Sec. 8.1.3]{rfc9622}.
+An example of a connection property is Timeout for Aborting Connection~\cite[Sec. 8.1.3]{rfc9622}.
 This property is used to specify the how long to wait before deciding that an
 active connection has failed when trying to reliably deliver data to the Remote Endpoint.
 
@@ -894,13 +894,13 @@ The \texttt{Use Temporary Local Address} selection property
 allows the application to specify
 whether or not to use temporary addresses which are a feature in
 IPv6, used for greater privacy
-\cite{gontTemporaryAddressExtensions2021},\cite{paulyArchitectureRequirementsTransport2025}.
+\cite{gontTemporaryAddressExtensions2021, paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Notification of ICMP soft error message arrival}
 selection property lets an application specify whether or 
 not it should be notified when an ICMP
 error, which does not force termination of the connection,
-arrives \cite{paulyArchitectureRequirementsTransport2025}.
+arrives~\cite{paulyArchitectureRequirementsTransport2025}.
 
 In addition to specifying which underlying protocol should be
 used through selection properties, the application using TAPS
@@ -912,12 +912,12 @@ or generic and be available for all transport protocols.
 The \texttt{Connection Group Transmission Scheduler} connection 
 property decides which scheduler is used within a given
 connection group, to divide the available capacity between the
-connections. \cite{paulyArchitectureRequirementsTransport2025}.
+connections.~\cite{paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Isolate Session} connection property set in order to
 have new connections use as little cached information as
 possible from previous connections not in the same connection
-group \cite{paulyArchitectureRequirementsTransport2025}.
+group~\cite{paulyArchitectureRequirementsTransport2025}.
 
 The final type of transport properties are message properties.
 These are set by the application on a per-message basis, and
@@ -944,7 +944,7 @@ as well as the protocols which are available to use.
 RFC9623 conceptualizes these combinations as a tree,
 with the first level of child nodes representing the
 possible Local Endpoints, which are resolved to possible local IP
-addresses when building the tree \cite{brunstromImplementingInterfacesTransport2025}.
+addresses when building the tree~\cite{brunstromImplementingInterfacesTransport2025}.
 The second level of the candidate tree represent the possible protocol
 options which can be used. This includes not only the protocol
 itself, but also any combination of options for this protocol which
@@ -991,7 +991,7 @@ user requirements while minimizing the network load
 This is achieved by trying to establish connections with
 the various candidates and finally selecting one of them.
 The exact process of racing the candidates and selecting
-a winner can vary by implementation. RFC 9623 lists three
+a winner can vary by implementation. RFC~9623 lists three
 ways of performing candidate racing:
 
 \begin{enumerate}
@@ -1001,7 +1001,7 @@ ways of performing candidate racing:
 \end{enumerate}
 
 Simultaneous racing is the process of trying to establish
-connections with all candidates at the same time. RFC 9623
+connections with all candidates at the same time. RFC~9623
 discourages this method, as it can lead to an unnecessarily large
 network load.
 
@@ -1015,7 +1015,7 @@ can be chosen if it connects successfully thereby limiting the
 number
 of needed attempts to find a connection. When racing IP addresses,
 TAPS implementations should follow the algorithm described
-in RFC 8305 \cite{schinaziHappyEyeballsVersion2017}, also known
+in RFC~8305~\cite{schinaziHappyEyeballsVersion2017}, also known
 as Happy Eyeballs. The relevance
 of this algorithm for TAPS is described in \cref{happyEyeballs}.
 
@@ -1029,7 +1029,7 @@ has successfully established a connection with a remote endpoint, or
 when all candidates have failed. 
 
 \section{Happy Eyeballs} \label{happyEyeballs}
-Happy Eyeballs, which is described in RFC 8305 is an algorithm
+Happy Eyeballs, which is described in RFC~8305 is an algorithm
 for racing IPv4 and  IPv6 addresses on dual-stack hosts
 \cite{schinaziHappyEyeballsVersion2017}. The candidate gathering
 and candidate racing algorithm found in TAPS is based on Happy Eyeballs,
@@ -1040,15 +1040,15 @@ IPv6 usage but minimize potential latency caused if IPv6 is broken.
 
 The first version of Happy Eyeballs was published in 2012 and describes an algorithm
 for racing an IPv4 and IPv6 connection to a server, giving a preferential
-head start to the IPv6 connection \cite{wingHappyEyeballsSuccess2012}.
+head start to the IPv6 connection~\cite{wingHappyEyeballsSuccess2012}.
 Happy Eyeballs version 2 improves
 upon problems within Happy Eyeballs version 1 by also racing the
-IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking \cite{schinaziHappyEyeballsVersion2017}.
+IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking~\cite{schinaziHappyEyeballsVersion2017}.
 
 This concept of racing is a central concept of TAPS, where it is
 taken one step further to also races all combinations of local interface,
 remote endpoint and underlying transport protocol which fit with the
-specifications of the user. RFC 8305 lists four steps for protocol racing,
+specifications of the user. RFC~8305 lists four steps for protocol racing,
 which conceptually divide into candidate Gathering and candidate Racing 
 TAPS system.
 
@@ -1066,7 +1066,7 @@ Since waiting for each of the four steps to fully complete before moving
 on to the next one would lead to unecessary delay Happy Eyeballs v2 recommends
 that connection attempts are started eiteher immeditately on
 the first response if it is IPv6, or after a 50 ms resoultion
-delay if the first received resolution if IPv4 \cite{schinaziHappyEyeballsVersion2017}.
+delay if the first received resolution if IPv4~\cite{schinaziHappyEyeballsVersion2017}.
 This helps mitigate potential slow DNS resolutions, especially
 if the IPv6 resolution is significantly slower than the IPv4
 resolution and the application has a hard requirement to
@@ -1087,7 +1087,7 @@ used is negotiated between the server and the client on
 the transport layer.
 ALPN is featured
 in in TLS, and a QUIC mandates that endpoints
-use some mechanism to agree on application protocol \cite[Sec. 8.1]{rfc9000}
+use some mechanism to agree on application protocol~\cite[Sec. 8.1]{rfc9000}
 ALPN allows the client and server to negotiate a common protocol
 without adding network round trips. The client features
 a list of supported protocols in its client hello message
@@ -1154,13 +1154,13 @@ to perform work in discrete pieces, and gives it a queue to add handling
 of I/O results when these returns.
 
 This asynchronous event loop model is very common, and is used for example
-in Node.js \cite{nodejsEventLoop} or in Python's asyncio \cite{pythonAsyncio}.
+in Node.js~\cite{nodejsEventLoop} or in Python's asyncio~\cite{pythonAsyncio}.
 
 \section{Libuv}
-Libuv \cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
+Libuv~\cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
 It is primarily developed for Node.js, but is used in several other large projects as well.
 Libuv is centered the \mono{uv_loop_t} structure which represents a single event loop.
-Applications can register work to a loop through the use of handles and requsts \cite{libuv_design}.
+Applications can register work to a loop through the use of handles and requsts~\cite{libuv_design}.
 Handles are long-lived objects for certain types of work, while requests are short-lived operations.
 When any intial handles and requests have been registered the application must invoke \mono{uv_run()}. This
 will take over the invoking thread and by default run until all registered handles
@@ -1195,7 +1195,7 @@ the application is finished it must close the created handles for
 the event loop to stop execution.
 
 \section{Picoquic} \label{sec:picoquic}
-Picoquic \cite{christianhuitemaPicoquic} is a C library which aims to be a
+Picoquic~\cite{christianhuitemaPicoquic} is a C library which aims to be a
 minimalist implementation of the QUIC standard. It is a cross-platform
 library compatible with Windows, Linux, MacOs and BSD.
 
@@ -1243,14 +1243,14 @@ Passing incoming QUIC packets to Picoquic is done through
 \mono{picoquic_incoming_packet()}.
 
 To handle the mandatory TLS for QUIC
-Picoquic integrates with Picotls \cite{picotls}.
+Picoquic integrates with Picotls~\cite{picotls}.
 Picoquic can therefore handle all necessary
 TLS setup, only requiring that the application
 provides the necessary parameters, such as
 ALPN values and the various key files.
 
 \section{Glib}
-GLib \cite{GLibGitLab} is a general purpose utility library which
+GLib~\cite{GLibGitLab} is a general purpose utility library which
 is used at the core of several other larger libraries, such as GTK and GNOME.
 
 Among other features, GLib provides implementations of several key data

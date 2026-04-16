@@ -1,7 +1,7 @@
 \chapter{Design} \label{chap:design}
 This chapter will cover the design decisions which has affected
 CTaps, both internally and for the external API. The overarching
-design goal was to conform to the API described in RFC 9622 \cite{rfc9622},
+design goal was to conform to the API described in RFC~9622~\cite{rfc9622},
 while exploring how to best expose as much QUIC functionality as possible
 through the TAPS API. The chapter first describes the overall scope
 of CTaps, before expanding on the chosen dependencies, internal architecture
@@ -18,10 +18,10 @@ several of the most beneficial features of the TAPS API such as candidate gather
 and candidate racing, as well as support for TCP, UDP and QUIC. In addition
 it presents all of the core objects of the TAPS API, such as Connections, Listeners and
 Connection Groups. It allows the application to set all Transport Properties listed
-in RFC 9622, although not all properties are supported internally and setting them has no effect.
+in RFC~9622, although not all properties are supported internally and setting them has no effect.
 When performing
 racing the most desirable protocols are attempted first and staggered racing
-is performed for less desirable protocols, as described in RFC 9623
+is performed for less desirable protocols, as described in RFC~9623
 \cite{brunstromImplementingInterfacesTransport2025}.
 \todo{Check in on this later, describe how large of a subset}
 
@@ -60,12 +60,12 @@ primarily avoiding race conditions and not having to guard shared
 state, since a single threaded event loop ensures that state
 is never accessed concurrently.
 
-When selecting a specific event loop library libuv \cite{Libuv2025} presented
+When selecting a specific event loop library libuv~\cite{Libuv2025} presented
 several advantages such as built-in protocol handles for TCP
 and UDP, in addition to being a mature library which is already
-used in production systems such as Node.js \cite{nodejsEventLoop}.
+used in production systems such as Node.js~\cite{nodejsEventLoop}.
 Libuv is also the event loop engine behind
-NEAT, which influenced the decision of CTaps \cite{neatCode}.
+NEAT, which influenced the decision of CTaps~\cite{neatCode}.
 
 Internally in CTaps, libuv provides the asynchronous interface
 which CTaps uses to interact with the network. It also provides
@@ -80,10 +80,10 @@ was needed to add QUIC support to CTaps.
 For this the largest priority was ease of use, in order
 to assist in exploring how to QUIC features map onto TAPS.
 
-Picoquic \cite{christianhuitemaPicoquic} was therefore chosen because
+Picoquic~\cite{christianhuitemaPicoquic} was therefore chosen because
 of its simplicity and was
 prioritized over larger and more performance-oriented libraries such as
-MsQuic \cite{MsQuic} from Microsoft.
+MsQuic~\cite{MsQuic} from Microsoft.
 
 A large advantage of Picoquic is that it features two modes of operation.
 It can either be used independently with its own event loop, or be
@@ -93,7 +93,7 @@ client completely independent of CTaps, while the second mode allowed Picoquic
 to integrate with libuv without having to manage two event loops.
 
 \subsection{GLib} \label{sec:glib-design-reason}
-CTaps uses GLib \cite{GLibGitLab} for implementations of
+CTaps uses GLib~\cite{GLibGitLab} for implementations of
 hash maps, linked lists, trees and arrays.
 
 GLib was added as a dependency since C has a small standard library
@@ -104,19 +104,19 @@ extensive testing, increasing the scope of CTaps.
 
 GLib itself was chosen because it is a large and mature library
 which is featured in several other large well known software libraries,
-such as GTK \cite{gtk_website}.
+such as GTK~\cite{gtk_website}.
 
 \subsection{log.c}
 In order to create structured logs which can
 easily be filtered by level
-CTaps uses log.c \cite{logc}.
+CTaps uses log.c~\cite{logc}.
 log.c was specifically chosen because of its simplicity
 and pure C implementation, making it easy to integrate
 with CTaps.
 
 \section{Architecture of CTaps} \label{sec:ctaps-arch-design}
 As mentioned, CTaps aims to conform to the asynchronous TAPS API described
-in RFC 9622 \cite{rfc9622}. Since CTaps is asynchronous it has
+in RFC~9622~\cite{rfc9622}. Since CTaps is asynchronous it has
 to rely on the result of any asynchronous operation being passed via
 callback, which affects the look of the external API and
 the internal architecture.
@@ -204,18 +204,18 @@ and how it interacts with Picoquic and libuv.
 
 \subsection{Mapping QUIC to TAPS} \label{sec:quic-arch-mapping}
 While the TAPS RFCs were designed with QUIC in mind, they were written before the
-QUIC design was finalized in RFC 9000 \cite{rfc9000}. This means that RFC 9623 does not
+QUIC design was finalized in RFC~9000~\cite{rfc9000}. This means that RFC~9623 does not
 feature any specific transport protocol considerations for mapping QUIC into
-a TAPS system \cite{brunstromImplementingInterfacesTransport2025}.
+a TAPS system~\cite{brunstromImplementingInterfacesTransport2025}.
 There exists a draft for mapping Transport Services to QUIC, but this has
-not made it into the official RFC \cite{transportServicesMappingForQuic}.
+not made it into the official RFC~\cite{transportServicesMappingForQuic}.
 
 The most important design decision made in CTaps in regards
 to QUIC was to map a QUIC Connection
 to a Connection Group instead of to a Connection. Since
 Connection Groups are populated by Connection cloning, and RFC
 9622 says \say{if the underlying protocol supports multi-streaming, it is natural to use this functionality to
-implement \mono{Clone}} \cite[Sec. 7.4]{rfc9622}, the Connection Group
+implement \mono{Clone}}~\cite[Sec. 7.4]{rfc9622}, the Connection Group
 becomes the natural model for the QUIC Connection.
 
 CTaps could
@@ -407,7 +407,7 @@ typedef struct ct_protocol_impl_s {
 
 \section{API Design}
 The external API of CTaps is designed according to the TAPS API
-described in RFC 9622 \cite{rfc9622}.
+described in RFC~9622~\cite{rfc9622}.
 The TAPS API is object oriented and asynchronous, which are the core
 aspects of CTaps as well. In addition, CTaps hides
 internal state from the user and only exposes getters and setters
@@ -447,7 +447,7 @@ its pointer, a pattern which can be seen in \cref{lst:using-remote-endpoint}.
 This pattern was chosen in order to make it more clear exactly which fields it is
 allowed to interact with, and which fields are only used internally in CTaps. This
 also allowed CTaps to differentiate between read-only Connection Properties and writable
-Connection Properties as described in the TAPS API \cite[Sec. 8.1.11]{rfc9622}.
+Connection Properties as described in the TAPS API~\cite[Sec. 8.1.11]{rfc9622}.
 
 \begin{listing}[htbp]
 \caption[Remote Endpoint Structure]
@@ -551,7 +551,7 @@ are used for asynchronous errors.
 Error codes in CTaps are
 negative values matching
 an errno corresponding to the given error. This matches the
-error convention used by libuv \cite{libuv_errors}.
+error convention used by libuv~\cite{libuv_errors}.
 
 If a function 
 can fail asynchronously then it also takes error callbacks as
@@ -582,7 +582,7 @@ This event loop will block the invoking thread until there are
 no more open handles performing work.
 
 CTaps is not designed with multi-threading in mind and does not make use
-of the threading API available through libuv \cite{libuv_threading}. This
+of the threading API available through libuv~\cite{libuv_threading}. This
 means that there is no internal synchronization and it expects applications
 to only interact with CTaps through a single thread, which eventually will
 start executing the event loop. Multi-threading is avoided in order to

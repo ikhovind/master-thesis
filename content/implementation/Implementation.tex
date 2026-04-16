@@ -124,10 +124,10 @@ internally within CTaps.
 \subsection{Candidate Gathering} \label{sec:candidateGathering}
 Before a Connection can be established, a list of possible Local and Remote
 need to be generated based on the data passed to the associated Preconnection.
-In CTaps this candidate gathering follows the procedure described in RFC 9623
+In CTaps this candidate gathering follows the procedure described in RFC~9623
 very closely.
 
-Using N-ary tree as described in RFC 9623 \cite{brunstromImplementingInterfacesTransport2025},
+Using N-ary tree as described in RFC~9623~\cite{brunstromImplementingInterfacesTransport2025},
 CTaps first builds the entire tree and resolves
 all possible local interfaces, all protocols, specified ALPNs and all possible resolutions of
 remote hostnames respectively. Each level in the tree corresponds to a specific
@@ -137,18 +137,18 @@ stack and a specific Remote Endpoint, are referred to as a candidate.
 
 After the entire tree has been built, CTaps prunes the branches which
 are not compatible with the required or prohibited selection properties. After pruning,
-the tree is sorted according to the stated selection properties, as described in RFC 9623 
+the tree is sorted according to the stated selection properties, as described in RFC~9623 
 \cite{brunstromImplementingInterfacesTransport2025}. Finally, the leaves of the tree
 are extracted into an array of candidates which is then used for candidate racing.
 
 \subsection{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered, CTaps
-will race them according to the specification from RFC 9623
+will race them according to the specification from RFC~9623
 \cite{brunstromImplementingInterfacesTransport2025}. 
 
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
-system follows the same procedure as specified in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017},
+system follows the same procedure as specified in Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017},
 which was originally designed to increase IPv6 adoption as described in \cref{happyEyeballs}.
 TAPS takes racing a step further by not only racing IP-address families, but also
 racing potential protocol configurations and endpoints.
@@ -160,7 +160,7 @@ are canceled upon the first success.
 
 Since CTaps has no internal cache and therefore no support for RTT estimation, the delay
 between each candidate is set to a fixed 250 ms which is the recommended value
-in Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017}. In a real-world
+in Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}. In a real-world
 use case this is a major limitation, which is discussed further in \cref{sec:discussion}.
 
 An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.
@@ -501,7 +501,7 @@ multiplexing.}
 
 \section{Connection Migration} \label{sec:connection-migration-impl}
 Connection migration is supported in CTaps by default, but multipath
-is by default disabled for clients in RFC 9622 \cite[Sec. 6.2.14]{rfc9622}.
+is by default disabled for clients in RFC~9622~\cite[Sec. 6.2.14]{rfc9622}.
 
 If multipath is set to active
 then CTaps will probe all Local Endpoints registered with the Connection through
@@ -594,7 +594,7 @@ A TAPS system can in support migration to both a new local and a new remote endp
 since the application is able to add both multiple Local and multiple Remote Endpoints
 to a Connection.
 Whether a system actually makes use of the multiple endpoints is however left up to the
-underlying transport protocol \cite[Sec. 7.5]{rfc9622}. For QUIC CTaps therefore only 
+underlying transport protocol~\cite[Sec. 7.5]{rfc9622}. For QUIC CTaps therefore only 
 supports intitating migrating to new Local Endpoints and only supports
 migration initiated by a client. Migration initiated by the remote
 is supported as long as the \mono{multipath} Selection Property is not
@@ -686,7 +686,7 @@ behind the thesis as a whole.
 \subsubsection{UDP} \label{sec:udpImpl}
 UDP is the simplest of the three currently supported protocols in CTaps
 and it has native
-support in libuv through the libuv \mono{uv_udp_t} handle \cite{libuvLibuvUDPHandle}.
+support in libuv through the libuv \mono{uv_udp_t} handle~\cite{libuvLibuvUDPHandle}.
 The relative protocol complexity is discussed further in
 in \cref{sec:protocolComplexity}.
 
@@ -713,7 +713,7 @@ in \cref{sec:protocol-impl-sel-props}.
 \subsubsection{TCP}
 TCP is one of the three protocols currently supported by CTaps, and has native
 support in libuv through the
-\mono{uv_tcp_t} handle \cite{libuvLibuvTCPHandle}.
+\mono{uv_tcp_t} handle~\cite{libuvLibuvTCPHandle}.
 
 Overall, TCP fits relatively well into the model
 provided by the TAPS API.
@@ -774,7 +774,7 @@ in addition to the actual packet data.
 
 Libuv does not currently
 support setting the from address on a regular \mono{uv_udp_t} handle,
-as \mono{uv_udp_send()} does not feature a from address as a parameter \cite{libuv_udp_send}.
+as \mono{uv_udp_send()} does not feature a from address as a parameter~\cite{libuv_udp_send}.
 Packets sent over a \mono{uv_udp_t} handle will therefore use the
 IP address the socket is bound to as a from address.
 If the socket is bound to a ephemeral address, then the kernel will
@@ -880,7 +880,7 @@ explicitly set a value for a certain property. In addition, each protocol implem
 keeps track of which Selection Properties it can and cannot fulfill.
 
 The default Selection Properties for each application is prescribed by TAPS in
-RFC 9622 \cite[Sec. 6.2]{rfc9622} and are designed
+RFC~9622~\cite[Sec. 6.2]{rfc9622} and are designed
 to be to be compatible with as many applications as possible.
 
 The Selection Properties each protocol fulfills are implementation specific
@@ -925,7 +925,7 @@ a Connection and the Selection Properties fulfilled by each protocol as defined 
     \small
     \item $^1$ CTaps only supports multipath in terms of connection migration, and does
       not support using multiple paths at once.
-    \item $^2$ AdvertisesAltAddress is set to a boolean RFC 9622 \cite[Sec. 6.2.15]{rfc9622},
+    \item $^2$ AdvertisesAltAddress is set to a boolean RFC~9622~\cite[Sec. 6.2.15]{rfc9622},
       but this cannot be used to reflect a protocol which can both advertise and not advertise.
       This becomes problematic if this value is used for filtering candidates.
 \end{tablenotes}
@@ -975,7 +975,7 @@ to the application.
 \end{table}
 
 \section{Testing} \label{testing}
-CTaps uses a test system built around Google Test \cite{GoogleTest2025} and FFF
+CTaps uses a test system built around Google Test~\cite{GoogleTest2025} and FFF
 \cite{longFakeFunctionFramework2025}. Google Test is a C++ library developed by
 Google which provides a rich set of macros to define tests and assertions
 to verify behavior. FFF is a C library which provides macros to easily
@@ -993,7 +993,7 @@ integration tests.
 FFF can mock both functions within CTaps itself and functions from external libraries
 such as libuv. Since mocking in FFF creates a new symbol with the same name as the mocked function
 it is especially useful when combined with wrapping symbols at link time, 
-such as with the \mono{-}\mono{-}\mono{wrap} flag in the GNU linker \cite{gnuLinkerManual}.
+such as with the \mono{-}\mono{-}\mono{wrap} flag in the GNU linker~\cite{gnuLinkerManual}.
 This can be used to redirect all invocations of a function
 to its mock at link time, avoiding any issues with symbol conflicts.
 
@@ -1066,10 +1066,10 @@ a single shared object file.
 
 As a limitation of scope in the original thesis description, CTaps is only
 targeted towards Linux. However, since I/O and other system calls are handled
-by libuv which does support windows \cite{Libuv2025}, CTaps is likely very close to being
+by libuv which does support windows~\cite{Libuv2025}, CTaps is likely very close to being
 Windows-compatible, but this has not been tested.
 
-The library is distributed through GitHub \cite{cTaps}. No binaries
+The library is distributed through GitHub~\cite{cTaps}. No binaries
 are compiled by default, but the project can be downloaded directly
 in CMake using FetchContent, as exemplified in the CTaps example project
 \cite{ctaps-example-project}.

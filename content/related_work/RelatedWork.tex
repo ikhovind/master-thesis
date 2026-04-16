@@ -2,13 +2,13 @@
 
 \section{NEAT}
 One of the first open source implementations of TAPS is 
-NEAT \cite{khademiNEATPlatformProtocolIndependent2017} \cite{neatCode},
+NEAT~\cite{khademiNEATPlatformProtocolIndependent2017, neatCode},
 whose development was funded by the EU horizon 2020 project
-from 2015 to 2018 \cite{neatFunding}.
+from 2015 to 2018~\cite{neatFunding}.
 Developed alongside TAPS, the development of TAPS and NEAT naturally
 affected each other, however, while NEAT halted development in 2018,
-the TAPS API has continued to evolve, and the final TAPS RFC was published
-in 2025 \cite{rfc9622}.
+the TAPS API has continued to evolve, and the final TAPS RFC~was published
+in 2025~\cite{rfc9622}.
 
 NEAT is an asynchronous library and
 uses an event loop and allowing for users to add their own callbacks.
@@ -25,7 +25,7 @@ is in contrast to TAPS, where the application only interfaces
 with the protocol through selection properties.
 
 \section{NEATPy}
-NEATPy \cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
+NEATPy~\cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
 is a Python library developed as a master's thesis at UiO in 2020.
 It was developed as an attempt to create a
 Python layer to bridge the growing gap between NEAT and TAPS. Among
@@ -42,13 +42,13 @@ allow support QUIC, as this is not supported by NEAT.
 Another
 limitation of NEATPy is that it was developed before the finalization of
 the TAPS standard. Developed in 2020, NEATPy is based mostly on
-version 4 and 5 of the TAPS interface draft \cite[p. 109]{gundersenNEATPyStandardsConformantProtocolIndependent2020}.
+version 4 and 5 of the TAPS interface draft~\cite[p. 109]{gundersenNEATPyStandardsConformantProtocolIndependent2020}.
 The TAPS API has since evolved, and was 
 published as an proposed standard in January 2025
 \cite{rfc9622}.
 
 Since the finalization of NEATPy, several new features have been added
-to TAPS since version 5 of the TAPS draft \cite{ietf-taps-interface-05}.
+to TAPS since version 5 of the TAPS draft~\cite{ietf-taps-interface-05}.
 For example, the support for giving more than one local and remote
 endpoint when creating a Preconnection. This is done when the application
 wants to indicate that several endpoints are eligible for the connection
@@ -72,7 +72,7 @@ Some selection properties have also been removed from the TAPS API:
 
 In addition to the outward differences to the API, there are also several
 changes to the required internal workings of TAPS since the development of NEATPy.
-For example, in the final RFC TAPS has loosened the required
+For example, in the final RFC~TAPS has loosened the required
 order of operations when working with selection properties.
 Previously, there was a strict precedence in the order of
 which preference values were to be applied.
@@ -82,11 +82,11 @@ relaxed.% and the prioritization has been moved from being
 % selection properties will affect the path selection.
 
 \section{Network.framework}
-Apple's Network.framework \cite{networkFramework} follows some of the same concepts
+Apple's Network.framework~\cite{networkFramework} follows some of the same concepts
 laid out by TAPS, although it is not a complete implementation. It
 features several of the same abstraction objects
 such as Connections and Listeners and presents itself as an alternative 
-to using sockets directly \cite{wwdc2018}. There are however several key differences between
+to using sockets directly~\cite{wwdc2018}. There are however several key differences between
 Network.framework and a fully fledged TAPS system, with the most important
 being the lack of Selection Properties and racing of protocol candidates.
 
@@ -96,17 +96,17 @@ Happy Eyeballs-style racing of IPv4/IPv6 addresses, it does not support
 racing across multiple remote endpoints or across different transport protocols, as TAPS describes.
 
 \section{PyTAPS}
-PyTAPS \cite{frankePythonasynciotaps2025} is a Python library aiming
+PyTAPS~\cite{frankePythonasynciotaps2025} is a Python library aiming
 to be fully compliant with TAPS. Unlike NEATPy, PyTAPS is not built
 on top of NEAT, and therefore does not suffer from the same limitations
 that NEATPy does. However, PyTAPS is based on the fourth version of the TAPS
-interface draft \cite{frankePythonasynciotaps2025} and has not had active
+interface draft~\cite{frankePythonasynciotaps2025} and has not had active
 development since 2020. As such, it naturally suffers from the same
 issues as NEATPy when it comes to the changes in the TAPS API.
 
 \section{Dynamic TAPS}
 dynamic-taps is a C implementation of TAPS, developed by the
-American technology company F5 \cite{dukeDynamictaps2025}. It
+American technology company F5~\cite{dukeDynamictaps2025}. It
 is in the very early stages of development and has not had
 active development since 2021, several years before the
 finalzation of the TAPS RFCs.

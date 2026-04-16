@@ -36,7 +36,7 @@ degree.
 
 
 \subsubsection{Software Tools} \label{sec:softwaretools}
-When performing benchmarks, the Linux utility \mono{tc-netem} was used \cite{tc-netem} to emulate delay, bandwidth limitations
+When performing benchmarks, the Linux utility \mono{tc-netem} was used~\cite{tc-netem} to emulate delay, bandwidth limitations
 and potential jitter.
 
 Netem could be invoked programmatically
@@ -44,7 +44,7 @@ from the Python testing script, which allowed a series network conditions to be 
 a single benchmark, for example the four RTTs
 in the handshake benchmark.
 
-In the migration test, iptables \cite{iptables_man} was used in order to block a specific path based on
+In the migration test, iptables~\cite{iptables_man} was used in order to block a specific path based on
 source IP, destination IP, protocol and destination port. The specific command
 used when blocking a local path can be seen in \cref{lst:iptables-command}.
 An equivalent command blocking
@@ -52,9 +52,9 @@ TCP data was also run, in order to illustrate the TCP connection failing after a
 
 This command adds a packet filter rule to the OUTPUT chain in the Linux kernel.
 This chain is
-run for locally generated packets \cite{iptables_man}, and when a packet
+run for locally generated packets~\cite{iptables_man}, and when a packet
 matches the assigned rule, netfilter rejects it and propagates \mono{-EPERM} back through the network
-stack \cite{LinuxKernelNfHookSlow}. \mono{sendmsg()} then returns -1 with
+stack~\cite{LinuxKernelNfHookSlow}. \mono{sendmsg()} then returns -1 with
 errno set to \mono{EPERM} according to POSIX conventions.
 
 For CTaps this works well as it could
@@ -73,7 +73,7 @@ For the simulation it was desirable for the Picoquic client
 to also treat \mono{EPERM} as implying that the remote is unreachable. Picoquic was therefore forked
 and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
-unreachable \cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
+unreachable~\cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
 for the Picoquic client when benchmarking. All other instances of Picoquic,
 including the one used in CTaps, were fetched from the main Picoquic repository.
 
@@ -344,7 +344,7 @@ expected behavior
 is that closing an individual Connection will close both the sending
 and receiving side and start teardown. For QUIC, this can in theory be emulated by sending a \mono{FIN}
 flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
-frame if their stream is in a ready or sending state \cite{rfc9000}.
+frame if their stream is in a ready or sending state~\cite{rfc9000}.
 A \mono{RESET_STREAM} frame tears down a QUIC stream in the sending direction,
 which in combination with the \mono{FIN} flag sent would completely close the stream.
 
@@ -365,7 +365,7 @@ after the peer has finished sending its data.
 If a peer wants to gracefully close
 a connection before all data has been received, the only way of handling it gracefully is to
 close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
-functionality from RFC9622 \cite{rfc9622}.
+functionality from RFC9622~\cite{rfc9622}.
 
 If the application takes care of performing TAPS connection cloning in a consistent way,
 it can consistently use \mono{ConnectionGroup.close()} and achieve the same
@@ -375,7 +375,7 @@ should interact with the API.
 
 This mapping of QUIC connections to TAPS connection groups also affects how
 CTaps handles the notification of path changes. In TAPS, the PathChange 
-event is per-Connection \cite[Sec. 8.3.2]{rfc9622},
+event is per-Connection~\cite[Sec. 8.3.2]{rfc9622},
 while QUIC migrations is per-Connection Group.
 
 For CTaps this means that for each path change event every CTaps Connection is notified
@@ -389,30 +389,30 @@ through a TAPS Connection.
 One example of this is the one-way abort mentioned
 earlier through \mono{STOP_SENDING}, which requests that the peer abort their
 sending, and \mono{RESET_STREAM}
-which aborts the local sending side \cite[Sec. 19.4, 19.5]{rfc9000}.
+which aborts the local sending side~\cite[Sec. 19.4, 19.5]{rfc9000}.
 For aborting Connections, the TAPS API presents only the generic
-\mono{Connection.abort()} \cite[Sec. 10]{rfc9622}.
+\mono{Connection.abort()}~\cite[Sec. 10]{rfc9622}.
 A TAPS implementation therefore has no way of knowing whether the application
 wants to abort sending, abort receiving, or both. The only natural conclusion is
 therefore to abort both sending and receiving, leaving the granular QUIC control 
 unavailable to the application.
 
 Another stream functionality which is not exposed through CTaps is
-initiating unidirectional streams \cite[Sec. 1]{rfc9000}.
+initiating unidirectional streams~\cite[Sec. 1]{rfc9000}.
 Currently TAPS implementations have to assume that every new stream opened via \mono{Connection.clone()}
 is bidirectional, although since the TAPS API is extensible a parameter could
 easily be added when Cloning a Connection to support this.
 
 Despite not being able to initiate unidirectional sending, a TAPS implementation
 is able to receive an unidirectional stream initiated by the peer as expected by QUIC.
-It can infer from the stream ID that it is unidirectional \cite[Sec. 2.1]{rfc9000}
+It can infer from the stream ID that it is unidirectional~\cite[Sec. 2.1]{rfc9000}
 and mark the resulting Connection as closed for sending before presenting it to the application.
 
-Withing QUIC, there are also several transport parameters \cite[Sec. 18]{rfc9000} which are not
+Withing QUIC, there are also several transport parameters~\cite[Sec. 18]{rfc9000} which are not
 exposed through the TAPS API. TAPS does not feature a generic timeout value
-which can be passed as \mono{max_idle_timeout} \cite[Sec. 10.1]{rfc9000}.
+which can be passed as \mono{max_idle_timeout}~\cite[Sec. 10.1]{rfc9000}.
 While TAPS does support timeouts for when sending data, for example through
-the Timeout for Aborting Connection Connection Property \cite[Sec. 8.1.3]{rfc9622},
+the Timeout for Aborting Connection Connection Property~\cite[Sec. 8.1.3]{rfc9622},
 it does not feature a generic idle timeout for automatically closing a connection.
 
 The TAPS API also does not support setting a maximum data to be received on either
@@ -430,35 +430,35 @@ connection-level max data, but this is not surfaced through CTaps.
 Picoquic does not provide a per-stream max data configuration.
 
 While TAPS does allow the application to control the number of Connections
-in a Connection Group through the groupConnLimit Connection Property \cite[Sec. 8.1.9]{rfc9622},
+in a Connection Group through the groupConnLimit Connection Property~\cite[Sec. 8.1.9]{rfc9622},
 it loses some granularity exposed through QUIC when controlling the number
 of streams in a connection. QUIC allows control over both the maximum number
 of both unidirectional and bidirectional streams through either the
 \mono{initial_max_streams_uni} and \mono{initial_max_streams_bidi} or a
-\mono{MAX_STREAMS} frame \cite[Sec. 18.2, 19.11]{rfc9000}. 
+\mono{MAX_STREAMS} frame~\cite[Sec. 18.2, 19.11]{rfc9000}. 
 
 QUIC path migration is supported in TAPS, and the migration
 policy can be controlled through the
 \mono{multipath} Selection Property.
 For QUIC servers it can be used to set the
-\mono{disable_active_migration} transport parameter \cite[Sec. 18.2]{rfc9000},
+\mono{disable_active_migration} transport parameter~\cite[Sec. 18.2]{rfc9000},
 while for clients it can be used to simply disable active migration.
 
 The combination of \mono{multipath} and the \mono{multipathPolicy} 
-Connection Property \cite[Sec. 8.1.7]{rfc9622} gives
+Connection Property~\cite[Sec. 8.1.7]{rfc9622} gives
 a more granular control of the expected behavior when using
 multipath than is featured in QUIC.
 This is expected from TAPS
-and it is clearly documented in RFC 9622 that Connection Properties
+and it is clearly documented in RFC~9622 that Connection Properties
 will only have an effect if they can actually be mapped onto the
-underlying connection \cite[Sec. 5]{rfc9622}. 
+underlying connection~\cite[Sec. 5]{rfc9622}. 
 
 An overview of the
-expected behavior according to RFC 9622 can be seen in
+expected behavior according to RFC~9622 can be seen in
 \cref{tab:multipath-combinations}.
 The \mono{interactive} and \mono{aggregate} multipath policies require
 simultaneous use of multiple paths, which is not supported in RFC~9000 QUIC.
-The IETF QUIC multipath extension \cite{ietf-quic-multipath-21} is currently
+The IETF QUIC multipath extension~\cite{ietf-quic-multipath-21} is currently
 under development and would enable these policies to be fully supported in a
 future version of CTaps.
 
@@ -489,7 +489,7 @@ future version of CTaps.
     \end{tabular}
     \begin{tablenotes}
       \small
-  \item[1] For QUIC servers, which cannot migrate \cite[Sec. 1]{rfc9000}, \mono{disabled}
+  \item[1] For QUIC servers, which cannot migrate~\cite[Sec. 1]{rfc9000}, \mono{disabled}
            can be used to set the \mono{disable_active_migration} transport parameter. For
            QUIC clients \mono{passive} and \mono{disabled} are equivalent since servers
            cannot migrate.
@@ -498,16 +498,16 @@ future version of CTaps.
 \end{table}
 
 On the server side, TAPS does not expose the \mono{preferred_address} 
-transport parameter \cite[Sec. 18.2]{rfc9000} directly.
+transport parameter~\cite[Sec. 18.2]{rfc9000} directly.
 This parameter is used by a QUIC server when it wants to accept on a given address but wants
-to migrate it to a new address shortly after the handshake \cite[Sec. 9.6]{rfc9000}.
+to migrate it to a new address shortly after the handshake~\cite[Sec. 9.6]{rfc9000}.
 A workaround could be made by setting \mono{advertisesAltaddr} and
 interpreting a second Local Endpoint as a preferred address for a Listener, but this
 would be a fairly large break with the expected behavior from other protocols.
 
 The remaining QUIC transport parameters which have no suitable mapping in TAPS
 and cannot be assumed to be handled automatically are \mono{ack_delay_exponent} 
-and \mono{max_ack_delay} \cite[Sec. 18.2]{rfc9000}, which both can be
+and \mono{max_ack_delay}~\cite[Sec. 18.2]{rfc9000}, which both can be
 assumed to be reasonably handled through the underlying QUIC implementation.
 
 There are also other features such as stateless reset which are not exposed through the TAPS
@@ -551,9 +551,9 @@ and how they may into CTaps and TAPS in general can be seen in
 \multicolumn{2}{l}{\textit{Supported through TAPS, but not implemented in CTaps}} \\
 \midrule
 \multicolumn{1}{l||}{Multipath} & Selection Property\\
-\multicolumn{1}{l||}{QUIC Datagrams \cite{rfc9221}} & Message Property \\
+\multicolumn{1}{l||}{QUIC Datagrams~\cite{rfc9221}} & Message Property \\
 \multicolumn{1}{l||}{PING Frames} & Connection Property \\
-\multicolumn{1}{l||}{Key Update \cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
+\multicolumn{1}{l||}{Key Update~\cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
 \multicolumn{1}{l||}{ECN} & Message Property \\
 \multicolumn{1}{l||}{\mono{disable_active_migration}} & Selection Property\\
 \multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{3}} & Connection Property \\
@@ -582,7 +582,7 @@ or exceeding the behavior of CTaps when using TCP as the underlying protocol.
 \item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
 \item[3] Requires that recvMsgMaxLen is communicated to the peer.
 \item[4] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
-\item[6] CTaps can set Connection timeout, but only when \say{trying to reliably deliver data to the Remote Endpoint} \cite[Sec. 8.1.3]{rfc9622}.
+\item[6] CTaps can set Connection timeout, but only when \say{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
 \item[7] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC.
 \end{tablenotes}
 \end{threeparttable}
@@ -601,7 +601,7 @@ servers with different protocols, due to candidate racing.
 The benchmark does however also show that candidate racing
 is not implemented optimally in CTaps.
 Currently, CTaps uses static stagger delay
-of 250 milliseconds between attempts as recommended by Happy Eyeballs V2 \cite{schinaziHappyEyeballsVersion2017}, but it does
+of 250 milliseconds between attempts as recommended by Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}, but it does
 not implement interleaving as described in the same document.
 This means that all
 combinations involving the most desirable protocol are attempted
@@ -643,7 +643,7 @@ on a single local path.
 With the larger number of
 possible combinations of candidates, a TAPS implementation should heed the
 more closely follow the recommendations for racing on multihomed hosts as
-described in \cite{rfc8421}.
+described in~\cite{rfc8421}.
 
 Other potential mitigations for this problem with interleaving is discussed further
 in \cref{sec:future-work}.
@@ -656,7 +656,7 @@ endpoints have been resolved before sorting the gathered candidates according
 to the application preferences and then working its way down the list.
 This could be optimized by integrating candidate gathering and candidate
 racing more tightly, utilizing a Resolution Delay similar to the one described
-in Happy Eyeballs \cite{schinaziHappyEyeballsVersion2017}.
+in Happy Eyeballs~\cite{schinaziHappyEyeballsVersion2017}.
 
 % Discuss candidate racing benchmark
 \subsection{Slow and Fast Endpoint Handshake Benchmark}
@@ -684,7 +684,7 @@ situations downloading large files like required for this benchmark this is unco
 
 In 2025 Cloudflare
 measured that the median number of packets sent to visitors to their service
-was 12 \cite{sulemanahmadMeasuringCharacteristicsTCP2025}. A majority of 
+was 12~\cite{sulemanahmadMeasuringCharacteristicsTCP2025}. A majority of 
 connections never even leave slow start.
 
 However, it can also be argued that
@@ -763,8 +763,8 @@ fallback logic which is not accounted for in this table.
 It is clear that the functionality present in QUIC has been desired
 for a long time, and
 several popular libraries exist which have significant feature overlap
-with QUIC. Two examples are Valve's GameNetworkingSockets \cite{ValveGameNetworkingSockets} and ENet
-\cite{Enet}. Both of these predate the finalization of the QUIC RFC in 2021 and
+with QUIC. Two examples are Valve's GameNetworkingSockets~\cite{ValveGameNetworkingSockets} and ENet
+\cite{Enet}. Both of these predate the finalization of the QUIC RFC~in 2021 and
 contain overlapping features which are also implemented through QUIC, such as connection
 management over UDP or multistreaming (referred to as "Channels" in Enet).
 
@@ -790,7 +790,7 @@ from the very beginning, creating a barrier for adoption in existing libraries.
 % Discuss QUIC under TAPS
 \subsection{QUIC under TAPS}
 Since the TAPS RFCs were written before the QUIC design was finalized
-in RFC 9000 \cite{rfc9000}, part of the motivation for developing CTaps
+in RFC~9000~\cite{rfc9000}, part of the motivation for developing CTaps
 was to find out which QUIC features could not be presented through the
 TAPS API.
 
@@ -810,7 +810,7 @@ connection to a server, to ensure that if the underlying protocol supports multi
 then the entire connection will be closed.
 
 While this breaks slightly with 
-with the principle of least surprise as described in RFC 9622 \cite{rfc9622}, it provides
+with the principle of least surprise as described in RFC~9622~\cite{rfc9622}, it provides
 greater flexibility and consistent behavior to the downstream application.
 
 \subsection{Racing with UDP}
@@ -874,10 +874,10 @@ to downgrade security since the insecure variants of protocols are at
 an advantage during candidate racing since they require fewer RTTs.
 
 In addition to mandating that TAPS implementations set the default allowed
-security protocols to be the best available, RFC 9622 also mentions that applications
+security protocols to be the best available, RFC~9622 also mentions that applications
 should use common safe defaults for security parameters
 \cite{rfc9622}. This means that the
-default should be requiring an encrypted connection. RFC 9622 also describe
+default should be requiring an encrypted connection. RFC~9622 also describe
 the difference between disabled Security Parameters and opportunistic
 Security Parameters.
 
@@ -949,7 +949,7 @@ CTaps has throughout had a larger focus on exposing as much as possible of
 the TAPS API, without necessarily implementing the internal logic associated with
 the actual API settings. 
 This was done to see exactly how the designed TAPS
-RFC would actually map into code and that the different settings could actually be
+RFC~would actually map into code and that the different settings could actually be
 presented well. Although this has proven successful in providing a public
 API to reason about and guidance for future TAPS implementations, this is
 not the ideal starting location when considering future real-world usage of
@@ -1001,7 +1001,7 @@ mode of operation as epected by CTaps, in order to integrate it into the libuv
 event loop.
 
 An alternative more performance-oriented QUIC library in C is for example
-be MsQuic \cite{MsQuic}. MsQuic is a cross-platform C implementation of QUIC
+be MsQuic~\cite{MsQuic}. MsQuic is a cross-platform C implementation of QUIC
 developed by Microsoft. With MsQuic being a cross-platform library it would
 further enable CTaps to become cross-platform as well, since the core dependencies
 of Libuv and MsQuic would be cross-platform. For CTaps, the QUIC
@@ -1019,7 +1019,7 @@ callbacks. This mirrors how CTaps interacts with its downstream
 applications. In theory this execution mode could be integrated
 into CTaps, but it would require using async handles in libuv [cite], since
 MsQuic specifically require that the callback functions do not
-introduce significant delay \cite{msquic_execution}. This would
+introduce significant delay~\cite{msquic_execution}. This would
 be a significant architectural change in CTaps and introduce
 a large amount of complexity.
 
@@ -1055,7 +1055,7 @@ QUIC_EXECUTION_CONFIG ExecConfig = { 0, &IOCP };
 QUIC_EXECUTION* ExecContext = nullptr;
 QUIC_STATUS Status = MsQuic->ExecutionCreate(QUIC_GLOBAL_EXECUTION_CONFIG_FLAG_NONE, 0, 1, &ExecConfig, &ExecContext);
 \end{minted}
-\caption{MsQuic code to create an event queue object \cite{msquic_execution}.}
+\caption{MsQuic code to create an event queue object~\cite{msquic_execution}.}
 \label{lst:msquicCustomEpoll}
 \end{listing}
 
@@ -1075,7 +1075,7 @@ while (!AllDone) {
     }
 }
 \end{minted}
-\caption{MsQuic code to poll custom event queue object \cite{msquic_execution}.}
+\caption{MsQuic code to poll custom event queue object~\cite{msquic_execution}.}
 \label{lst:msquicCustomLoop}
 \end{listing}
   
