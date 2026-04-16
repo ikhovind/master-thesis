@@ -165,7 +165,7 @@ use case this is a major limitation, which is discussed further in \cref{sec:dis
 
 An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.
 Here, DNS resolution resolves two endpoints with delays of
-RTT of 300 and 100 ms respectively. The slower endpoint is attempted first,
+RTT of 300 and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
 but the faster RTT leads to the second endpoint winning the race and being
 presented to the application.
 In the example the DNS resolution is set to take 100 ms
