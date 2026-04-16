@@ -3,20 +3,25 @@
    \def\input@path{{./front}}
 \makeatother
 
-\documentclass[USenglish]{uiomasterthesis}  %% ... or norsk or nynorsk or USenglish
-\usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}                 %% ... or latin1
+\documentclass[binding, USenglish]{uiomasterthesis}  %% ... or norsk or nynorsk or USenglish
 \usepackage[T1]{url}\urlstyle{sf}
 \usepackage{float}
 \usepackage[parfill]{parskip} % New line between paragraphs, no indentation
-\usepackage[backend=biber,style=numeric-comp,url=true]{biblatex}
-\usepackage[hidelinks, hypertexnames=false]{hyperref}
+\usepackage[backref=page,backend=biber,style=numeric-comp,url=true]{biblatex}
+\usepackage[
+  hidelinks,
+  hypertexnames=false,
+  pdftitle={A Taps Implementation for Linux},
+  pdfauthor={Ingebrigt Hovind},
+  pdfsubject={Master's thesis},
+  pdfkeywords={TAPS, transport layer, Linux}
+]{hyperref}
+\usepackage{bookmark}
 \usepackage[cache=true]{minted}
+\setminted[text]{numbers=none}
 \usepackage{xr}
-\usepackage{amssymb}
 \usepackage{placeins}
-\usepackage{microtype}
-
+\captionsetup{format=plain, font=small, labelfont=bf}
 \widowpenalty=10000
 \clubpenalty=10000
 
@@ -27,8 +32,6 @@
 \usepackage{marginnote}
 \usepackage{xurl}
 \usepackage{fancyvrb}
-\usepackage{hyperref}
-\usepackage{amssymb}
 \usepackage{pifont}
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
@@ -42,9 +45,7 @@
 \usepackage{xcolor}
 \usepackage{colortbl}
 \usepackage{amsmath}
-\usepackage{dirtytalk}
 \usepackage{appendix}
-\usepackage{listings}
 \usepackage{siunitx}
 \sisetup{per-mode=symbol}
 \usepackage{tabularx} % in preamble
@@ -53,6 +54,7 @@
 \usepackage{calculator}
 \usepackage{babel, csquotes, graphicx, textcomp, uiomasterfp, varioref}
 \usepackage[colorinlistoftodos, textwidth=\marginparwidth]{todonotes}
+\usepackage{microtype}
 \usepackage{cleveref}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -65,18 +67,11 @@
 
 \usepackage{import}     % Enable importing of sections
 
-\PassOptionsToPackage{showframe}{geometry}
-
-\addbibresource{./references/masterthesis.bib}
-
-\title{A Taps Implementation for Linux}        %% ... or whatever
+\title{A TAPS Implementation for Linux}        %% ... or whatever
 \subtitle{A library to remove the compile-time binding to transport layer protocols}         %% ... if any
 \author{Ingebrigt Hovind}                      %% ... or whoever 
 \date{\today}
 
-\pagestyle{fancy}
-\fancyhead[L]{A Taps Implementation for Linux} % left header
-\fancyhead[R]{Ingebrigt Hovind} % right header
 \renewcommand{\headrulewidth}{0pt} % remove the horizontal line
 \newcommand\wordcount{\input{|"texcount -inc -sub -sum -0 -template={SUM} \jobname.tex"}}
 \newcommand{\mono}[1]{\texttt{\expandafter\detokenize\expandafter{#1}}}
@@ -90,11 +85,24 @@
 
 \begin{document}
 
+\renewcommand{\headrulewidth}{0.4pt}  % ruler on running pages
+
+\fancypagestyle{plain}{
+    \fancyhead{}
+    \renewcommand{\headrulewidth}{0pt}  % no ruler on chapter openers
+    \fancyfoot[LE,RO]{\textsf{\thepage}}  % keep page number
+}
+
+% \fancyhead[LE]{\textsf{\small A TAPS Implementation for Linux} \quad \textbar \quad \textsf{\small \nouppercase{\leftmark}}}
+% \fancyhead[LE]{\textsf{\small \nouppercase{\leftmark}}}
+\fancyhead[LE]{\textsf{\small \nouppercase{\leftmark}}}
+\fancyhead[RO]{\textsf{\small \nouppercase{\rightmark}}}
+% \fancyhead[LE]{\textsf{\small Your Thesis Title}}
+% \fancyhead[RO]{\textsf{\small \nouppercase{\rightmark}}}
+
 \uiomasterfp[
   supervisor={Michael Welzl},                    %% ... or blank
   long]                                     %% ... or short
-
-\hfuzz=4pt
 
 \frontmatter{}
 
@@ -125,6 +133,8 @@
 \import{./content/evaluation/}{Evaluation}
 \import{./content/conclusion/}{Conclusion}
 \appendix
+\appendixpage
+
 \import{./content/appendix/}{Appendix}
 
 \backmatter{}

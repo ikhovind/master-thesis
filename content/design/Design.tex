@@ -214,7 +214,7 @@ The most important design decision made in CTaps in regards
 to QUIC was to map a QUIC Connection
 to a Connection Group instead of to a Connection. Since
 Connection Groups are populated by Connection cloning, and RFC
-9622 says \say{if the underlying protocol supports multi-streaming, it is natural to use this functionality to
+9622 says \enquote{if the underlying protocol supports multi-streaming, it is natural to use this functionality to
 implement \mono{Clone}}~\cite[Sec. 7.4]{rfc9622}, the Connection Group
 becomes the natural model for the QUIC Connection.
 

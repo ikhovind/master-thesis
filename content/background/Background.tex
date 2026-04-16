@@ -1,4 +1,4 @@
-\chapter{Background} \label{chap:background}
+\chapter{Background}\label{chap:background}
 
 \section{Network Interfaces and Paths}
 A machine is considered to be multihomed if it is connected to more than
@@ -18,11 +18,9 @@ local interface represents a different network path, but can
 be used to reach the same destination.
 
 Within QUIC, a network path is a term used for the combination of
-source IP, source port, destination IP and destination port
-\cite{rfc9000}.
+source IP, source port, destination IP and destination port~\cite{rfc9000}.
 This term has become necessary since QUIC decouples
-the path from the connection itself. More details about this can be found in
-\cref{sec:quic}.
+the path from the connection itself. More details about this can be found in~\cref{sec:quic}.
 
 \section{Network Sockets}
 When it comes to network programming,
@@ -37,12 +35,11 @@ programming~\cites{crockerNewHostHostProtocol1970}[p.~502]{tanenbaumComputerNetw
 
 Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
-the socket API primarily through the \texttt{sys/socket.h} header file
-\cite{posix:2024:socket}.
+the socket API primarily through the \texttt{sys/socket.h} header file~\cite{posix:2024:socket}.
 
 When creating a socket on an UNIX-like system, the application
 invokes the \texttt{socket} system call. This system call
-\say{creates an endpoint for communication and returns a file 
+\enquote{creates an endpoint for communication and returns a file 
 descriptor that refers to that endpoint}~\cite{Socket2LinuxManual}.
 This system call takes three parameters, the domain, the type
 and the protocol which will be used for the socket.
@@ -59,7 +56,7 @@ most common transport layer protocols.
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
 
-\section{Barriers to Protocol Adoption} \label{sec:transport-protocol-barriers}
+\section{Barriers to Protocol Adoption}\label{sec:transport-protocol-barriers}
 The fact that an application has to specify both the domain
 and the type of the socket means that both the
 underlying addressing and the protocol are bound at compile time.
@@ -90,8 +87,7 @@ Applications can themselves implement needed features
 such as reliability and congestion control.
 This way of designing new protocols has become so common that
 it has prompted an official RFC~from the IETF, describing
-the best practices for implementing congestion control on top of UDP 
-\cite{eggertUnicastUDPUsage2008}.
+the best practices for implementing congestion control on top of UDP~\cite{eggertUnicastUDPUsage2008}.
 
 \section{TCP}
 TCP is by far the most common transport layer protocol used on the
@@ -99,8 +95,8 @@ internet today. It is a connection-oriented protocol and provides
 a reliable, in-order transfer of a stream of bytes to the application layer.
 It has also become common to use TCP for message-based applications,
 using a framing protocol on top of TCP to divide the TCP byte stream into
-discrete messages. A description of TCP was first published as an RFC~in 1974
-\cite{cerfSpecificationInternetTransmission1974} and it has since grown to become
+discrete messages. A description of TCP was first published as an RFC~in 1974~\cite{cerfSpecificationInternetTransmission1974}
+and it has since grown to become
 ubiquitous across the internet.
 
 In TCP, connections are uniquely identified by a four-tuple consisting
@@ -147,7 +143,7 @@ As of 2026 TLS adoption has been very widespread,
 with 95 \% of all connections in Chrome on Windows using an encrypted
 connection~\cite{google2026transparency}.
 
-\section{QUIC} \label{sec:quic}
+\section{QUIC}\label{sec:quic}
 QUIC is a protocol developed by Google and formalized
 through RFC~9000 in 2021~\cite{rfc9000}.
 Intended to be a replacement for TCP, it has achieved
@@ -183,18 +179,18 @@ The format of a QUIC stream frame as described in RFC~9000 can
 be seen in \cref{lst:stream-frame-format}.
 
 \begin{listing}[tbp]
-	\centering
-	\begin{lstlisting}
-        STREAM Frame {
-          Type (i) = 0x08..0x0f,
-          Stream ID (i),
-          [Offset (i)],
-          [Length (i)],
-          Stream Data (..),
-        }
-    \end{lstlisting}
-	\caption{Format of a QUIC stream frame~\cite{rfc9000}}
-	\label{lst:stream-frame-format}
+    \centering
+    \begin{BVerbatim}
+STREAM Frame {
+  Type (i) = 0x08..0x0f,
+  Stream ID (i),
+  [Offset (i)],
+  [Length (i)],
+  Stream Data (..),
+}
+\end{BVerbatim}
+    \caption{Format of a QUIC stream frame~\cite{rfc9000}}
+    \label{lst:stream-frame-format}
 \end{listing}
 
 A given stream can exist in several different states.
@@ -209,38 +205,38 @@ seen in \cref{fig:stream_states}.
 
 \begin{figure}[tbp]
     \centering
-    \begin{lstlisting}
-       o
-       | Create Stream (Sending)
-       | Peer Creates Bidirectional Stream
-       v
-   +-------+
-   | Ready | Send RESET_STREAM
-   |       |-----------------------.
-   +-------+                       |
-       |                           |
-       | Send STREAM /             |
-       |      STREAM_DATA_BLOCKED  |
-       v                           |
-   +-------+                       |
-   | Send  | Send RESET_STREAM     |
-   |       |---------------------->|
-   +-------+                       |
-       |                           |
-       | Send STREAM + FIN         |
-       v                           v
-   +-------+                   +-------+
-   | Data  | Send RESET_STREAM | Reset |
-   | Sent  |------------------>| Sent  |
-   +-------+                   +-------+
-       |                           |
-       | Recv All ACKs             | Recv ACK
-       v                           v
-   +-------+                   +-------+
-   | Data  |                   | Reset |
-   | Recvd |                   | Recvd |
-   +-------+                   +-------+
-    \end{lstlisting}
+    \begin{BVerbatim}
+   o
+   | Create Stream (Sending)
+   | Peer Creates Bidirectional Stream
+   v
++-------+
+| Ready | Send RESET_STREAM
+|       |-----------------------.
++-------+                       |
+   |                            |
+   | Send STREAM /              |
+   |      STREAM_DATA_BLOCKED   |
+   v                            |
++-------+                       |
+| Send  | Send RESET_STREAM     |
+|       |---------------------->|
++-------+                       |
+   |                            |
+   | Send STREAM + FIN          |
+   v                            v
++-------+                   +-------+
+| Data  | Send RESET_STREAM | Reset |
+| Sent  |------------------>| Sent  |
++-------+                   +-------+
+   |                           |
+   | Recv All ACKs             | Recv ACK
+   v                           v
++-------+                   +-------+
+| Data  |                   | Reset |
+| Recvd |                   | Recvd |
++-------+                   +-------+
+    \end{BVerbatim}
     \caption{States of a QUIC stream sending data~\cite{rfc9000}}
     \label{fig:stream_states}
 \end{figure}
@@ -248,7 +244,7 @@ seen in \cref{fig:stream_states}.
 Much like TCP, QUIC also implements congestion control, there are
 however some key differences between the algorithms. A key concept
 to QUIC's congestion control is the 'packet number space'. Packet
-number spaces are \say{the context in which a packet can be processed
+number spaces are \enquote{the context in which a packet can be processed
 and acknowledged}~\cite{rfc9000}. 
 This context reflects the level of encryption and there 
 are therefore three separate packet number spaces. Initial space,
@@ -270,8 +266,7 @@ is that QUIC separates the transmission order from the delivery order.
 This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
-of retransmissions, making RTT measurements in these cases more accurate
-\cite{rfc9000}.
+of retransmissions, making RTT measurements in these cases more accurate~\cite{rfc9000}.
 
 Future network ossification related to QUIC is also mitigated 
 by mandating TLS 1.3 and by encrypting the header.
@@ -334,7 +329,7 @@ Connection IDs make addressing in QUIC independent of addressing in lower layer
 protocols~\cite{rfc9000}. This allows QUIC to survive
 changes in the underlying four-tuple and therefore enables connection migration.
 
-\subsection{Connection Migration} \label{sec:connection-migration}
+\subsection{Connection Migration}\label{sec:connection-migration}
 % TODO - only clients can currently migrate, disable_active_migration
 % multipath vs. migration
 Since a QUIC connection uses connection IDs to identify a connection,
@@ -358,8 +353,7 @@ on the same local endpoint for the lifetime of the connection, while
 a server should support migration from the client. A client can request
 that the client migrates to a new local address for the server through
 by stating a preferred local IP address through the \mono{preferred_address}
-parameter, but this can only be done during the initial TLS handshake
-\cite[Sec. 9.6.1]{rfc9000}.
+parameter, but this can only be done during the initial TLS handshake~\cite[Sec. 9.6.1]{rfc9000}.
 
 
 If the server does not
@@ -380,8 +374,7 @@ Connection migration can be initiated without first validating
 the new local path, since the remote is
 previously validated. The peer initiating the 
 path migration can defer local path validation until
-after receiving data on the new local endpoint
-\cite{rfc9000}.
+after receiving data on the new local endpoint~\cite{rfc9000}.
 
 If the endpoint validation fails, which happens if no matching response
 is received within a given time period, the endpoints can continue
@@ -557,48 +550,48 @@ seen in \cref{fig:socket-programming-api-model} and
 
 \begin{figure}[tbp]
     \centering
-    \begin{lstlisting}
-        +-----------------------------------------------------+
-        |                    Application                      |
-        +-----------------------------------------------------+
-                |                 |                  |
-          +------------+     +------------+    +--------------+
-          |  DNS Stub  |     | Stream API |    | Datagram API |
-          |  Resolver  |     +------------+    +--------------+
-          +------------+          |                  |
-                            +---------------------------------+
-                            |    TCP                UDP       |
-                            |    Kernel Networking Stack      |
-                            +---------------------------------+
-                                            |
-        +-----------------------------------------------------+
-        |               Network-Layer Interface               |
-        +-----------------------------------------------------+
-    \end{lstlisting}
+    \begin{BVerbatim}
++-----------------------------------------------------+
+|                    Application                      |
++-----------------------------------------------------+
+        |                 |                  |
+  +------------+     +------------+    +--------------+
+  |  DNS Stub  |     | Stream API |    | Datagram API |
+  |  Resolver  |     +------------+    +--------------+
+  +------------+          |                  |
+                    +---------------------------------+
+                    |    TCP                UDP       |
+                    |    Kernel Networking Stack      |
+                    +---------------------------------+
+                                    |
++-----------------------------------------------------+
+|               Network-Layer Interface               |
++-----------------------------------------------------+
+    \end{BVerbatim}
     \caption{API model for socket programming from RFC~9622\cite{rfc9622}}
     \label{fig:socket-programming-api-model}
 \end{figure}
 
 \begin{figure}[tbp]
     \centering
-    \begin{lstlisting}
-        +-----------------------------------------------------+
-        |                    Application                      |
-        +-----------------------------------------------------+
-                                  |
-        +-----------------------------------------------------+
-        |              Transport Services API                 |
-        +-----------------------------------------------------+
-                                  |
-        +-----------------------------------------------------+
-        |          Transport Services Implementation          |
-        |  (Using DNS, UDP, TCP, SCTP, DCCP, TLS, QUIC, etc.) |
-        +-----------------------------------------------------+
-                                  |
-        +-----------------------------------------------------+
-        |               Network-Layer Interface               |
-        +-----------------------------------------------------+
-    \end{lstlisting}
+    \begin{BVerbatim}
++-----------------------------------------------------+
+|                    Application                      |
++-----------------------------------------------------+
+                          |
++-----------------------------------------------------+
+|              Transport Services API                 |
++-----------------------------------------------------+
+                          |
++-----------------------------------------------------+
+|          Transport Services Implementation          |
+|  (Using DNS, UDP, TCP, SCTP, DCCP, TLS, QUIC, etc.) |
++-----------------------------------------------------+
+                          |
++-----------------------------------------------------+
+|               Network-Layer Interface               |
++-----------------------------------------------------+
+    \end{BVerbatim}
     \caption{API model for TAPS from RFC~9622\cite{rfc9622}}
     \label{fig:taps-api-model}
 \end{figure}
@@ -624,41 +617,41 @@ free to implement its internal workings as it sees fit.
 
 \begin{figure}[tbp]
     \centering
-    \begin{lstlisting}
-     +-----------------------------------------------------+
-     |                    Application                      |
-     +-+----------------+------^-------+--------^----------+
-       |                |      |       |        |
-     pre-               |     data     |      events
-     establishment      |   transfer   |        |
-       |        establishment  |   termination  |
-       |                |      |       |        |
-       |             +--v------v-------v+       |
-     +-v-------------+   Connection(s)  +-------+----------+
-     |  Transport    +--------+---------+                  |
-     |  Services              |                            |
-     |  API                   |  +-------------+           |
-     +------------------------+--+  Framer(s)  |-----------+
-                              |  +-------------+
-     +------------------------|----------------------------+
-     |  Transport             |                            |
-     |  System                |        +-----------------+ |
-     |  Implementation        |        |     Cached      | |
-     |                        |        |      State      | |
-     |  (Candidate Gathering) |        +-----------------+ |
-     |                        |                            |
-     |  (Candidate Racing)    |        +-----------------+ |
-     |                        |        |     System      | |
-     |                        |        |     Policy      | |
-     |             +----------v-----+  +-----------------+ |
-     |             |    Protocol    |                      |
-     +-------------+    Stack(s)    +----------------------+
-                   +-------+--------+
-                           V
-   +-----------------------------------------------------+
-   |               Network-Layer Interface               |
-   +-----------------------------------------------------+
-    \end{lstlisting}
+    \begin{BVerbatim}
+ +-----------------------------------------------------+
+ |                    Application                      |
+ +-+----------------+------^-------+--------^----------+
+   |                |      |       |        |
+ pre-               |     data     |      events
+ establishment      |   transfer   |        |
+   |        establishment  |   termination  |
+   |                |      |       |        |
+   |             +--v------v-------v+       |
+ +-v-------------+   Connection(s)  +-------+----------+
+ |  Transport    +--------+---------+                  |
+ |  Services              |                            |
+ |  API                   |  +-------------+           |
+ +------------------------+--+  Framer(s)  |-----------+
+                          |  +-------------+
+ +------------------------|----------------------------+
+ |  Transport             |                            |
+ |  System                |        +-----------------+ |
+ |  Implementation        |        |     Cached      | |
+ |                        |        |      State      | |
+ |  (Candidate Gathering) |        +-----------------+ |
+ |                        |                            |
+ |  (Candidate Racing)    |        +-----------------+ |
+ |                        |        |     System      | |
+ |                        |        |     Policy      | |
+ |             +----------v-----+  +-----------------+ |
+ |             |    Protocol    |                      |
+ +-------------+    Stack(s)    +----------------------+
+               +-------+--------+
+                       V
++-----------------------------------------------------+
+|               Network-Layer Interface               |
++-----------------------------------------------------+
+    \end{BVerbatim}
     \caption{TAPS architecture as described in RFC~9621~\cite{paulyArchitectureRequirementsTransport2025}.}
     \label{fig:tapsArch}
 \end{figure}
@@ -667,9 +660,9 @@ free to implement its internal workings as it sees fit.
 Abstracting away the underlying transport protocols is done by
 presenting a set of abstractions to the application. The most
 central of these abstractions is the Connection. A Connection
-represents a \say{shared state of two or more endpoints that persists
-across messages that are transmitted between these endpoints}
-\cite{welzlUsageTransportFeatures2018}.
+represents a \enquote{shared state of two or more endpoints that persists
+across messages that are transmitted between these endpoints}~\cite{welzlUsageTransportFeatures2018}.
+
 When working with Connection objects, TAPS provides five high
 level groups of actions that an application can perform:
 \begin{itemize}
@@ -754,8 +747,7 @@ delimiter-separated formats, where the beginning and end of a piece of
 data is separated by delimiters.~\cite{brunstromImplementingInterfacesTransport2025}
 Examples of the two categories are HTTP/1.1 for a delimiter-separated format
 and DHCP for TLV, specifying the length of the given hardware address, allowing
-parsers which are unfamiliar with the type to skip it, since the length is known
-\cite{dromsDynamicHostConfiguration1997}.
+parsers which are unfamiliar with the type to skip it, since the length is known~\cite{dromsDynamicHostConfiguration1997}.
 
 For a TAPS system, where the application layer should not need to take into
 account which application layer protocol it is running on top of, Framers become
@@ -769,32 +761,31 @@ underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
 
 \begin{figure}[tbp]
 \centering
-  \begin{lstlisting}
-     Initiate()   Send()   Receive()   Close()
-       |          |         ^          |
-       |          |         |          |
-  +----v----------v---------+----------v-----+
-  |                Connection                |
-  +----+----------+---------^----------+-----+
-       |          |         |          |
-       |      +-----------------+      |
-       |      |    Messages     |      |
-       |      +-----------------+      |
-       |          |         |          |
-  +----v----------v---------+----------v-----+
-  |                Framer(s)                 |
-  +----+----------+---------^----------+-----+
-       |          |         |          |
-       |      +-----------------+      |
-       |      |   Byte-stream   |      |
-       |      +-----------------+      |
-       |          |         |          |
-  +----v----------v---------+----------v-----+
-  |         Transport Protocol Stack         |
-  +------------------------------------------+
-  \end{lstlisting}
-\caption{Protocol Stack Showing a Message Framer from RFC~9622~\cite{rfc9622}}
-\label{fig:tpsStack}
+\begin{BVerbatim}
+ Initiate()   Send()   Receive()   Close()
+     |          |         ^          |
+     |          |         |          |
++----v----------v---------+----------v-----+
+|                Connection                |
++----+----------+---------^----------+-----+
+     |          |         |          |
+     |      +-----------------+      |
+     |      |    Messages     |      |
+     |      +-----------------+      |
+     |          |         |          |
++----v----------v---------+----------v-----+
+|                Framer(s)                 |
++----+----------+---------^----------+-----+
+     |          |         |          |
+     |      +-----------------+      |
+     |      |   Byte-stream   |      |
+     |      +-----------------+      |
+     |          |         |          |
++----v----------v---------+----------v-----+
+|         Transport Protocol Stack         |
++------------------------------------------+
+  \end{BVerbatim}
+\caption{Protocol Stack Showing a Message Framer from RFC~9622~\cite{rfc9622}}\label{fig:tpsStack}
 \end{figure}
 
 \subsection{Transport Properties}
@@ -858,8 +849,7 @@ The \texttt{Multistream Connections in Group} Selection Property
 allows the application to select whether the
 application would prefer multiple Connections within a
 Connection Group to be provided by streams of a single
-underlying transport connection where possible
-\cite{paulyArchitectureRequirementsTransport2025}.
+underlying transport connection where possible~\cite{paulyArchitectureRequirementsTransport2025}.
 
 Multistreaming in this context is the act of providing multiple
 streams of data over a single underlying connection. This
@@ -884,17 +874,14 @@ connection may still fall back to \mono{Full coverage}.
 The \mono{Provisioning Domain Instance or Type} selection
 property allows the application
 to control path selection by selecting for specific Provisioning
-Domain or categories of domains
-\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
+Domain or categories of domains~\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
 Domains define consistent sets of network properties that might
-be more specific than network interfaces
-\cite{paulyArchitectureRequirementsTransport2025}.
+be more specific than network interfaces~\cite{paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Use Temporary Local Address} selection property
 allows the application to specify
 whether or not to use temporary addresses which are a feature in
-IPv6, used for greater privacy
-\cite{gontTemporaryAddressExtensions2021, paulyArchitectureRequirementsTransport2025}.
+IPv6, used for greater privacy~\cite{gontTemporaryAddressExtensions2021, paulyArchitectureRequirementsTransport2025}.
 
 The \texttt{Notification of ICMP soft error message arrival}
 selection property lets an application specify whether or 
@@ -934,7 +921,7 @@ transport protocol supports switching between ordered and
 unordered delivery of messages. This can for example be
 supported by an implementation of QUIC, but it is not mandatory.
 
-\subsection{Candidate Gathering} \label{sec:candidate-gathering}
+\subsection{Candidate Gathering}\label{sec:candidate-gathering}
 When initiating a Preconnection, a TAPS system will gather a
 list of candidates for establishing a Connection. This process
 is known as Candidate Gathering. The candidates are based on
@@ -958,9 +945,9 @@ While the primary use of Selection Properties are to restrict
 which protocols are selected, they can also be used to affect
 other layers in the Candidate Gathering tree.
 For example the possible types of interfaces
-in the first level can be restricted via the "interface" selection
-property and the possible addresses resolved in the third level can
-for example be restricted by requiring the use of temporary local
+in the first level can be restricted via Selection~Property
+and the possible addresses resolved in the third level can
+be restricted by requiring the use of temporary local
 addresses, as these are only featured in IPv6.
 
 While RFC9623 uses a tree to conceptualize the different combinations
@@ -978,15 +965,14 @@ After all the candidates have been gathered and sorted, a single candidate
 needs to be selected to be used for this connection. This is done
 through candidate racing.
 
-\subsection{Candidate Racing} \label{candidateRacing}
+\subsection{Candidate Racing}\label{candidateRacing}
 When a tree or other representation of the candidates has
 been constructed, a single candidate needs to be selected for use
 by the final application. This is done through
 candidate racing. Candidate racing is the process of establishing
 a connection using a single protocol over a single path with
 a single endpoint as quickly as possible, optimizing for the
-user requirements while minimizing the network load
-\cite{brunstromImplementingInterfacesTransport2025}.
+user requirements while minimizing the network load~\cite{brunstromImplementingInterfacesTransport2025}.
 
 This is achieved by trying to establish connections with
 the various candidates and finally selecting one of them.
@@ -1008,8 +994,7 @@ network load.
 Staggered racing is the process of trying to establish connections
 with several candidates at once, but with a delay between the start
 of each candidate. This delay is configurable, but should be based
-on the expected handshake time
-\cite{brunstromImplementingInterfacesTransport2025}. 
+on the expected handshake time~\cite{brunstromImplementingInterfacesTransport2025}. 
 Since the most desirable candidate will be raced first, it
 can be chosen if it connects successfully thereby limiting the
 number
@@ -1028,10 +1013,9 @@ Connection establishment has been completed when a single candidate,
 has successfully established a connection with a remote endpoint, or
 when all candidates have failed. 
 
-\section{Happy Eyeballs} \label{happyEyeballs}
+\section{Happy Eyeballs}\label{happyEyeballs}
 Happy Eyeballs, which is described in RFC~8305 is an algorithm
-for racing IPv4 and  IPv6 addresses on dual-stack hosts
-\cite{schinaziHappyEyeballsVersion2017}. The candidate gathering
+for racing IPv4 and  IPv6 addresses on dual-stack hosts~\cite{schinaziHappyEyeballsVersion2017}. The candidate gathering
 and candidate racing algorithm found in TAPS is based on Happy Eyeballs,
 so they share a lot of central features.
 Happy Eyeballs implements a staggered racing algorithm with a preference for
@@ -1099,8 +1083,7 @@ error notifying the client of this.
 \section{SCTP}
 QUIC is not the first transport layer protocol to feature
 multistreaming. SCTP was introduced in 2000 and
-is both message based and features multi-streaming like QUIC. 
-\cite{leungMultihomedCommunicationSCTP2013}.
+is both message based and features multi-streaming like QUIC~\cite{leungMultihomedCommunicationSCTP2013}.
 However, since SCTP is a transport layer protocol traditionally
 built on top of IP, its adoption has struggled likely due
 to network ossification.
@@ -1194,7 +1177,7 @@ When
 the application is finished it must close the created handles for
 the event loop to stop execution.
 
-\section{Picoquic} \label{sec:picoquic}
+\section{Picoquic}\label{sec:picoquic}
 Picoquic~\cite{christianhuitemaPicoquic} is a C library which aims to be a
 minimalist implementation of the QUIC standard. It is a cross-platform
 library compatible with Windows, Linux, MacOs and BSD.
