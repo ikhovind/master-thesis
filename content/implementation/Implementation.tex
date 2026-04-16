@@ -172,7 +172,7 @@ In the example the DNS resolution is set to take 100 ms
 which is a arbitrary value with no influence on the following candidate racing.
 
 
-\begin{figure}[ph]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
   >=Stealth,
@@ -402,7 +402,7 @@ of QUIC benefits when available.
 A benchmark showing the measured benefits of utilizing Connection cloning in
 CTaps over QUIC vs. TCP can be seen in \cref{sec:smallfiletransfer}.
 
-\begin{figure}[ph]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\small, >=stealth]
 
@@ -889,7 +889,7 @@ A table containing both the default values for when an application initiates
 a Connection and the Selection Properties fulfilled by each protocol as defined by CTaps can be seen in
 \cref{tab:selection-properties}.
 
-\begin{table}[hp]
+\begin{table}[htbp]
 \centering
 \begin{threeparttable}
 \caption[Selection properties per protocol]{Selection properties for each protocol
@@ -941,16 +941,6 @@ of QUIC being \textasciitilde2.6 larger than that of TCP, QUIC support also requ
 complex external dependency to handle incoming and outgoing data instead of
 relying on built-in libuv support.
 
-This increased complexity reflects primarily two things, lower degrees of toolchain
-support and an increase in the number of features provided.
-For the first point, the complexity to integrate QUIC into CTaps
-could likely be greatly reduced if if libuv integrated QUIC support into a custom handle
-like it has with UDP and TCP.
-For the second point it naturally follows that since
-QUIC offers several features not available through UDP or TCP such as multistreaming
-and connection migration, CTaps has to implement logic to make these features available
-to the application.
-
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
@@ -969,10 +959,20 @@ to the application.
 \end{tabular}
 \begin{tablenotes}
     \small
-  \item \textit{Note: LoC counts include all lines, including blank lines and comments}
+  \item \textit{Counts include all lines, including blank lines and comments}
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
+
+This increased complexity reflects primarily two things, lower degrees of toolchain
+support and an increase in the number of features provided.
+For the first point, the complexity to integrate QUIC into CTaps
+could likely be greatly reduced if if libuv integrated QUIC support into a custom handle
+like it has with UDP and TCP.
+For the second point it naturally follows that since
+QUIC offers several features not available through UDP or TCP such as multistreaming
+and connection migration, CTaps has to implement logic to make these features available
+to the application.
 
 \section{Testing} \label{testing}
 CTaps uses a test system built around Google Test~\cite{GoogleTest2025} and FFF

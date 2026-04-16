@@ -20,7 +20,7 @@
 \usepackage[cache=true]{minted}
 \setminted[text]{numbers=none}
 \usepackage{xr}
-\usepackage{placeins}
+\usepackage[section]{placeins}
 \captionsetup{format=plain, font=small, labelfont=bf}
 \widowpenalty=10000
 \clubpenalty=10000
@@ -84,6 +84,9 @@
 \newcommand{\term}{\emph}
 
 \begin{document}
+% Disallow top and bottom figures etc.
+% \setcounter{topnumber}{0}
+% \setcounter{bottomnumber}{0}
 
 \renewcommand{\headrulewidth}{0.4pt}  % ruler on running pages
 

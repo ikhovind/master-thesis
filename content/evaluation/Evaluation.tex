@@ -130,7 +130,7 @@ does not have an effect on the time taken for the initial handshake.
 The associated TCP server was a pure socket implementation and the QUIC server
 used the Picoquic packet loop.
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \input{./resources/racing_handshake.pgf}
     \caption[Single Endpoint Handshake Benchmark]{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
@@ -169,7 +169,7 @@ $\qty{50}{\milli\second} \cdot 4 + \qty{250}{\milli\second} = \qty{450}{\milli\s
 and
 $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively. 
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \input{./resources/handshake_kde.pgf}
     \caption[Slow and fast endpoint handshake benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
     endpoint is attempted first, showing the benefit of candidate racing. ($N = 200$)}
@@ -222,7 +222,7 @@ Since the bandwidth is constant and BDP scales
 with RTT we can therefore conclude that the BDP of the link is large enough
 to carry the small file for all tested delay values.
 
-\begin{figure}[p]
+\begin{figure}[htbp]
   \input{./resources/small_file.pgf}
   \caption[Small file transfer benchmark]{Transfer time of a 100 kB file after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
   \label{fig:small-file-bar}
@@ -253,7 +253,7 @@ This benchmark was gathered with the CTaps and QUIC client described in \cref{se
 showing that connection migration is made available through CTaps with minimal complexity
 for the application.
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \input{./resources/migration_throughput.pgf}
     \caption[Path migration benchmark]{Transfer of a 4.6 MB file over a 5 Mbit link with CTaps, Picoquic and TCP. A path block is applied at t = 5s.}
     \label{fig:migration-throughput}
@@ -281,7 +281,7 @@ terminated the connection after the handshake had completed, in order
 to optimize the benchmark execution time.\footnote{All clients used for benchmarking can be found in the \mono{benchmark/src/client/} folder
 in the CTaps repository.}
 
-\begin{table}[ph]
+\begin{table}[htbp]
 \centering
 \begin{threeparttable}
 \caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
@@ -444,6 +444,14 @@ For QUIC servers it can be used to set the
 \mono{disable_active_migration} transport parameter~\cite[Sec. 18.2]{rfc9000},
 while for clients it can be used to simply disable active migration.
 
+TAPS does not expose the \mono{preferred_address} 
+transport parameter~\cite[Sec. 18.2]{rfc9000} directly.
+This parameter is used by a QUIC server when it wants to accept on a given address but wants
+to migrate it to a new address shortly after the handshake~\cite[Sec. 9.6]{rfc9000}.
+A workaround could be made by setting \mono{advertisesAltaddr} and
+interpreting a second Local Endpoint as a preferred address for a Listener, but this
+would be a fairly large break with the expected behavior from other protocols.
+
 The combination of \mono{multipath} and the \mono{multipathPolicy} 
 Connection Property~\cite[Sec. 8.1.7]{rfc9622} gives
 a more granular control of the expected behavior when using
@@ -465,7 +473,7 @@ future version of CTaps.
 \begin{table}[htbp]
   \centering
   \begin{threeparttable}
-    \caption{Effective behaviour for \mono{multipath}/\mono{multipathPolicy} combinations}
+    \caption{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations}
     \label{tab:multipath-combinations}
     \begin{tabular}{llp{7cm}}
       \toprule
@@ -496,14 +504,6 @@ future version of CTaps.
     \end{tablenotes}
   \end{threeparttable}
 \end{table}
-
-On the server side, TAPS does not expose the \mono{preferred_address} 
-transport parameter~\cite[Sec. 18.2]{rfc9000} directly.
-This parameter is used by a QUIC server when it wants to accept on a given address but wants
-to migrate it to a new address shortly after the handshake~\cite[Sec. 9.6]{rfc9000}.
-A workaround could be made by setting \mono{advertisesAltaddr} and
-interpreting a second Local Endpoint as a preferred address for a Listener, but this
-would be a fairly large break with the expected behavior from other protocols.
 
 The remaining QUIC transport parameters which have no suitable mapping in TAPS
 and cannot be assumed to be handled automatically are \mono{ack_delay_exponent} 
