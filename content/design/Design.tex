@@ -643,3 +643,436 @@ of receiving Messages and that they would very rarely have to be stored for long
 An alternative to deep copying objects would be for CTaps
 to implement reference counting for all objects, but this was decided to be unnecessarily complex
 when compared to deep copying.
+
+\section{QUIC Under TAPS} \label{sec:quicUnderTaps}
+As the first TAPS implementation to feature QUIC as
+an underlying protocol option, finding out exactly which features of
+QUIC are available through the default TAPS interface was one of the
+key research questions for this thesis. Since TAPS is an interface to
+a generic transport layer, TAPS concepts, terminology and intended functionality
+naturally does not map one to one onto concepts, terminology and functionality
+of QUIC.
+
+\subsection{Streams and Closing Them}
+The largest differences when it comes to the expected behavior when
+for QUIC and TAPS stems from the
+the Connection and the Connection Group.
+Since multistreaming is handled through Connection
+Groups in TAPS, this means that a single QUIC connection maps to a Connection Group
+while a TAPS Connection maps to a QUIC stream.
+
+This has an especially large effect in when it comes to closing TAPS Connections
+since QUIC has no support for a graceful teardown of a single stream.
+A QUIC stream is intended to transfer
+a single piece of data, with both the client and the server marking the transfer
+from their respective ends as independently completed to close the stream.
+
+While TCP connections can be closed one way, the typical behavior is that
+when it closed by one peer, then the other peer closes the connection
+in conjunction, which differs from the expected one-way closing of QUIC
+streams.
+
+This means that a TAPS system has to make a choice for how to close individual
+TAPS connections when using QUIC as the underlying protocol. Based on TCP, the 
+expected behavior
+is that closing an individual Connection will close both the sending
+and receiving side and start teardown. For QUIC, this can in theory be emulated by sending a \mono{FIN}
+flag and a \mono{STOP_SENDING} frame. The peer then must respond with a \mono{RESET_STREAM}
+frame if their stream is in a ready or sending state~\cite{rfc9000}.
+A \mono{RESET_STREAM} frame tears down a QUIC stream in the sending direction,
+which in combination with the \mono{FIN} flag sent would completely close the stream.
+
+Even though this handling of underlying QUIC streams in TAPS is superficially
+closer to the expected behavior from TCP, \mono{STOP_SENDING} is not a graceful close and is
+only
+expected to be used on error conditions. For a graceful teardown of a single
+stream only, the expected behavior is both sides sending \mono{FIN} flags when
+they are done sending.
+
+In order to avoid unnecessary error behavior for QUIC the most natural mapping
+for closing a TAPS Connection over QUIC is therefore to simply
+send a \mono{FIN} flag in the sending direction and remain open in the receiving direction.
+This will appear to the application in the form of it still having to monitor
+the connection for incoming messages and it not receiving a closed()-callback until
+after the peer has finished sending its data.
+
+If a peer wants to gracefully close
+a connection before all data has been received, the only way of handling it gracefully is to
+close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
+functionality from RFC9622~\cite{rfc9622}.
+
+If the application takes care of performing TAPS connection cloning in a consistent way,
+it can consistently use \mono{ConnectionGroup.close()} and achieve the same
+expected behavior irrespective of the underlying protocol in the TAPS system, this
+is however an example of underlying functionality leaking through to how the application 
+should interact with the API.
+
+This mapping of QUIC connections to TAPS connection groups also affects how
+CTaps handles the notification of path changes. In TAPS, the PathChange 
+event is per-Connection~\cite[Sec. 8.3.2]{rfc9622},
+while QUIC migrations is per-Connection Group.
+
+For CTaps this means that for each path change event every CTaps Connection is notified
+separately, even though the event is always common to an
+entire Connection Group. This could be mitigated by allowing registration
+of callbacks on a per-Connection Group basis, but this not featured
+in the current TAPS API.
+
+There are also features related to streams in QUIC which are not available
+through a TAPS Connection.
+One example of this is the one-way abort mentioned
+earlier through \mono{STOP_SENDING}, which requests that the peer abort their
+sending, and \mono{RESET_STREAM}
+which aborts the local sending side~\cite[Sec. 19.4, 19.5]{rfc9000}.
+For aborting Connections, the TAPS API presents only the generic
+\mono{Connection.abort()}~\cite[Sec. 10]{rfc9622}.
+A TAPS implementation therefore has no way of knowing whether the application
+wants to abort sending, abort receiving, or both. The only natural conclusion is
+therefore to abort both sending and receiving, leaving the granular QUIC control 
+unavailable to the application.
+
+Another stream functionality which is not exposed through CTaps is
+initiating unidirectional streams~\cite[Sec. 1]{rfc9000}.
+Currently TAPS implementations have to assume that every new stream opened via \mono{Connection.clone()}
+is bidirectional, although since the TAPS API is extensible a parameter could
+easily be added when Cloning a Connection to support this.
+
+Despite not being able to initiate unidirectional sending, a TAPS implementation
+is able to receive an unidirectional stream initiated by the peer as expected by QUIC.
+It can infer from the stream ID that it is unidirectional~\cite[Sec. 2.1]{rfc9000}
+and mark the resulting Connection as closed for sending before presenting it to the application.
+
+Withing QUIC, there are also several transport parameters~\cite[Sec. 18]{rfc9000} which are not
+exposed through the TAPS API. TAPS does not feature a generic timeout value
+which can be passed as \mono{max_idle_timeout}~\cite[Sec. 10.1]{rfc9000}.
+While TAPS does support timeouts for when sending data, for example through
+the Timeout for Aborting Connection Connection Property~\cite[Sec. 8.1.3]{rfc9622},
+it does not feature a generic idle timeout for automatically closing a connection.
+
+The TAPS API also does not support setting a maximum data to be received on either
+a Connection Group or on a Connection, as supported on QUIC connections and streams
+through the \mono{initial_max_data} and various \mono{initial_max_stream_data_*}
+transport properties respectively.
+
+In theory, an application
+using TAPS could desire to set these, but they can also be assumed to
+be handled by the underlying QUIC implementation and therefore not
+necessarily be considered a gap in the TAPS API.
+In CTaps' case, Picoquic provides
+an optional \mono{picoquic_set_max_data_control} for
+connection-level max data, but this is not surfaced through CTaps.
+Picoquic does not provide a per-stream max data configuration.
+
+While TAPS does allow the application to control the number of Connections
+in a Connection Group through the groupConnLimit Connection Property~\cite[Sec. 8.1.9]{rfc9622},
+it loses some granularity exposed through QUIC when controlling the number
+of streams in a connection. QUIC allows control over both the maximum number
+of both unidirectional and bidirectional streams through either the
+\mono{initial_max_streams_uni} and \mono{initial_max_streams_bidi} or a
+\mono{MAX_STREAMS} frame~\cite[Sec. 18.2, 19.11]{rfc9000}. 
+
+\subsection{Using Multiple Paths}
+QUIC path migration is supported in TAPS, and the migration
+policy can be controlled through the
+\mono{multipath} Selection Property.
+For QUIC servers it can be used to set the
+\mono{disable_active_migration} transport parameter~\cite[Sec. 18.2]{rfc9000},
+while for clients it can be used to simply disable active migration.
+
+TAPS does not expose the \mono{preferred_address} 
+transport parameter~\cite[Sec. 18.2]{rfc9000} directly.
+This parameter is used by a QUIC server when it wants to accept on a given address but wants
+to migrate it to a new address shortly after the handshake~\cite[Sec. 9.6]{rfc9000}.
+A workaround could be made by setting \mono{advertisesAltaddr} and
+interpreting a second Local Endpoint as a preferred address for a Listener, but this
+would be a fairly large break with the expected behavior from other protocols.
+
+The combination of \mono{multipath} and the \mono{multipathPolicy} 
+Connection Property~\cite[Sec. 8.1.7]{rfc9622} gives
+a more granular control of the expected behavior when using
+multipath than is featured in QUIC.
+This is expected from TAPS
+and it is clearly documented in RFC~9622 that Connection Properties
+will only have an effect if they can actually be mapped onto the
+underlying connection~\cite[Sec. 5]{rfc9622}. 
+
+An overview of the
+expected behavior according to RFC~9622 can be seen in
+\cref{tab:multipath-combinations}.
+The \mono{interactive} and \mono{aggregate} \mono{multipath} policies require
+simultaneous use of multiple paths, which is not supported in RFC~9000 QUIC.
+The IETF QUIC multipath extension~\cite{ietf-quic-multipath-21} is currently
+under development and would enable these policies to be fully supported in a
+future version of CTaps.
+
+\begin{table}[htbp]
+  \centering
+  \begin{threeparttable}
+    \caption{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations}
+    \label{tab:multipath-combinations}
+    \begin{tabular}{llp{7cm}}
+      \toprule
+      \rowcolor{gray!25}
+      \textbf{\mono{multipath}} & \textbf{\mono{multipathPolicy}} & \textbf{Description} \\
+      \midrule
+      \multicolumn{3}{l}{\textbf{\texttt{disabled}}\tnote{1}} \\
+        & \multicolumn{1}{|l||}{---}
+        & \mono{multipathPolicy} has no effect if multipath is disabled. \\
+      \midrule
+      \multicolumn{3}{l}{\textbf{\texttt{active}}} \\
+        & \multicolumn{1}{|l||}{\texttt{handover}}    & Will initiate migration on path failure. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{interactive}} & Will use multiple paths concurrently to minimize latency. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{aggregate}}   & Will use multiple paths concurrently to maximize throughput. \\[8pt]
+      \midrule
+      \multicolumn{3}{l}{\textbf{\texttt{passive}}} \\
+        & \multicolumn{1}{|l||}{\texttt{handover}}    & Will accept migration and multipath used by the remote. \\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{interactive}} & Will accept migration and multipath from the remote, will attempt to minimize latency.\\[8pt]
+        & \multicolumn{1}{|l||}{\texttt{aggregate}}   & Will accept migration and multipath from the remote, will attempt to maximize throughput.\\[8pt]
+      \bottomrule
+    \end{tabular}
+    \begin{tablenotes}
+      \small
+  \item[1] For QUIC servers, which cannot migrate~\cite[Sec. 1]{rfc9000}, \mono{disabled}
+           can be used to set the \mono{disable_active_migration} transport parameter. For
+           QUIC clients \mono{passive} and \mono{disabled} are equivalent since servers
+           cannot migrate.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+
+The remaining QUIC transport parameters which have no suitable mapping in TAPS
+and cannot be assumed to be handled automatically are \mono{ack_delay_exponent} 
+and \mono{max_ack_delay}~\cite[Sec. 18.2]{rfc9000}, which both can be
+assumed to be reasonably handled through the underlying QUIC implementation.
+
+There are also other features such as stateless reset which are not exposed through the TAPS
+API directly, but are expected to be handled by the underlying QUIC implementation,
+so that there is no need to expose them in a TAPS system.
+
+An overview over the most important features in QUIC
+and how they may into CTaps and TAPS in general can be seen in
+\cref{tab:quic-taps-mapping}.
+
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
+\label{tab:quic-taps-mapping}
+\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\rowcolor{gray!25}
+\textbf{QUIC Feature} & \textbf{TAPS Mapping} \\
+\midrule
+\multicolumn{2}{l}{\textit{Supported in CTaps with expected behavior\tnote{1}}} \\
+\midrule
+\multicolumn{1}{l||}{ALPN negotiation} & Security Parameter \\
+\multicolumn{1}{l||}{0-RTT establishment} & Message Property\\
+\multicolumn{1}{l||}{TLS certificates} & Security Parameter\\
+\multicolumn{1}{l||}{Connection Migration} & Multiple Local Endpoints\\
+\multicolumn{1}{l||}{Bidirectional streams} & \mono{Clone()}\\
+\multicolumn{1}{l||}{Stream Priority} & Connection Property\\
+\midrule
+\multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior\tnote{1}}} \\
+\midrule
+\multicolumn{1}{l||}{QUIC connection\tnote{2}} & Connection Group\\
+\multicolumn{1}{l||}{QUIC stream} & Connection\\
+\multicolumn{1}{l||}{Unidirectional stream close (FIN)} & Connection \mono{Close()}\\
+\multicolumn{1}{l||}{Connection migration\tnote{7}} & Selection Property\\
+\multicolumn{1}{l||}{Path change events} & Per-Connection callback\\
+\multicolumn{1}{l||}{\mono{initial_max_streams_bidi}} & Connection Property \\
+\midrule
+\multicolumn{2}{l}{\textit{Supported through TAPS, but not implemented in CTaps}} \\
+\midrule
+\multicolumn{1}{l||}{Multipath} & Selection Property\\
+\multicolumn{1}{l||}{QUIC Datagrams~\cite{rfc9221}} & Message Property \\
+\multicolumn{1}{l||}{PING Frames} & Connection Property \\
+\multicolumn{1}{l||}{Key Update~\cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
+\multicolumn{1}{l||}{ECN} & Message Property \\
+\multicolumn{1}{l||}{\mono{disable_active_migration}} & Selection Property\\
+\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{3}} & Connection Property \\
+\multicolumn{1}{l||}{\mono{STOP_SENDING}\tnote{8}} & Connection \mono{Abort()}\\
+\multicolumn{1}{l||}{\mono{RESET_STREAM}\tnote{8}} & Connection \mono{Abort()}\\
+\midrule
+\multicolumn{2}{l}{\textit{Not supported through TAPS}} \\
+\midrule
+\multicolumn{1}{l||}{Unidirectional stream init} & --- \\
+\multicolumn{1}{l||}{\mono{initial_max_data}} & ---\\
+\multicolumn{1}{l||}{\mono{initial_max_stream_data_*}} & ---\\
+\multicolumn{1}{l||}{Idle Timeout\tnote{6}} & ---\\
+\multicolumn{1}{l||}{\mono{ack_delay_exponent}} & ---\\
+\multicolumn{1}{l||}{\mono{max_ack_delay}} & ---\\
+\multicolumn{1}{l||}{Directional \mono{initial_max_streams_*}} & ---\\
+\multicolumn{1}{l||}{\mono{preferred_address}} & ---\\
+\multicolumn{1}{l||}{\mono{Stateless reset}    } & --- \\
+\multicolumn{1}{l||}{Connection ID handling\tnote{4}} & ---\\
+\bottomrule
+\end{tabularx}
+\begin{tablenotes}
+\footnotesize
+\item[1] Expected Behavior is defined to be a
+mapping which behaves consistently with the protocol-agnostic TAPS API. Generally this means matching 
+or exceeding the behavior of TCP as the underlying protocol.
+\item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
+\item[3] Requires that recvMsgMaxLen is communicated to the peer.
+\item[4] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
+\item[6] CTaps can set Connection timeout, but only when \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
+\item[7] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC. This means that a TAPS implementation filtering
+    protocols in candidate gathering cannot know if this property is mandatory in a protocol or not.
+\item[8] Only available in unison through TAPS, not individually.
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+\todo{Fix ordering of notes}
+
+Since the TAPS RFCs were written mostly before the QUIC design was finalized
+in RFC~9000~\cite{rfc9000}, part of the motivation for developing CTaps
+was to find out which QUIC features could not be presented through the
+TAPS API.
+
+The largest issues with creating a common abstraction for several different protocols like
+TAPS is that there ends up being distinct concepts in each protocol which do
+not necessarily map neatly into the shared abstraction layer concepts. This
+is apparent in the differing behavior of Connections in CTaps depending on
+whether the underlying protocol is QUIC or not.
+
+With QUIC the Connection abstraction
+becomes the connection group and treating individual streams as connections
+leads to unexpected behavior, such as one-way closing by default except
+when aborting the stream. This causes the application to have to interact
+with TAPS in a way which does not reflect how they would interact with TCP,
+for example always closing the entire connection group when done with a logical
+connection to a server, to ensure that if the underlying protocol supports multistreaming
+then the entire connection will be closed.
+
+While this breaks slightly with 
+with the principle of least surprise as described in RFC~9622~\cite{rfc9622}, it provides
+greater flexibility and consistent behavior to the downstream application.
+
+\section{Candidate Racing}
+\todo{Think about talking about generic candidate racing too}
+When it comes to connection racing, it is a useful feature but can
+be hard to map for non-connection oriented protocols such as UDP, leading to
+unexpected or even undesirable behavior.
+
+While the default preferences in CTaps prefers TCP or
+QUIC over UDP, if UDP is preferred but not required then there is no way for
+racing to function properly.
+
+Since UDP has no handshake to complete, CTaps has chosen to assume that a UDP connection
+is established as soon as local endpoint has been set up. This means that
+if the remote is does not support UDP, the racing will be unable to detect
+this and UDP can potentially win the candidate racing,
+but the remote will be unreachable.
+
+An alternative
+solution would be to send a test message and to wait for a reply, but
+this relies on the remote peer having implemented this functionality and
+therefore  risks designating legitimate endpoints as unresponsive. Since
+the default preferences rank UDP lower than other supported protocols, it was
+deemed that for CTaps the risk of UDP being ranked higher than other protocols when
+the endpoint does not support it is quite low. The simple solution of
+of assuming an established connection on opening the socket is adequate was therefore
+chosen, for lack of a better option.
+
+\section{Security}
+The security of a TAPS system is reliant on the security of the underlying protocols.
+While there are several key security measures which should be taken before
+CTaps could be used in a security-sensitive production context, CTaps
+also shows that it is possible to achieve equivalent security benefits
+in a TAPS system as when using the underlying protocols directly.
+
+% Handling of underlying credentials
+Despite TAPS being designed before the official release of QUIC, it supports
+the same security settings due to QUIC using TLS under the hood. It supports
+both 0-RTT handshakes and the necessary client and server certificates for both
+clients and servers using TLS. In addition it supports the required ALPNs and
+and makes them accessible through Security Parameters. Security Parameters as
+designed in TAPS and implemented by CTaps are by nature extensible, without
+introducing breaking API changes.
+
+Since TAPS provides a common API to several different protocols, there may
+of course be situations where TAPS places a limitation on the security of a system.
+This is however likely to be more related to the specific
+TAPS implementation than to TAPS in general. One can for example imagine a scenario
+where the key files should specifically be kept in memory and cannot be referred
+to via a file name, then that could not be supported by CTaps as of the current
+implementation. The TAPS API does however support this since it is generic
+and only specifies server and client certificates through the use of
+certificate bundles, but does not mandate the form which these bundles should take.
+CTaps has chosen the form of referring to files on disk, but there is no reason why
+it could not be adopted into taking the memory address of a buffer instead.
+
+%TAPS downgrading security
+The user of a TAPS system is also reliant on TAPS not silently downgrading
+the required security of the application. Here TAPS needs to follow sane defaults
+which default to mandating security, otherwise TAPS would be liable
+to downgrade security since the insecure variants of protocols are at
+an advantage during candidate racing since they require fewer RTTs.
+
+In addition to mandating that TAPS implementations set the default allowed
+security protocols to be the best available, RFC~9622 also mentions that applications
+should use common safe defaults for security parameters
+\cite{rfc9622}. This means that the
+default should be requiring an encrypted connection. RFC~9622 also describe
+the difference between disabled Security Parameters and opportunistic
+Security Parameters.
+
+Disabled Security Parameters are an option in order
+to support compatibility with endpoints that do not support transport security
+protocols, such as a pure HTTP website, while opportunistic Security Parameters
+allow for the coexistence of secure and insecure transport layer protocols.
+It is natural to assume that in cases where both insecure and secure transport
+protocols are viable, any TAPS implementation would choose to prioritize the
+secure protocol if performing candidate racing. For this case, the TAPS implementation
+should also take the increased number of RTTs for the secure protocol into account
+when calculating the stagger delay for candidate racing, in order to not give
+the unencrypted protocols undue advantages.
+
+
+Another concern with TAPS is that when applications utilize a large library
+like a full TAPS implementation would be, the surface area for potential
+attacks and errors becomes much larger.
+
+The most useful mitigation for issues like this would be for a community
+effort to develop a true fully featured open source implementation of TAPS
+which achieves genuine real world usage. This would create a real incentive
+to find and patch as many vulnerabilities as possible in the library.
+
+Although TAPS aims to be as secure as possible by default, there are of course
+trade-offs to be made between the default configuration of a TAPS system 
+when it comes to feature-richness and security. With the relative complexity
+and large number of configurations available within TAPS there is a genuine risk that
+security minded applications may not have combed through all
+available configurations in TAPS and therefore not be aware of a security risk.
+
+An example of a potential unknown unknown is the potential of isolating sessions
+through Security Parameters. By default this is set to false, allowing a TAPS implementation
+to use an internal cache to optimize established connections. Using this cache
+could lead to a leak of connection linkability, as observers over the wire could
+observe different connections exhibiting the same behavior, and thereby induce that
+they are made by the same client.
+
+TAPS strikes a balance between being extremely
+cautious and being secure by default by allowing certain configurations to be the most
+performant by default instead of necessarily the most secure. Since a choice has to be made
+for TAPS it can be assumed that extremely security conscious applications where
+issues like fingerprinting are absolutely unacceptable will perform a careful comb
+through of the security parameters, making the most cautious decision at every step.
+The same cannot be assumed of a more casual application, having to comb through
+Security Parameter configurations in order to find relatively large performance
+gains to be made with relatively small security trade-offs.
+
+%Racing reveal who uses TAPS? Other revealing options?
+For applications where fingerprinting are absolutely unacceptable there are
+also other issues related to TAPS, which cannot necessarily be traded away.
+First of all, using a networking library which standardizes the interaction
+with the network to a certain degree would naturally lead to potential fingerprinting
+of clients. This is not something which can be configured away and is an
+inherent property of software libraries whose behavior are exposed to the internet.
+Without a large and diverse enough user base, fairly accurate assumptions can
+be made about the users behind a connection, if the underlying library being
+used can be ascertained. This becomes a larger risk if the behavior
+if the underlying library is fairly unique, such as the extensive
+candidate racing in TAPS.
