@@ -10,9 +10,9 @@ It would have to be carefully considered exactly how these candidates were
 to be interleaved. The applications does rank its most desired protocols,
 so interleaving with no care as to the order could lead to a lower ranked
 protocol being tried second after the most desirable one, to the application's
-surprise. It would also be beneficial to include the local and remote endpoints
+surprise. It would also be beneficial to include the Local and Remote Endpoints
 in the interleaving algorithm somehow. In the hypothetical situation that the
-first candidates all try to connect to the same remote endpoint, but that endpoint
+first candidates all try to connect to the same Eemote Endpoint, but that endpoint
 turns out to be unreachable, the current stagger delay would lead to a one
 second delay before the next endpoint was tried.
 
@@ -48,37 +48,37 @@ API to reason about and guidance for future TAPS implementations, this is
 not the ideal starting location when considering future real-world usage of
 CTaps.
 
-Applications coming across CTaps would likely find the API to be fairly confusing.
+Application developers coming across CTaps would likely find the API to be fairly confusing.
 It looks like a more complete implementation than it actually is, and several
 attempts to configure connections with unsupported settings, for example the multipath
 policy connection property, would lead to no changed behavior from the applications point of view.
 
 Another consequence of this push to make CTaps present as much of the API of TAPS
 as possible is that most testing and development has been focused on the various
-happy paths of the features, while not enough time or testing has been devoted
+happy paths of the features, while less time or testing has been devoted
 to testing various error paths, both for errors stemming from errors in user configuration
 and from network errors.
 
 Another key limitation with the current implementation of CTaps is that several key
-features have been deemed to be out of scope, and is not presented in the API at
-all. The largest of these are peer to peer connection establishment. This is
+features have been deemed to be out of scope, and are not presented in the API at
+all. The largest group of these is peer to peer connection establishment. This is
 the only major group of TAPS features which is totally absent from CTaps.
 
-Among the smaller features not present in CTaps a prominent examples are that CTaps
+Among the smaller features not present in CTaps, prominent examples are that CTaps
 does not support adding endpoints in during the lifetime of a connection and that
 CTaps does not feature
 listening on more than a single connection.
 
 Not being able to add endpoints to an active Connection places a real limitation on
 a Connection's ability to migrate, as there is no way to dynamically administer the
-endpoints which can be migrated to or from. All Local and Remote endpoints has to be
+endpoints which can be migrated to or from. All Local and Remote endpoints have to be
 passed to the Preconnection. QUIC connections can still migrate to new remote endpoints,
-if migration is initiated by the peer, but there is no way to for example dynamically
-add a new endpoint.
+if migration is initiated by the peer, but there is no way to dynamically
+add a new endpoint for example.
 
 CTaps also contain inaccuracies which deviate from expected behavior, for example
 that \mono{sent()}-callbacks
-does not represent when a packet has been actually transferred to the network,
+do not represent when a packet has been actually transferred to the network,
 but instead when a packet has been handed over to Picoquic if QUIC is the underlying
 protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.

@@ -1,5 +1,5 @@
 \chapter{Design} \label{chap:design}
-This chapter will cover the design decisions which has affected
+This chapter will cover the design decisions which have affected
 CTaps, both internally and for the external API. The overarching
 design goal was to conform to the API described in RFC~9622~\cite{rfc9622},
 while exploring how to best expose as much QUIC functionality as possible
@@ -9,7 +9,7 @@ and the external API presented to applications.
 
 \section{Choice of Scope}
 One of the key research questions motivating the development of CTaps is exactly
-how well the TAPS API as it exists currently can be presented programmatically.
+how well the TAPS API as it currently exists can be presented programmatically.
 CTaps therefore aims to present as much of the TAPS API as possible, despite
 implementing several features as no-ops.
 
@@ -25,7 +25,7 @@ is performed for less desirable protocols, as described in RFC~9623
 \cite{brunstromImplementingInterfacesTransport2025}.
 \todo{Check in on this later, describe how large of a subset}
 
-The parts of the TAPS API which were prioritized for CTaps are common features related
+The parts of the TAPS API that were prioritized for CTaps are common features related
 to establishing client and server connections, transferring data and managing
 the lifetime of Connections. The highest prioritized internal TAPS features
 were the most unique parts of the TAPS API, which only a software library
@@ -535,9 +535,9 @@ to the \mono{ready()} callback.
 CTaps uses callbacks to create Connection and Listener
 objects themselves. Both of these objects require asynchronous operations
 to instantiate, and therefore require the resulting object to be passed
-through the application through callback.
+to the application through callback.
 The Connection is asynchronous both
-because Candidate Gathering is asynchronous, but
+because candidate gathering is asynchronous, but
 also because it is only created after an actual connection has
 been created over the network, in the case of connection-oriented
 protocols. The Listener is asynchronous because it uses the
@@ -645,30 +645,32 @@ to implement reference counting for all objects, but this was decided to be unne
 when compared to deep copying.
 
 \section{QUIC Under TAPS} \label{sec:quicUnderTaps}
-As the first TAPS implementation to feature QUIC as
+As the first open source TAPS implementation to feature QUIC as
 an underlying protocol option, finding out exactly which features of
 QUIC are available through the default TAPS interface was one of the
 key research questions for this thesis. Since TAPS is an interface to
 a generic transport layer, TAPS concepts, terminology and intended functionality
-naturally does not map one to one onto concepts, terminology and functionality
+naturally do not map one-to-one onto concepts, terminology and functionality
 of QUIC.
 
-\subsection{Streams and Closing Them}
-The largest differences when it comes to the expected behavior when
-for QUIC and TAPS stems from the
+\subsection{QUIC Streams}
+The largest differences when it comes to the expected behavior
+for QUIC and TAPS stems from
 the Connection and the Connection Group.
 Since multistreaming is handled through Connection
 Groups in TAPS, this means that a single QUIC connection maps to a Connection Group
 while a TAPS Connection maps to a QUIC stream.
 
-This has an especially large effect in when it comes to closing TAPS Connections
+This has an especially large effect when it comes to closing TAPS Connections
 since QUIC has no support for a graceful teardown of a single stream.
 A QUIC stream is intended to transfer
 a single piece of data, with both the client and the server marking the transfer
 from their respective ends as independently completed to close the stream.
+This means that the only way for a QUIC stream to close as expected is
+for a FIN flag to be sent in both directions.
 
 While TCP connections can be closed one way, the typical behavior is that
-when it closed by one peer, then the other peer closes the connection
+when it is closed by one peer, then the other peer closes the connection
 in conjunction, which differs from the expected one-way closing of QUIC
 streams.
 
@@ -707,7 +709,7 @@ expected behavior irrespective of the underlying protocol in the TAPS system, th
 is however an example of underlying functionality leaking through to how the application 
 should interact with the API.
 
-This mapping of QUIC connections to TAPS connection groups also affects how
+This mapping of QUIC connections to TAPS Connection Groups also affects how
 CTaps handles the notification of path changes. In TAPS, the PathChange 
 event is per-Connection~\cite[Sec. 8.3.2]{rfc9622},
 while QUIC migrations is per-Connection Group.
@@ -732,36 +734,41 @@ therefore to abort both sending and receiving, leaving the granular QUIC control
 unavailable to the application.
 
 Another stream functionality which is not exposed through CTaps is
-initiating unidirectional streams~\cite[Sec. 1]{rfc9000}.
-Currently TAPS implementations have to assume that every new stream opened via \mono{Connection.clone()}
+initiating unidirectional streams~\cite[Sec. 1]{rfc9000}. TAPS
+does support setting the directionality of a Connection through the
+\mono{direction} Selection Property \cite[Sec. 6.2.16]{rfc9622},
+but selection properties can only be set before a connection has
+been initiated. This means that TAPS does not currently support
+the directionality of the resulting Connection when
+cloning.
+
+TAPS implementations have to assume that every new stream opened via \mono{Connection.clone()}
 is bidirectional, although since the TAPS API is extensible a parameter could
-easily be added when Cloning a Connection to support this.
+easily be added when Cloning to support this.
 
 Despite not being able to initiate unidirectional sending, a TAPS implementation
 is able to receive an unidirectional stream initiated by the peer as expected by QUIC.
 It can infer from the stream ID that it is unidirectional~\cite[Sec. 2.1]{rfc9000}
 and mark the resulting Connection as closed for sending before presenting it to the application.
 
-Withing QUIC, there are also several transport parameters~\cite[Sec. 18]{rfc9000} which are not
+Within QUIC, there are also several transport parameters~\cite[Sec. 18]{rfc9000} that are not
 exposed through the TAPS API. TAPS does not feature a generic timeout value
 which can be passed as \mono{max_idle_timeout}~\cite[Sec. 10.1]{rfc9000}.
-While TAPS does support timeouts for when sending data, for example through
+While TAPS does support timeouts when sending data, for example through
 the Timeout for Aborting Connection Connection Property~\cite[Sec. 8.1.3]{rfc9622},
 it does not feature a generic idle timeout for automatically closing a connection.
 
-The TAPS API also does not support setting a maximum data to be received on either
-a Connection Group or on a Connection, as supported on QUIC connections and streams
-through the \mono{initial_max_data} and various \mono{initial_max_stream_data_*}
-transport properties respectively.
+While the TAPS API does not support setting the QUIC transport properties related
+to a maximum amount of data, it does support the flow control they are intended to expose.
+Since an application registers a callback for each Message it wants to receive
+it naturally limits the pace of incoming data.
 
-In theory, an application
-using TAPS could desire to set these, but they can also be assumed to
+Since an application gets the same flow control through
+TAPS as it would through the
+\mono{initial_max_data} and various \mono{initial_max_stream_data_*} QUIC 
+transport parameters they can also be assumed to
 be handled by the underlying QUIC implementation and therefore not
 necessarily be considered a gap in the TAPS API.
-In CTaps' case, Picoquic provides
-an optional \mono{picoquic_set_max_data_control} for
-connection-level max data, but this is not surfaced through CTaps.
-Picoquic does not provide a per-stream max data configuration.
 
 While TAPS does allow the application to control the number of Connections
 in a Connection Group through the groupConnLimit Connection Property~\cite[Sec. 8.1.9]{rfc9622},
@@ -779,13 +786,16 @@ For QUIC servers it can be used to set the
 \mono{disable_active_migration} transport parameter~\cite[Sec. 18.2]{rfc9000},
 while for clients it can be used to simply disable active migration.
 
-TAPS does not expose the \mono{preferred_address} 
-transport parameter~\cite[Sec. 18.2]{rfc9000} directly.
-This parameter is used by a QUIC server when it wants to accept on a given address but wants
-to migrate it to a new address shortly after the handshake~\cite[Sec. 9.6]{rfc9000}.
-A workaround could be made by setting \mono{advertisesAltaddr} and
-interpreting a second Local Endpoint as a preferred address for a Listener, but this
-would be a fairly large break with the expected behavior from other protocols.
+TAPS does not directly expose an equivalent to the
+\mono{preferred_address} 
+transport parameter~\cite[Sec. 18.2]{rfc9000}, but a
+value can be inferred based on the \mono{interface}
+and \mono{advertisesAltaddr} Selection Properties.
+An application wishing for incoming Connections
+to a Listener to migrate could could set a preferred
+interface and the \mono{advertisesAltaddr}
+property to true. Any Connection attempts on non-preferred
+interfaces could then be asked to migrate to the highest preference.\todo{rewrite}
 
 The combination of \mono{multipath} and the \mono{multipathPolicy} 
 Connection Property~\cite[Sec. 8.1.7]{rfc9622} gives
@@ -841,9 +851,9 @@ future version of CTaps.
 \end{table}
 
 The remaining QUIC transport parameters which have no suitable mapping in TAPS
-and cannot be assumed to be handled automatically are \mono{ack_delay_exponent} 
-and \mono{max_ack_delay}~\cite[Sec. 18.2]{rfc9000}, which both can be
-assumed to be reasonably handled through the underlying QUIC implementation.
+are the \mono{ack_delay_exponent} 
+and \mono{max_ack_delay}~\cite[Sec. 18.2]{rfc9000} transport parameters.
+A TAPS implementation could infer a course guidance through the \mono{connCapacityProfile} Connection Property.
 
 There are also other features such as stateless reset which are not exposed through the TAPS
 API directly, but are expected to be handled by the underlying QUIC implementation,
@@ -932,19 +942,19 @@ was to find out which QUIC features could not be presented through the
 TAPS API.
 
 The largest issues with creating a common abstraction for several different protocols like
-TAPS is that there ends up being distinct concepts in each protocol which do
+TAPS is that one ends up with distinct concepts in each protocol which do
 not necessarily map neatly into the shared abstraction layer concepts. This
 is apparent in the differing behavior of Connections in CTaps depending on
 whether the underlying protocol is QUIC or not.
 
 With QUIC the Connection abstraction
-becomes the connection group and treating individual streams as connections
+becomes the Connection group and treating individual streams as Connections
 leads to unexpected behavior, such as one-way closing by default except
 when aborting the stream. This causes the application to have to interact
 with TAPS in a way which does not reflect how they would interact with TCP,
-for example always closing the entire connection group when done with a logical
-connection to a server, to ensure that if the underlying protocol supports multistreaming
-then the entire connection will be closed.
+for example always closing the entire Connection Group when done with a logical
+Connection to a server, to ensure that, if the underlying protocol supports multistreaming,
+then the entire Connection will be closed.
 
 While this breaks slightly with 
 with the principle of least surprise as described in RFC~9622~\cite{rfc9622}, it provides
@@ -953,10 +963,10 @@ greater flexibility and consistent behavior to the downstream application.
 \section{Candidate Racing}
 \todo{Think about talking about generic candidate racing too}
 When it comes to connection racing, it is a useful feature but can
-be hard to map for non-connection oriented protocols such as UDP, leading to
+be hard to map to non-connection oriented protocols such as UDP, leading to
 unexpected or even undesirable behavior.
 
-While the default preferences in CTaps prefers TCP or
+While the default preferences in CTaps prefer TCP or
 QUIC over UDP, if UDP is preferred but not required then there is no way for
 racing to function properly.
 
@@ -974,7 +984,7 @@ the default preferences rank UDP lower than other supported protocols, it was
 deemed that for CTaps the risk of UDP being ranked higher than other protocols when
 the endpoint does not support it is quite low. The simple solution of
 of assuming an established connection on opening the socket is adequate was therefore
-chosen, for lack of a better option.
+chosen, for lack of a better option. \todo{Cite rfc 9868 or smth.}
 
 \section{Security}
 The security of a TAPS system is reliant on the security of the underlying protocols.
@@ -987,7 +997,7 @@ in a TAPS system as when using the underlying protocols directly.
 Despite TAPS being designed before the official release of QUIC, it supports
 the same security settings due to QUIC using TLS under the hood. It supports
 both 0-RTT handshakes and the necessary client and server certificates for both
-clients and servers using TLS. In addition it supports the required ALPNs and
+clients and servers using TLS. In addition it supports the required ALPNs
 and makes them accessible through Security Parameters. Security Parameters as
 designed in TAPS and implemented by CTaps are by nature extensible, without
 introducing breaking API changes.
@@ -1009,7 +1019,7 @@ The user of a TAPS system is also reliant on TAPS not silently downgrading
 the required security of the application. Here TAPS needs to follow sane defaults
 which default to mandating security, otherwise TAPS would be liable
 to downgrade security since the insecure variants of protocols are at
-an advantage during candidate racing since they require fewer RTTs.
+an advantage during candidate racing because they require fewer RTTs.
 
 In addition to mandating that TAPS implementations set the default allowed
 security protocols to be the best available, RFC~9622 also mentions that applications
@@ -1047,7 +1057,7 @@ and large number of configurations available within TAPS there is a genuine risk
 security minded applications may not have combed through all
 available configurations in TAPS and therefore not be aware of a security risk.
 
-An example of a potential unknown unknown is the potential of isolating sessions
+An example is the potential of isolating sessions
 through Security Parameters. By default this is set to false, allowing a TAPS implementation
 to use an internal cache to optimize established connections. Using this cache
 could lead to a leak of connection linkability, as observers over the wire could
@@ -1065,14 +1075,14 @@ Security Parameter configurations in order to find relatively large performance
 gains to be made with relatively small security trade-offs.
 
 %Racing reveal who uses TAPS? Other revealing options?
-For applications where fingerprinting are absolutely unacceptable there are
+For applications where fingerprinting is absolutely unacceptable there are
 also other issues related to TAPS, which cannot necessarily be traded away.
 First of all, using a networking library which standardizes the interaction
 with the network to a certain degree would naturally lead to potential fingerprinting
-of clients. This is not something which can be configured away and is an
+of clients. This is an
 inherent property of software libraries whose behavior are exposed to the internet.
 Without a large and diverse enough user base, fairly accurate assumptions can
 be made about the users behind a connection, if the underlying library being
 used can be ascertained. This becomes a larger risk if the behavior
-if the underlying library is fairly unique, such as the extensive
+of the underlying library is fairly unique, such as the extensive
 candidate racing in TAPS.

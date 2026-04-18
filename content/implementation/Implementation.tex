@@ -90,7 +90,7 @@ which defines the required properties and function properties which a
 protocol implementation must implement.
 
 The concrete protocols themselves are then defined as global instances
-of this struct, and are stored in a global array of currently supported protocols.
+of this struct and are stored in a global array of currently supported protocols.
 An example declaration can be seen in \cref{lst:udp-protocol-decl}, where
 the global UDP protocol implementation is declared in \mono{udp.h}. Since
 the protocol implementations themselves have no state, it is safe to use a
@@ -111,7 +111,7 @@ are legal in internal functions except where strictly necessary
 and that internally, CTaps uses the same function for success paths
 and failure paths, instead passing a NULL pointer as a result when operations fail.
 
-Like with libuv, if a CTaps function returns a synchronous error then any error callback
+Similar to libuv, if a CTaps function returns a synchronous error then any error callback
 will never be invoked.
 
 \section{Connection Lifetime}
@@ -122,8 +122,8 @@ and being torn down. This section will describe how each phase is implemented
 internally within CTaps.
 
 \subsection{Candidate Gathering} \label{sec:candidateGathering}
-Before a Connection can be established, a list of possible Local and Remote
-need to be generated based on the data passed to the associated Preconnection.
+Before a Connection can be established, a list of possible Local and Remote Endpoints
+needs to be generated based on the data passed to the associated Preconnection.
 In CTaps this candidate gathering follows the procedure described in RFC~9623
 very closely.
 
@@ -335,9 +335,7 @@ In CTaps, applications can request to receive data on a Connection
 at any time. CTaps will then either cache the passed \mono{receive()}
 callback until a message is received, or invoke it immediately with
 a cached message.
-This means that the user does not have to
-spin while waiting for messages, instead being able to perform other work while
-waiting. Each invocation only receives
+Each invocation only receives
 a single message, and will always receive the first message in
 the message queue.
 
@@ -691,7 +689,7 @@ The relative protocol complexity is discussed further in
 in \cref{sec:protocolComplexity}.
 
 UDP does not fit perfectly into the model assumed by
-TAPS, which is that of a Connection-based system. There is therefore
+TAPS, which is that of a Connection-based system. There are therefore
 several pieces of logic in the CTaps UDP implementation which adapt
 the underlying UDP to fit into a TAPS model.
 
@@ -722,8 +720,7 @@ For CTaps this means that every time libuv notifies CTaps of having
 received new data over a TCP socket then the received data is wrapped into a
 single message and passed to the application.
 
-While the application
-can the a framer to wrap or unwrap received messages, this currently
+While the application can use a framer to wrap or unwrap received messages, this currently
 functions as a proof of concept in CTaps, and does not currently have an internal buffer
 to support combining multiple TCP packets into a single Message.
 
@@ -830,6 +827,7 @@ implemented in CTaps is discussed further in \cref{sec:single-endpoint-handshake
 The full implementation of the protocol implementation struct for QUIC can be seen in
 \cref{lst:quic-impl-struct} in \cref{app:code-examples}.
 
+\definecolor{taskgreen}{HTML}{A5D6A7}
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
@@ -837,6 +835,7 @@ The full implementation of the protocol implementation struct for QUIC can be se
     arr/.style={->, >=stealth, thick},
     lbl/.style={font=\footnotesize, align=center},
 ]
+
 
 \node[box] (app)      at ( 0,  4) {Application};
 \node[box] (ctaps)    at ( 0,  0) {CTaps};
@@ -875,19 +874,18 @@ the use of Selection Properties. In CTaps this is used when gathering candidates
 when deciding the order of racing and when deciding certain protocol behavior for
 an active Connection.
 
-Selection Properties have default values which are used when an application does not
+Selection Properties have default values that are used when an application does not
 explicitly set a value for a certain property. In addition, each protocol implementation
 keeps track of which Selection Properties it can and cannot fulfill.
 
-The default Selection Properties for each application is prescribed by TAPS in
-RFC~9622~\cite[Sec. 6.2]{rfc9622} and are designed
+The default Selection Properties for each application are prescribed by TAPS in
+RFC~9622~\cite[Sec. 6.2]{rfc9622}. They are designed
 to be to be compatible with as many applications as possible.
 
 The Selection Properties each protocol fulfills are implementation specific
-to a certain extent and are not prescribed by TAPS.
-A table containing both the default values for when an application initiates
-a Connection and the Selection Properties fulfilled by each protocol as defined by CTaps can be seen in
-\cref{tab:selection-properties}.
+to a certain extent and are not prescribed by TAPS. \Cref{tab:selection-properties}
+shows both the default values for when an application initiates
+a Connection and the Selection Properties fulfilled by each protocol as defined by CTaps.
 
 \begin{table}[htbp]
 \centering
@@ -967,9 +965,9 @@ relying on built-in libuv support.
 This increased complexity reflects primarily two things, lower degrees of toolchain
 support and an increase in the number of features provided.
 For the first point, the complexity to integrate QUIC into CTaps
-could likely be greatly reduced if if libuv integrated QUIC support into a custom handle
+could likely be greatly reduced if libuv integrated QUIC support into a custom handle
 like it has with UDP and TCP.
-For the second point it naturally follows that since
+For the second point it naturally follows that, since
 QUIC offers several features not available through UDP or TCP such as multistreaming
 and connection migration, CTaps has to implement logic to make these features available
 to the application.
@@ -1023,9 +1021,9 @@ TEST(InitiationTests, respectsLocalEndpoint) {
 \end{listing}
 
 \section{Build System} \label{sec:build-system}
-CTaps is built using CMake and follows attempts to largely follow the same conventions
+CTaps is built using CMake and attempts to largely follow the same conventions
 around build and structure as libuv. This includes
-having the API consist of a single header file, \mono{ctaps.h} which
+having the API consist of a single header file, \mono{ctaps.h}, which
 is included to expose all functionality intended to be used by an application.
 
 CTaps is also compiled with visibility of all symbols set to hidden by default,

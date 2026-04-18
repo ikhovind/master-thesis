@@ -21,7 +21,7 @@ All tests were run on localhost, so the network emulation was used to
 show CTaps behavior under different network conditions.
 
 The performance seen in the benchmarks would likely not change much
-on a more performant system, as they are all I/O-bound to a large
+on a more performant system, as tested operations are all I/O-bound to a large
 degree.
 
 \begin{table}[htbp]
@@ -51,7 +51,7 @@ When performing benchmarks, the Linux utility \mono{tc-netem} was used~\cite{tc-
 and potential jitter.
 
 Netem could be invoked programmatically
-from the Python testing script, which allowed a series network conditions to be used in
+from the Python testing script, which allowed a series of network conditions to be used in
 a single benchmark, for example the four RTTs
 in the handshake benchmark.
 
@@ -96,6 +96,14 @@ iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
 \label{lst:iptables-command}
 \end{listing}
 
+In addition to the clients used two servers \footnote{
+The servers and clients used for benchmarking can be found in the \mono{benchmark/src/server/}
+and \mono{benchmark/src/client/}
+folders in the main CTaps repository.
+} were implemented to peform
+benchmarking. Each server accepts incoming connections and supports
+two commands, one for initiating the transfer of the small file and one
+for initiating the transfer of the large file.
 
 \subsection{Measurement Approach}
 Benchmarking data was gathered through a common benchmarking Python script.
@@ -106,10 +114,10 @@ can be found in the \mono{benchmark/scripts/} folder of the main CTaps repositor
 together with a README on how to reproduce the benchmarks.}.
 
 \subsection{Single Endpoint Handshake}
-
 This benchmark can be seen in \cref{fig:racing-handshake} and
 intends to show that a single CTaps client
-can connect to multiple servers serving different protocols and
+can connect to multiple servers
+serving different protocols and
 that there is no significant overhead in CTaps when connecting to a server.
 It also shows the cost of a staggered racing delay as it exists now in CTaps.
 
@@ -119,7 +127,7 @@ growth between network delay and the handshake time.
 The handshake times are very consistent since no jitter was added to the emulated
 network. The graph is therefore based on a single measurement
 for each data point. Since CTaps does not
-support TLS, the TCP handshakes do not feature encryption,
+support TLS, the TCP handshakes do not implement encryption,
 and therefore require only one RTT to set up compared to the two RTTs required
 for QUIC.
 
@@ -136,9 +144,6 @@ For each of the handshakes
 the bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
 does not have an effect on the time taken for the initial handshake.
 
-The associated TCP server was a pure socket implementation and the QUIC server
-used the Picoquic packet loop.
-
 \begin{figure}[htbp]
     \input{./resources/racing_handshake.pgf}
     \caption[Single Endpoint Handshake Benchmark]{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
@@ -146,7 +151,7 @@ used the Picoquic packet loop.
 \end{figure}
 
 \subsection{Slow and Fast Endpoint Handshake} \label{sec:handshake-kde}
-This benchmark can be seen in \cref{fig:handshake-kde} and intends to
+This benchmark can be seen in \cref{fig:handshake-kde}. It intends to
 show the benefits of candidate racing and how it helps find the
 endpoint with the smallest delay.
 This benchmark was modeled after the theoretical
@@ -376,11 +381,11 @@ The 250~millisecond delay recommended in Happy Eyeballs
 V2 has a very specific background in that it is racing two protocol families
 on a single local path.
 With the larger number of
-possible combinations of candidates, a TAPS implementation should heed the
-more closely follow the recommendations for racing on multihomed hosts as
-described in~\cite{rfc8421}.
+possible combinations of candidates, a TAPS implementation should
+follow the recommendations for racing on multihomed hosts as
+described in~\cite{rfc8421} more closely.
 
-Other potential mitigations for this problem with interleaving is discussed further
+Other potential mitigations for this problem with interleaving are discussed further
 in \cref{sec:future-work}.
 
 In addition to the stagger delay, the connection establishment time of
@@ -409,16 +414,17 @@ unrealistically large due to the CTaps-specific stagger delay.
 \subsection{Small File Transfer Benchmark}
 The small file benchmark shows that CTaps can utilize Connection
 Cloning to make use of QUIC multistreaming and achieve performance
-parity with a Picoquic client. This is however on a 
-small I/O bound applications and it does
+parity with a Picoquic client. The benchmark does
+however consist of a 
+small I/O bound application and it does
 not mean that there is no overhead with using CTaps.
 
 The small file
 transfer is a constructed scenario and in real-world
-situations downloading large files like required for this benchmark this is uncommon.
+situations downloading large files as required for this benchmark may be uncommon.
 
 In 2025 Cloudflare
-measured that the median number of packets sent to visitors to their service
+measured that the median number of packets sent to clients of their service
 was 12~\cite{sulemanahmadMeasuringCharacteristicsTCP2025}. A majority of 
 connections never even leave slow start.
 
@@ -442,7 +448,7 @@ CTaps and that CTaps can make use of another QUIC-specific advantage
 from a client that also supports TCP.
 
 While the benchmark shows that connection migration is currently supported
-with little overhead, there are however still many scenarios which are not
+with little overhead, there are however still many scenarios that are not
 supported by CTaps. These would not present extra complexity to the
 application, but would lead to quite a bit of internal CTaps complexity.
 
@@ -458,7 +464,7 @@ unproductive in situations where applications anyways
 are I/O-bound, which is naturally the case in the CTaps benchmarks.
 They can therefore be used to draw the conclusion that there
 is no significant overhead between CTaps and the underlying protocols,
-but they cannot for example be used that a CTaps client would perform
+but they cannot for example be used to judge how CTaps client would perform
 under load as a pure QUIC or TCP client.
 
 Since both the Picoquic packet loop client and CTaps interact with the network in
@@ -467,7 +473,7 @@ waiting for a response for the network. Since any computationally heavy work per
 on the data sent to or from the network would be in the domain of the application using CTaps,
 the only way to truly show the overhead of CTaps would be to create a large amount of
 concurrent clients and to transfer large amounts of data in order to stress CTaps as
-the interface between the network and the client. When it comes to high performance CTaps
+the interface between the network and the client. When it comes to high performance, CTaps
 is naturally limited by the single threaded event loop model of libuv and would therefore
 not be able to fully make use of all the resources available to it on a host system.
 
