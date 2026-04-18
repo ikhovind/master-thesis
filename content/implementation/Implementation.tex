@@ -159,16 +159,16 @@ attempt for each, with a delay between each candidate. All outstanding racing at
 are canceled upon the first success.
 
 Since CTaps has no internal cache and therefore no support for RTT estimation, the delay
-between each candidate is set to a fixed 250 ms which is the recommended value
+between each candidate is set to a fixed \qty{250}{\milli\second} which is the recommended value
 in Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}. In a real-world
 use case this is a major limitation, which is discussed further in \cref{sec:discussion}.
 
 An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.
 Here, DNS resolution resolves two endpoints with delays of
-RTT of 300 and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
+RTT of \qty{300}{\milli\second} and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
 but the faster RTT leads to the second endpoint winning the race and being
 presented to the application.
-In the example the DNS resolution is set to take 100 ms
+In the example the DNS resolution is set to take \qty{100}{\milli\second}
 which is a arbitrary value with no influence on the following candidate racing.
 
 

@@ -37,7 +37,7 @@ degree.
 \midrule
 \multicolumn{1}{l||}{Model}      & ThinkPad X1 Carbon 6th Gen (2018) \\
 \multicolumn{1}{l||}{CPU}        & Intel Core i5-8350U CPU @ 1.70GHz (4 cores, 8 threads) \\
-\multicolumn{1}{l||}{RAM}        & 16 GB LPDDR3-2133 \\
+\multicolumn{1}{l||}{RAM}        & \qty{16}{\giga\byte} LPDDR3-2133 \\
 \multicolumn{1}{l||}{OS}         & Debian GNU/Linux 12 \\
 \multicolumn{1}{l||}{Kernel}     & 6.1.0-44-amd64 \\
 \bottomrule
@@ -165,15 +165,16 @@ as a second alternative. This is intended to emulate the scenario after
 for example a DNS resolution where multiple endpoints are available but
 the client does not know which one is best.
 
-In order to gather a distribution of handshake times, the test was run 200 times with a
-jitter of \qty{7}{\milli\second} and a latency correlation of 25 \%.
+In order to gather a distribution of handshake times, the test was run 200~times with a
+jitter of \qty{7}{\milli\second} and a latency correlation of \qty{25}{\percent}.
 In the scenario that this benchmark models,
 candidate racing would lead to not only shorter
 handshake times, but also a significantly smaller delay throughout the entire connection lifetime.
 
 The theoretical ideal handshake times for each endpoint are featured
-in the graph. With a 250 ms racing delay, 2 RTTs for a full handshake and delays of 50 and 150
-milliseconds, the theoretical minimum handshake times work out to 
+in the graph. With a \qty{250}{\milli\second} racing delay, 2~RTTs for a full handshake and delays of
+\qtylist{50;150}{\milli\second}
+the theoretical minimum handshake times work out to 
 $\qty{50}{\milli\second} \cdot 4 + \qty{250}{\milli\second} = \qty{450}{\milli\second}$
 and
 $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively. 
@@ -196,12 +197,12 @@ over TCP when compared to QUIC, as modeled in \cref{fig:connection-clone-gains} 
 \cref{chap:impl}.
 In order to show that the performance gap between TCP and QUIC grows with increasing delay
 the benchmark sweeps across four delays of
-25, 50, 75 and \qty{100}{\milli\second}.
+\qtylist{25;50;75;100}{\milli\second}
 
-The measurement consists of the time taken to transfer a file with 70 packets'
+The measurement consists of the time taken to transfer a file with 70~packets'
 worth of data. For TCP this works out to
 $70 \cdot 1460 \approx \qty{100}{\kilo\byte}$ after discounting the 20 byte IP and TCP
-headers from a typical 1500 byte MTU. QUIC has slightly more overhead per packet,
+headers from a typical 1500-byte~MTU. QUIC has slightly more overhead per packet,
 but not enough to make a significant difference in the required file size.
 
 Before the small file transfer was started, a large file of \qty{4.6}{\mega\byte} was
@@ -211,16 +212,18 @@ CWND is reused. This large file is the same as the one used in the migration ben
 described in \cref{sec:path-migration}.
 
 To verify that the small file transfer can actually be completed in
-a single RTT we need to check that the large file is large enough for the CWND to ramp up to at least 70 packets
+a single RTT we need to check that the large file is large enough for the CWND to ramp up to at least 70~packets
 and that the BDP of the link is large enough to carry the entire small file in a single RTT.
 
-Assuming an initial CWND of 10 packets, the number of RTTs required for the CWND to grow to at least 70 during slow start is
-$10 \cdot 2^{x-1} \geq 70 \Rightarrow x \geq 4 \text{ RTTs}$. During the minimum of 4 RTTs
+Assuming an initial CWND of 10~packets, the number of RTTs required for the CWND to grow to at least
+70~packets
+during slow start is
+$10 \cdot 2^{x-1} \geq 70 \Rightarrow x \geq 4 \text{ RTTs}$. During the minimum of 4~RTTs
 $\sum_{n=1}^{4} 1460 \cdot 10 \cdot 2^{n-1} = \qty{219}{\kilo\byte}$ of data would
 be transferred, which is well below the \qty{4.6}{\mega\byte} file used in the benchmark.
 
 To verify that the BDP is large enough, we can calculate the minimum BDP for
-70 packets which is
+70~packets which is
 $70 \cdot 1500 \cdot 8 = \qty{840}{\kilo\bit}$.
 
 In our benchmark, the smallest delay is \qty{25}{\milli\second}
@@ -233,7 +236,7 @@ to carry the small file for all tested delay values.
 
 \begin{figure}[htbp]
   \input{./resources/small_file.pgf}
-  \caption[Small file transfer benchmark]{Transfer time of a 100 kB file after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
+  \caption[Small file transfer benchmark]{Transfer time of a \qty{100}{\kilo\byte}~file after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
   \label{fig:small-file-bar}
 \end{figure}
 
@@ -264,7 +267,8 @@ for the application.
 
 \begin{figure}[htbp]
     \input{./resources/migration_throughput.pgf}
-    \caption[Connection migration benchmark]{Transfer of a 4.6 MB file over a 5 Mbit link with CTaps, Picoquic and TCP. A path block is applied at t = 5s.}
+    \caption[Connection migration benchmark]{Transfer of a \qty{4.6}{\mega\byte}~file over a \qty{5}{\mega\bit\per\second}~link with CTaps, Picoquic and TCP.
+    The first path is blocked after 5~seconds.}
     \label{fig:migration-throughput}
 \end{figure}
 
@@ -332,7 +336,7 @@ servers with different protocols, due to candidate racing.
 The benchmark does however also show that candidate racing
 is not implemented optimally in CTaps.
 Currently, CTaps uses static stagger delay
-of 250 milliseconds between attempts as recommended by Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}, but it does
+of 250~milliseconds between attempts as recommended by Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}, but it does
 not implement interleaving as described in the same document.
 This means that all
 combinations involving the most desirable protocol are attempted
@@ -368,7 +372,7 @@ becomes far less appealing if the racing
 delays introduce multi-second handshake delays, limiting
 the current appeal of CTaps.
 
-The \qty{250}{\milli\second} delay recommended in Happy Eyeballs
+The 250~millisecond delay recommended in Happy Eyeballs
 V2 has a very specific background in that it is racing two protocol families
 on a single local path.
 With the larger number of
@@ -394,7 +398,7 @@ in Happy Eyeballs~\cite{schinaziHappyEyeballsVersion2017}.
 The stagger shows up not only in the raw handshake measurement times,
 but also in the candidate racing benchmark. Here the benchmark itself becomes
 more contrived than needed because it needs to make the faster endpoint
-preferred even with the long 250 ms stagger delay. This means making the
+preferred even with the long \qty{250}{\milli\second} stagger delay. This means making the
 delay for the slow endpoint three times larger than for the fast
 endpoint. While this
 still serves to show the benefit gained on a suboptimal ordering from

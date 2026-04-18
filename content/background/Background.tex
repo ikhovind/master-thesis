@@ -71,30 +71,29 @@ which support the requirements given by the domain and type.
 
 \section{Barriers to Protocol Adoption}\label{sec:transport-protocol-barriers}
 The fact that an application has to specify both the domain
-and the type of the socket means that both the
-underlying addressing and the protocol are bound at compile time.
-The underlying transport protocol is therefore tightly
-coupled to the design of an application, and barring fairly
-advanced logic when setting up
-the necessary sockets, the application will be bound to a single 
-protocol and addressing scheme. Updating
-the underlying protocol therefore requires at least recompilation and 
-probably a fairly large refactoring of the application. 
-This naturally makes adopting new protocols difficult, even
-if the new protocol is better suited to the application's requirements.
+and the type of the socket means that the
+underlying addressing and the transport layer protocol are bound at compile time.
+Updating
+the underlying transport protocol will therefore require at least recompilation and 
+likely a refactoring of the application. 
+This naturally makes adopting new transport protocols difficult, even
+if a new protocol is better suited to the application's requirements.
 
-Another challenge with new transport-layer protocols
-is that
-Network middleboxes have have been
+Another challenge with the adoption of new transport layer protocols
+is network middleboxes. Network Middleboxes have been
 optimized to support TCP and UDP and may sometimes
-even drop packets if they contain another transport layer protocol.
-The resulting difficulty in innovating on the transport-layer
-is known as network ossification. Several new protocols such
-as UDP-lite and QUIC are built on top of UDP in order to combat
-this ossification.
+drop packets if the protocol field in the IP header
+does not match TCP or UDP.
 
-While using UDP as a substrate does present some overhead,
-it is fairly minimal with only a header of 8 bytes.
+The resulting difficulty in innovating on the transport layer
+is known as network ossification. In an attempt to combat
+this ossification, transport layer protocols are often built
+using UDP as a substrate, allowing them to use the same IP
+protocol number as UDP. Examples of this include QUIC \cite{rfc9000} and
+SCTP over UDP \cite{rfc6951}.
+
+While building on top of UDP this way does present some overhead,
+it is fairly minimal with the UDP header only being \qty{8}{\Bytes}.
 
 Applications can themselves implement needed features
 such as reliability and congestion control.
@@ -114,8 +113,7 @@ ubiquitous across the internet.
 
 In TCP, connections are uniquely identified by a four-tuple consisting
 of the source IP address, the source port, the destination IP address
-and the destination port. This is unlike more modern protocols such
-as QUIC, which contain a dedicated connection ID.
+and the destination port.
 
 \section{UDP}
 UDP has, along with TCP, grown to become one of the two dominant
@@ -125,7 +123,7 @@ to the application layer. It is often used for applications which
 prioritize low latency over reliability, such as real-time applications.
 
 UDP is designed to be a very lightweight protocol with as little
-overhead as possible. It features a very simple 8 byte header, featuring
+overhead as possible. It uses a very simple 8-byte header, containing 
 only the source port, destination port, length and checksum.
 Since UDP does not mandate
 advanced features such as in-order delivery or reliability, it
@@ -135,7 +133,7 @@ or reliable delivery as needed.
 
 The primary reason for why protocols choose to use UDP as a substrate
 instead of developing directly over IP is network ossification. This
-is discussed further in \cref{sec:transport-protocol-barriers}
+is discussed further in \cref{sec:transport-protocol-barriers}.
 
 \section{TLS}
 TLS is a cryptographic protocol which provides secure communication
@@ -144,30 +142,31 @@ most visible as the basis for HTTPS, the secure version of HTTP.
 
 TLS features its own handshake protocol when establishing a connection,
 in order to exchange the cryptographic parameters needed for the connection.
-This means that connections using TLS have to perform an additional round trip time (RTT)
+This means that connections using TLS have to spend an additional round trip time (RTT)
 during connection establishment, compared to a non-secure TCP connection.
 
-TLS 1.3 also supports for 0-RTT handshakes
+TLS 1.3 also supports 0-RTT handshakes
 which allow a client to send data during the initial handshake when resuming
 a previous connection to a server~\cite{rfc8446}. This can be a source
 of replay attacks if the message being sent is not idempotent.
 
 As of 2026 TLS adoption has been very widespread,
-with 95 \% of all connections in Chrome on Windows using an encrypted
+with \qty{95}{\percent} of all connections in Chrome on Windows using an encrypted
 connection~\cite{google2026transparency}.
 
 \section{QUIC}\label{sec:quic}
 QUIC is a protocol developed by Google and formalized
 through RFC~9000 in 2021~\cite{rfc9000}.
 Intended to be a replacement for TCP, it has achieved
-a fairly high adoption, for example with over 75 \%
+a fairly high adoption, for example with over \qty{75}{\percent}
 of traffic to Meta servers using QUIC in 2020~\cite{joras2020quic}.
 
 QUIC is a connection-oriented protocol and provides reliability,
 despite being implemented in user-space on top of
 UDP. QUIC enables several features which either are not available
-or do not have a wide adoption in TCP, among these are 0-RTT connection establishment,
-multistreaming. TLS is a mandatory part of the protocol and QUIC
+or do not have a wide adoption in TCP, among these are
+0-RTT connection establishment and multistreaming.
+TLS is a mandatory part of the protocol and QUIC
 also encrypts its header, unlike TLS over TCP.
 
 While QUIC does present an overarching connection, the
@@ -381,7 +380,7 @@ order to verify the peers ownership of the endpoint.
 
 Path validation is done by using
 \mono{PATH_CHALLENGE} and \mono{PATH_RESPONSE} 
-frames. The challenge frame contains 8 bytes of arbitrary data,
+frames. The challenge frame contains \qty{8}{\Bytes} of arbitrary data,
 which the peer must echo back in the response frame. 
 Connection migration can be initiated without first validating
 the new local path, since the remote is
@@ -528,7 +527,7 @@ could function as a transport layer protocol, and swapping the
 underlying transport layer protocol should in theory be simple.
 
 Exactly which Transport Services are provided by which transport
-protocols has been mapped by the IETF in RFC8095, as part of the
+protocols has been mapped by the IETF in RFC~8095, as part of the
 TAPS working group~\cite{fairhurstServicesProvidedIETF2017}.
 
 \section{TAPS}
@@ -941,7 +940,7 @@ is known as Candidate Gathering. The candidates are based on
 the specified local and remote endpoints of the Preconnection,
 as well as the protocols which are available to use. 
 
-RFC9623 conceptualizes these combinations as a tree,
+RFC~9623 conceptualizes these combinations as a tree,
 with the first level of child nodes representing the
 possible Local Endpoints, which are resolved to possible local IP
 addresses when building the tree~\cite{brunstromImplementingInterfacesTransport2025}.
@@ -963,7 +962,7 @@ and the possible addresses resolved in the third level can
 be restricted by requiring the use of temporary local
 addresses, as these are only featured in IPv6.
 
-While RFC9623 uses a tree to conceptualize the different combinations
+While RFC~9623 uses a tree to conceptualize the different combinations
 of candidates, it places no bearing on the actual implementation
 in a real TAPS system, it does however recommend to branch in the
 same order as the RFC, to place concepts more important to a
@@ -1062,7 +1061,7 @@ while step two and three map into the TAPS concept of candidate racing.
 Since waiting for each of the four steps to fully complete before moving
 on to the next one would lead to unecessary delay Happy Eyeballs v2 recommends
 that connection attempts are started eiteher immeditately on
-the first response if it is IPv6, or after a 50 ms resoultion
+the first response if it is IPv6, or after a \qty{50}{\milli\second} resolution
 delay if the first received resolution if IPv4~\cite{schinaziHappyEyeballsVersion2017}.
 This helps mitigate potential slow DNS resolutions, especially
 if the IPv6 resolution is significantly slower than the IPv4
