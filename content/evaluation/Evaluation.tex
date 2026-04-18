@@ -341,7 +341,7 @@ servers with different protocols, due to candidate racing.
 The benchmark does however also show that candidate racing
 is not implemented optimally in CTaps.
 Currently, CTaps uses static stagger delay
-of 250~milliseconds between attempts as recommended by Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}, but it does
+of 250~milliseconds between attempts as recommended by Happy Eyeballs V2~\cite{rfc8305}, but it does
 not implement interleaving as described in the same document.
 This means that all
 combinations involving the most desirable protocol are attempted
@@ -396,7 +396,7 @@ endpoints have been resolved before sorting the gathered candidates according
 to the application preferences and then working its way down the list.
 This could be optimized by integrating candidate gathering and candidate
 racing more tightly, utilizing a Resolution Delay similar to the one described
-in Happy Eyeballs~\cite{schinaziHappyEyeballsVersion2017}.
+in Happy Eyeballs~\cite{rfc8305}.
 
 % Discuss candidate racing benchmark
 \subsection{Slow and Fast Endpoint Handshake Benchmark}

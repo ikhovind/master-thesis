@@ -22,7 +22,7 @@ in RFC~9622, although not all properties are supported internally and setting th
 When performing
 racing the most desirable protocols are attempted first and staggered racing
 is performed for less desirable protocols, as described in RFC~9623
-\cite{brunstromImplementingInterfacesTransport2025}.
+\cite{rfc9623}.
 \todo{Check in on this later, describe how large of a subset}
 
 The parts of the TAPS API that were prioritized for CTaps are common features related
@@ -206,7 +206,7 @@ and how it interacts with Picoquic and libuv.
 While the TAPS RFCs were designed with QUIC in mind, they were written before the
 QUIC design was finalized in RFC~9000~\cite{rfc9000}. This means that RFC~9623 does not
 feature any specific transport protocol considerations for mapping QUIC into
-a TAPS system~\cite{brunstromImplementingInterfacesTransport2025}.
+a TAPS system~\cite{rfc9623}.
 There exists a draft for mapping Transport Services to QUIC, but this has
 not made it into the official RFC~\cite{transportServicesMappingForQuic}.
 

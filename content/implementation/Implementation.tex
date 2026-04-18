@@ -127,7 +127,7 @@ needs to be generated based on the data passed to the associated Preconnection.
 In CTaps this candidate gathering follows the procedure described in RFC~9623
 very closely.
 
-Using N-ary tree as described in RFC~9623~\cite{brunstromImplementingInterfacesTransport2025},
+Using N-ary tree as described in RFC~9623~\cite{rfc9623},
 CTaps first builds the entire tree and resolves
 all possible local interfaces, all protocols, specified ALPNs and all possible resolutions of
 remote hostnames respectively. Each level in the tree corresponds to a specific
@@ -138,17 +138,17 @@ stack and a specific Remote Endpoint, are referred to as a candidate.
 After the entire tree has been built, CTaps prunes the branches which
 are not compatible with the required or prohibited selection properties. After pruning,
 the tree is sorted according to the stated selection properties, as described in RFC~9623 
-\cite{brunstromImplementingInterfacesTransport2025}. Finally, the leaves of the tree
+\cite{rfc9623}. Finally, the leaves of the tree
 are extracted into an array of candidates which is then used for candidate racing.
 
 \subsection{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered, CTaps
 will race them according to the specification from RFC~9623
-\cite{brunstromImplementingInterfacesTransport2025}. 
+\cite{rfc9623}. 
 
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
-system follows the same procedure as specified in Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017},
+system follows the same procedure as specified in Happy Eyeballs V2~\cite{rfc8305},
 which was originally designed to increase IPv6 adoption as described in \cref{happyEyeballs}.
 TAPS takes racing a step further by not only racing IP-address families, but also
 racing potential protocol configurations and endpoints.
@@ -160,7 +160,7 @@ are canceled upon the first success.
 
 Since CTaps has no internal cache and therefore no support for RTT estimation, the delay
 between each candidate is set to a fixed \qty{250}{\milli\second} which is the recommended value
-in Happy Eyeballs V2~\cite{schinaziHappyEyeballsVersion2017}. In a real-world
+in Happy Eyeballs V2~\cite{rfc8305}. In a real-world
 use case this is a major limitation, which is discussed further in \cref{sec:discussion}.
 
 An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.

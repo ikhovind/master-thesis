@@ -44,7 +44,7 @@ First mentioned in 1970 in relation to ARPANET, the
 simplicity of sockets and their ubiquity in all UNIX distributions
 since version 4.2 of the Berkeley Software Distribution have
 led to them becoming the de facto standard for network
-programming~\cites{crockerNewHostHostProtocol1970}[p.~502]{tanenbaumComputerNetworks2011}.
+programming~\cites{rfc33}[p.~502]{tanenbaumComputerNetworks2011}.
 
 Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
@@ -99,7 +99,7 @@ Applications can themselves implement needed features
 such as reliability and congestion control.
 This way of designing new protocols has become so common that
 it has prompted an official RFC~from the IETF, describing
-the best practices for implementing congestion control on top of UDP~\cite{eggertUnicastUDPUsage2008}.
+the best practices for implementing congestion control on top of UDP~\cite{rfc5405}.
 
 \section{TCP}
 TCP is by far the most common transport layer protocol used on the
@@ -107,7 +107,7 @@ internet today. It is a connection-oriented protocol and provides
 a reliable, in-order transfer of a stream of bytes to the application layer.
 It has also become common to use TCP for message-based applications,
 using a framing protocol on top of TCP to divide the TCP byte stream into
-discrete messages. A description of TCP was first published as an RFC~in 1974~\cite{cerfSpecificationInternetTransmission1974}
+discrete messages. A description of TCP was first published as an RFC~in 1974~\cite{rfc675}
 and it has since grown to become
 ubiquitous across the internet.
 
@@ -531,7 +531,7 @@ underlying transport layer protocol should in theory be simple.
 
 Exactly which Transport Services are provided by which transport
 protocols has been mapped by the IETF in RFC~8095, as part of the
-TAPS working group~\cite{fairhurstServicesProvidedIETF2017}.
+TAPS working group~\cite{rfc8095}.
 
 \section{TAPS}
 The TAPS WG was an IETF working group which aimed to solve the strong
@@ -614,7 +614,7 @@ seen in \cref{fig:socket-programming-api-model} and
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
 RFC~9621 describes the underlying architecture of and a set of requirements
-for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch}~\cite{paulyArchitectureRequirementsTransport2025}.
+for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch}~\cite{rfc9621}.
 A TAPS system consists of two primary parts, the Transport Services
 API and the Transport System Implementation. The Transport Services
 API is the public facing API used by the application. This contains
@@ -668,7 +668,7 @@ free to implement its internal workings as it sees fit.
 |               Network-Layer Interface               |
 +-----------------------------------------------------+
     \end{BVerbatim}
-    \caption{TAPS architecture as described in RFC~9621~\cite{paulyArchitectureRequirementsTransport2025}.}
+    \caption{TAPS architecture as described in RFC~9621~\cite{rfc9621}.}
     \label{fig:tapsArch}
 \end{figure}
 
@@ -677,7 +677,7 @@ Abstracting away the underlying transport protocols is done by
 presenting a new set of abstractions to the application. The most
 central of these abstractions is the Connection. A Connection
 represents a \enquote{shared state of two or more endpoints that persists
-across Messages that are transmitted between these endpoints}~\cite{welzlUsageTransportFeatures2018}.
+across Messages that are transmitted between these endpoints}~\cite{rfc8303}.
 
 When working with Connection objects, TAPS provides five high
 level groups of actions that an application can perform:
@@ -696,7 +696,7 @@ level groups of actions that an application can perform:
 
 In addition, the lifeline of a Connection is divided into three distinct
 phases, preestablishment, the established state, and
-termination of a Connection~\cite{paulyArchitectureRequirementsTransport2025}.
+termination of a Connection~\cite{rfc9621}.
 Each of these phases are associated
 with one or more of the groups of actions that an application can perform,
 as described above. 
@@ -708,7 +708,7 @@ transfer data.
 
 There are three ways of
 establishing a Connection: \mono{initiate()}, \mono{listen()} and
-\mono{rendezvous()}~\cite{paulyArchitectureRequirementsTransport2025}.
+\mono{rendezvous()}~\cite{rfc9621}.
 
 Invoking \mono{initiate()} establishes a Connection to a remote endpoint which
 is assumed to be listening for incoming Connections. How this Connection
@@ -760,10 +760,10 @@ ways of converting TCP's byte-stream into usable messages has been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
 delimiter-separated formats, where the beginning and end of a piece of
-data is separated by delimiters.~\cite{brunstromImplementingInterfacesTransport2025}
+data is separated by delimiters.~\cite{rfc9623}
 Examples of the two categories are HTTP/1.1 for a delimiter-separated format
 and DHCP for TLV, specifying the length of the given hardware address, allowing
-parsers which are unfamiliar with the type to skip it, since the length is known~\cite{dromsDynamicHostConfiguration1997}.
+parsers which are unfamiliar with the type to skip it, since the length is known~\cite{rfc2131}.
 
 For a TAPS system, where the application layer should not need to take into
 account which application layer protocol it is running on top of, Framers become
@@ -865,7 +865,7 @@ The \texttt{Multistream Connections in Group} Selection Property
 allows the application to select whether the
 application would prefer multiple Connections within a
 Connection Group to be provided by streams of a single
-underlying transport Connection where possible~\cite{paulyArchitectureRequirementsTransport2025}.
+underlying transport Connection where possible~\cite{rfc9621}.
 
 Multistreaming in this context is the act of providing multiple
 streams of data over a single underlying Connection. This
@@ -890,20 +890,20 @@ Connection may still fall back to \mono{Full coverage}.
 The \mono{Provisioning Domain Instance or Type} selection
 property allows the application
 to control path selection by selecting for specific Provisioning
-Domain or categories of domains~\cite{paulyArchitectureRequirementsTransport2025}. Provisioning
+Domain or categories of domains~\cite{rfc9621}. Provisioning
 Domains define consistent sets of network properties that might
-be more specific than network interfaces~\cite{paulyArchitectureRequirementsTransport2025}.
+be more specific than network interfaces~\cite{rfc9621}.
 
 The \texttt{Use Temporary Local Address} Selection Property
 allows the application to specify
 whether or not to use temporary addresses which are a feature in
-IPv6, used for greater privacy~\cite{gontTemporaryAddressExtensions2021, paulyArchitectureRequirementsTransport2025}.
+IPv6, used for greater privacy~\cite{rfc8981, rfc9621}.
 
 The \texttt{Notification of ICMP soft error message arrival}
 Selection Property lets an application specify whether or 
 not it should be notified when an ICMP
 error, which does not force termination of the Connection,
-arrives~\cite{paulyArchitectureRequirementsTransport2025}.
+arrives~\cite{rfc9621}.
 
 In addition to specifying which underlying protocol should be
 used through Selection Properties, the application using TAPS
@@ -915,12 +915,12 @@ or generic and be available for all transport protocols.
 The \mono{Connection Group Transmission Scheduler} Connection 
 property decides which scheduler is used within a given
 Connection Group, to divide the available capacity between the
-Connections.~\cite{paulyArchitectureRequirementsTransport2025}.
+Connections.~\cite{rfc9621}.
 
 The \mono{Isolate Session} Connection Property can be set in order to
 have new Connections use as little cached information as
 possible from previous Connections not in the same Connection
-group~\cite{paulyArchitectureRequirementsTransport2025}.
+group~\cite{rfc9621}.
 
 The final type of transport properties are Message Properties.
 These are set by the application on a per-Message basis, and
@@ -946,7 +946,7 @@ as well as the protocols which are available to use.
 RFC~9623 conceptualizes these combinations as a tree,
 with the first level of child nodes representing the
 possible Local Endpoints, which are resolved to possible local IP
-addresses when building the tree~\cite{brunstromImplementingInterfacesTransport2025}.
+addresses when building the tree~\cite{rfc9623}.
 The second level of the candidate tree represent the possible protocol
 options which can be used. This includes not only the protocol
 itself, but also any combination of options for this protocol which
@@ -988,7 +988,7 @@ by the final application. This is done through
 candidate racing. Candidate racing is the process of establishing
 a Connection using a single protocol over a single path with
 a single endpoint as quickly as possible, optimizing for the
-user requirements while minimizing the network load~\cite{brunstromImplementingInterfacesTransport2025}.
+user requirements while minimizing the network load~\cite{rfc9623}.
 
 This is achieved by trying to establish Connections with
 the various candidates and finally selecting one of them.
@@ -1010,13 +1010,13 @@ network load.
 Staggered racing is the process of trying to establish Connections
 with several candidates at once, but with a delay between the start
 of each candidate. This delay is configurable, but should be based
-on the expected handshake time~\cite{brunstromImplementingInterfacesTransport2025}. 
+on the expected handshake time~\cite{rfc9623}. 
 Since the most desirable candidate will be raced first, it
 can be chosen if it connects successfully, thereby limiting the
 number
 of needed attempts to find a Connection. When racing IP addresses,
 TAPS implementations should follow the algorithm described
-in RFC~8305~\cite{schinaziHappyEyeballsVersion2017}, also known
+in RFC~8305~\cite{rfc8305}, also known
 as Happy Eyeballs. The relevance
 of this algorithm for TAPS is described in \cref{happyEyeballs}.
 
@@ -1031,7 +1031,7 @@ when all candidates have failed.
 
 \section{Happy Eyeballs}\label{happyEyeballs}
 Happy Eyeballs, which is described in RFC~8305 is an algorithm
-for racing IPv4 and  IPv6 addresses on dual-stack hosts~\cite{schinaziHappyEyeballsVersion2017}. The candidate gathering
+for racing IPv4 and  IPv6 addresses on dual-stack hosts~\cite{rfc8305}. The candidate gathering
 and candidate racing algorithm found in TAPS is based on Happy Eyeballs,
 so they share a lot of central features.
 Happy Eyeballs implements a staggered racing algorithm with a preference for
@@ -1040,10 +1040,10 @@ IPv6 usage but minimize potential latency caused if IPv6 is broken.
 
 The first version of Happy Eyeballs was published in 2012 and describes an algorithm
 for racing an IPv4 and IPv6 connection to a server, giving a preferential
-head start to the IPv6 connection~\cite{wingHappyEyeballsSuccess2012}.
+head start to the IPv6 connection~\cite{rfc6555}.
 Happy Eyeballs version 2 improves
 upon problems within Happy Eyeballs version 1 by also racing the
-IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking~\cite{schinaziHappyEyeballsVersion2017}.
+IPv6 and IPv4 DNS queries, avoiding DNS slow family blocking~\cite{rfc8305}.
 
 This concept of racing is a central concept of TAPS, where it is
 taken one step further to also race all combinations of local interface,
@@ -1066,7 +1066,7 @@ Since waiting for each of the four steps to fully complete before moving
 on to the next one would lead to unecessary delay Happy Eyeballs v2 recommends
 that connection attempts are started eiteher immeditately on
 the first response if it is IPv6, or after a \qty{50}{\milli\second} resolution
-delay if the first received resolution if IPv4~\cite{schinaziHappyEyeballsVersion2017}.
+delay if the first received resolution if IPv4~\cite{rfc8305}.
 This helps mitigate potential slow DNS resolutions, especially
 if the IPv6 resolution is significantly slower than the IPv4
 resolution and the application has a hard requirement to
