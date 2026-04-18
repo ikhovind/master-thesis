@@ -449,7 +449,7 @@ CTaps over QUIC vs. TCP can be seen in \cref{sec:smallfiletransfer}.
 \end{scope}
 
 %% ============ RIGHT PANEL: QUIC ============
-\begin{scope}[xshift=7.0cm]
+\begin{scope}[xshift=6.7cm]
 
   % Axes
   \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
@@ -902,27 +902,27 @@ a Connection and the Selection Properties fulfilled by each protocol as defined 
 \textbf{Property} & \textbf{Default} & \textbf{UDP} & \textbf{TCP} & \textbf{QUIC} \\
 \midrule
 \multicolumn{1}{l|}{Reliability}            & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{PreserveMsgBoundaries}  & \multicolumn{1}{c||}{No Preference} & Require       & Prohibit      & Require       \\
-\multicolumn{1}{l|}{PerMsgReliability}      & \multicolumn{1}{c||}{No Preference} & Prohibit      & Prohibit      & Prefer        \\
+\multicolumn{1}{l|}{PreserveMsgBoundaries}  & \multicolumn{1}{c||}{No Pref.} & Require       & Prohibit      & Require       \\
+\multicolumn{1}{l|}{PerMsgReliability}      & \multicolumn{1}{c||}{No Pref.} & Prohibit      & Prohibit      & Prefer        \\
 \multicolumn{1}{l|}{PreserveOrder}          & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{ZeroRttMsg}             & \multicolumn{1}{c||}{No Preference} & No Preference & No Preference & No Preference \\
-\multicolumn{1}{l|}{Multistreaming}         & \multicolumn{1}{c||}{Prefer}        & Prohibit      & Prohibit      & No Preference \\
+\multicolumn{1}{l|}{ZeroRttMsg}             & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{Multistreaming}         & \multicolumn{1}{c||}{Prefer}        & Prohibit      & Prohibit      & No Pref. \\
 \multicolumn{1}{l|}{FullChecksumSend}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
 \multicolumn{1}{l|}{FullChecksumRecv}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
 \multicolumn{1}{l|}{CongestionControl}      & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{KeepAlive}              & \multicolumn{1}{c||}{No Preference} & No Preference & No Preference & No Preference \\
-\multicolumn{1}{l|}{UseTemporaryLocalAddr}  & \multicolumn{1}{c||}{Runtime dep.}  & No Preference & No Preference & No Preference \\
-\multicolumn{1}{l|}{SoftErrorNotify}        & \multicolumn{1}{c||}{No Preference} & No Preference & No Preference & No Preference \\
-\multicolumn{1}{l|}{ActiveReadBeforeSend}   & \multicolumn{1}{c||}{No Preference} & No Preference & No Preference & No Preference \\
-\multicolumn{1}{l|}{Multipath$^1$}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Preference \\
+\multicolumn{1}{l|}{KeepAlive}              & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{UseTemporaryLocalAddr}  & \multicolumn{1}{c||}{Runtime dep.}  & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{SoftErrorNotify}        & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{ActiveReadBeforeSend}   & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{Multipath$^1$}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Pref. \\
 \multicolumn{1}{l|}{AdvertisesAltAddress$^2$} & \multicolumn{1}{c||}{false}       & false         & false         & false \\
-\multicolumn{1}{l|}{Direction}              & \multicolumn{1}{c||}{Bidirectional} & Bidirectional & Bidirectional & Bidirectional \\
+\multicolumn{1}{l|}{Direction}              & \multicolumn{1}{c||}{Bidir.} & Bidir. & Bidir. & Bidir. \\
 \multicolumn{1}{l|}{Interface}              & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
 \multicolumn{1}{l|}{Pvd}                    & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
-    \small
+    \footnotesize
     \item $^1$ CTaps only supports multipath in terms of connection migration, and does
       not support using multiple paths at once.
     \item $^2$ AdvertisesAltAddress is set to a boolean RFC~9622~\cite[Sec. 6.2.15]{rfc9622},
@@ -958,7 +958,7 @@ relying on built-in libuv support.
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
-    \small
+    \footnotesize
   \item \textit{Counts include all lines, including blank lines and comments}
 \end{tablenotes}
 \end{threeparttable}

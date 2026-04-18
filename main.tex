@@ -48,7 +48,7 @@
 \usepackage{appendix}
 \usepackage{siunitx}
 \sisetup{per-mode=symbol}
-\usepackage{tabularx} % in preamble
+\usepackage{tabularx}
 \usepackage{threeparttable}
 \usepackage{threeparttablex}
 \usepackage{calculator}
@@ -146,5 +146,6 @@
 \setcounter{biburllcpenalty}{9000}
 % If you want to break on URL UPPER CASE letters
 \setcounter{biburlucpenalty}{9000}
-\printbibliography{}
+{\hfuzz=1pt
+\printbibliography}
 \end{document}
