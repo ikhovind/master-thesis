@@ -1,37 +1,50 @@
 \chapter{Conclusion}
-In this thesis we have
+In this thesis we have described an implementation of IETF Transport Services,
+with a focus on how this can be used to expose the features of QUIC, TCP and
+UDP through a common API. We have discussed the specific design considerations
+which must be taken when implementing Transport Services in order to achieve as
+flexible a system as possible. In this chapter we will discuss the findings
+of the thesis overall and provide answers to the stated research questions.
+In addition, we will discuss the scope and limitations of the thesis as a whole
+and future work if CTaps is to be further developed into a production-ready library.
 
-\section{Future Work}\label{sec:future-work}
-If an attempt was to be made to make CTaps into a real-world production
-ready system, then candidate interleaving would likely be one of the first
-features to be implemented.
+\section{Summary of Contributions}
+The primary contribution of this thesis is CTaps.
+CTas is an open source C-implementation of Transport Services as specified
+by RFC~9621--9623. CTaps features support for QUIC, TCP and UDP as underlying
+protocols and can therefore be used to analyse how well the features of these
+protocols can be represented through a TAPS API. Internally, CTaps uses libuv
+to serve as the central event loop allowing asyncronous interaction with the
+network and Picoquic as a QUIC engine to provide support for QUIC.
 
-It would have to be carefully considered exactly how these candidates were
-to be interleaved. The applications does rank its most desired protocols,
-so interleaving with no care as to the order could lead to a lower ranked
-protocol being tried second after the most desirable one, to the application's
-surprise. It would also be beneficial to include the Local and Remote Endpoints
-in the interleaving algorithm somehow. In the hypothetical situation that the
-first candidates all try to connect to the same Eemote Endpoint, but that endpoint
-turns out to be unreachable, the current stagger delay would lead to a one
-second delay before the next endpoint was tried.
+CTaps implements large parts of the TAPS API as well
+as the internal specification. Externally this means all major features of the
+TAPS API except for peer-to-peer connection establishment. Internally this means
+support for asynchronous candidate gathering, filtering, sorting and candidate racing. 
+This means that a single CTaps client can connect to multiple servers supporting
+different protocols. The effect of candidate racing is clearly illustrated
+in \cref{fig:handshake-kde}.
 
-In order to mitigate the possible DNS delay,
-connection attempts in CTaps can be made the same way as recommended in Happy Eyeballs V2, racing
-as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
-to give preferred addresses a chance to return before initiating an
-attempt with a less desirable endpoint.
+In addition to the development of CTaps this thesis also contains
+an extensive analysis of how QUIC maps onto TAPS and what architectural
+challenges will have to be faced when implementing a TAPS system.
+This is useful for potential future implementations of TAPS which
+can use the lessons learned during the development of CTaps for their
+own benefit.
 
-\todo{Describe more flexible socket manager handling}
+\section{Research Questions and Findings}
+At the onset of this thesis two primary research questions were defined
+as goals and key motivations behind the development of CTaps. These
+were:
 
-If CTaps were to be developed into a fully featured TAPS library, it would likely
-be wise to first strip away the parts of the external API which currently have
-no support in the internal implementation. This would allow a gradual addition of
-features as they were supported, making it more clear to downstream applications exactly
-which parts of the external library is mature enough to be used. This would also allow
-future development to focus on more important improvements, instead of implementing
-as much of the API as possible in order to make the features exposed by the API actually
-real. The highest priority future work is described in \cref{sec:future-work}.
+\begin{enumerate}
+    \item \rqone
+    \item \rqtwo
+\end{enumerate}
+
+\subsection{Research Question One}
+
+\subsection{Research Question Two}
 
 \section{Scope and Limitations}
 CTaps is an exploratory work, intended to show how an implementation of a TAPS
@@ -83,7 +96,39 @@ but instead when a packet has been handed over to Picoquic if QUIC is the underl
 protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.
 
-\section{Alternative QUIC Backends} \todo{This section is valuable but needs to be tightened by a lot}
+\section{Future Work}\label{sec:future-work}
+If an attempt was to be made to make CTaps into a real-world production
+ready system, then candidate interleaving would likely be one of the first
+features to be implemented.
+
+It would have to be carefully considered exactly how these candidates were
+to be interleaved. The applications does rank its most desired protocols,
+so interleaving with no care as to the order could lead to a lower ranked
+protocol being tried second after the most desirable one, to the application's
+surprise. It would also be beneficial to include the Local and Remote Endpoints
+in the interleaving algorithm somehow. In the hypothetical situation that the
+first candidates all try to connect to the same Eemote Endpoint, but that endpoint
+turns out to be unreachable, the current stagger delay would lead to a one
+second delay before the next endpoint was tried.
+
+In order to mitigate the possible DNS delay,
+connection attempts in CTaps can be made the same way as recommended in Happy Eyeballs V2, racing
+as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
+to give preferred addresses a chance to return before initiating an
+attempt with a less desirable endpoint.
+
+\todo{Describe more flexible socket manager handling}
+
+If CTaps were to be developed into a fully featured TAPS library, it would likely
+be wise to first strip away the parts of the external API which currently have
+no support in the internal implementation. This would allow a gradual addition of
+features as they were supported, making it more clear to downstream applications exactly
+which parts of the external library is mature enough to be used. This would also allow
+future development to focus on more important improvements, instead of implementing
+as much of the API as possible in order to make the features exposed by the API actually
+real. The highest priority future work is described in \cref{sec:future-work}.
+
+\subsection{Alternative QUIC Backends} \todo{This section is valuable but needs to be tightened by a lot}
 Since QUIC is an exploratory work an prioritized simplicity over raw performance
 when selecting the QUIC library to use there are likely large performance gains
 to be made by selecting a more performance oriented library than Picoquic. While
@@ -172,3 +217,4 @@ while (!AllDone) {
 \label{lst:msquicCustomLoop}
 \end{listing}
   
+

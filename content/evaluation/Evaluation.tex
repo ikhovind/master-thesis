@@ -150,7 +150,7 @@ does not have an effect on the time taken for the initial handshake.
     \label{fig:racing-handshake}
 \end{figure}
 
-\subsection{Slow and Fast Endpoint Handshake} \label{sec:handshake-kde}
+\subsection{Candidate Racing Benchmark} \label{sec:handshake-kde}
 This benchmark can be seen in \cref{fig:handshake-kde}. It intends to
 show the benefits of candidate racing and how it helps find the
 endpoint with the smallest delay.
@@ -186,7 +186,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 
 \begin{figure}[htbp]
     \input{./resources/handshake_kde.pgf}
-    \caption[Slow and fast endpoint handshake benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
+    \caption[Candidate Racing Benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
     endpoint is attempted first, showing the benefit of candidate racing. ($N = 200$)}
     \label{fig:handshake-kde}
 \end{figure}
@@ -399,7 +399,7 @@ racing more tightly, utilizing a Resolution Delay similar to the one described
 in Happy Eyeballs~\cite{rfc8305}.
 
 % Discuss candidate racing benchmark
-\subsection{Slow and Fast Endpoint Handshake Benchmark}
+\subsection{Candidate Racing Benchmark}
 The stagger shows up not only in the raw handshake measurement times,
 but also in the candidate racing benchmark. Here the benchmark itself becomes
 more contrived than needed because it needs to make the faster endpoint

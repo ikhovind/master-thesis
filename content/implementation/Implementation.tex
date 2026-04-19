@@ -837,10 +837,10 @@ The full implementation of the protocol implementation struct for QUIC can be se
 ]
 
 
-\node[box] (app)      at ( 0,  4) {Application};
-\node[box] (ctaps)    at ( 0,  0) {CTaps};
-\node[box] (picoquic) at ( 5,  0) {Picoquic};
-\node[box] (libuv)    at ( 0, -4) {UDP Socket};
+\node[box, fill=blue!10] (app)      at ( 0,  4) {Application};
+\node[box, fill=gray!10] (ctaps)    at ( 0,  0) {CTaps};
+\node[box, fill=gray!10] (picoquic) at ( 5,  0) {Picoquic};
+\node[box, fill=gray!10] (libuv)    at ( 0, -4) {UDP Socket};
 
 % Application <-> CTaps
 \draw[arr] ([xshift=-0.3cm]app.south)   -- ([xshift=-0.3cm]ctaps.north)

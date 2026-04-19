@@ -149,7 +149,7 @@ architecture of CTaps and the reasoning behind each of them.
         minimum width=8cm, 
         minimum height=1.2cm, 
         align=center, 
-        fill=gray!5,
+        fill=gray!10,
         font=\sffamily\bfseries
     },
     sublayer/.style={
@@ -181,7 +181,7 @@ architecture of CTaps and the reasoning behind each of them.
 \node [sublayer, below=0.5cm of pico.south east, anchor=north east] (libuvraw) {libuv \mdseries (raw UDP socket)};
 
 % % 5. OS Layer
-\node [layer, below=1cm of libuvraw.south west, fill=gray!20] (os) {Network Stack};
+\node [layer, below=1cm of libuvraw.south west, fill=gray!25] (os) {Network Stack};
 
 % Connectors
 \draw[->, thick] (app) -- (api);
