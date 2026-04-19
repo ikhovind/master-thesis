@@ -43,8 +43,202 @@ were:
 \end{enumerate}
 
 \subsection{Research Question One}
+For the analysis of architecgture requirements and considerations
+fo rTAPS implementations most of the requirements stem from
+the need to be compliant with the architecture, functionality
+and features as described in TAPS. The most important of these
+are that TAPS is asynchronous at its core. This limits the actual
+simplest naive implementation which is to simply interact with
+the network in a blocking manner. As described in \cref{sec:async-background}
+this means that TAPS implementations have two primary design
+in order to achieve this asynchrony. Either use multiple threads
+or be asynchronous.
+
+The exact nature of which model should be folloewed
+depends on the goals of the implementation. Asynchrony
+is a more complicated model, both because of it deviation
+from normal sequential programming, but also because
+it requires an event loop \todo{always required?} which
+requires a fairly heavy dependency.
+
+Asynchronous models do however avoid the added overhead
+of creating a large number of threads, as well as the
+complexity needed for avoiding race conditions if the
+implemnetation features any shared resources between the
+threads.
+
+Assuming that the implementation settles for an
+asynchronous model like CTaps has then TAPS
+requires that it pulls in an event loop
+library such as libuv. 
+
+Apart from the required asynchrony TAPS also mandates that the implementation
+is flexible in which prtocol and andpoints a Connection can be attached to. Large parts
+of the internal architcture is also prescribed through the candidate gathering and
+candidate racing descriptions from RFC~9623. These prescribe how a Connection is created and how
+the candidates are fetches. This is owever broad strokes and the exact implementation
+is left up to the implementation. TAPS prescribes
+nothing other than that it needs to be capable
+of racing and able
+to gather avrious candidates based
+on the passed selection properties and
+endpoints.
+
+With the flexibility of binding between Conenction, Listener and underlying protocol and endpoints
+required by CTaps there are also several implicit architectural constraints.
+While not strictly required, in order to be as maintainable as possible
+all TAPS implementaitons should feature some sort of generic way of representing
+a protocol, such as the protocol interface in CTaps. This is to avoid the internal
+implementation code becoming very tightly bound to specific protocols, making it
+far more difficult to adapt the TAPS implementation to support new protocols.
+
+In addition to the flexibility for established sockets, a true TAPS implementation
+also needs a way to listen for incoming data for multiple different protocols
+when opening a listener. Since RFC~9623 recommends that a listener should
+be able to receive from multiple transport protocols at once over a single
+socket \cite[Sec. 4.7]{rfc9623}, the internal structure used to represent protocols and manage
+sockets need to reflect this advanced behavior. This means that the application
+is barred from using simple abstractions such as the TCP and UDP handles in
+libuv which do not support it. Instead it needs to implement more advanced
+connection handling parsing incoming data directly.
+
+With TAPS being connection-oriented it also mandates certain features
+and therefore intermediary structures between the protocol and Connections.
+In CTaps' case the requirement of TAPS being connection oriented comes into
+play when supporing UDP. A TAPS implementation has to maintain its own Connections
+for UDP, which can be done by emulating the four-tuple as used by TCP.
+Incoming datagrams can be compared with a map of previous remote addresses
+for the given local socket and demultiplexed accordingly. If no matching remote
+can be found in the map then the datagram belongs to a new Connection.
+This sets a hard requirement for internal data structures, as it
+prescribes each socket having some sort of state in order to make these
+lookups and that this state is stored together with the socket.
+The requirements of multiple Connections sharing a single socket
+also mandates handling which makes sure that the socket is not closed
+until all associated Connections have been closed. This means that the
+implementation will likely have to implement even more state in the form
+of a counter or list keeping track of the number of open Connections still
+using the given socket.
+
+Since TAPS explicitly supports connection migration and multipath as well
+as multiple local andpoints, the architecture must also be adopted to make
+sure that the actual socket and Local Endpoint used for a given Connection
+is flexible. This means that a Connection cannot be tightly bound to a single
+endpoint if the TAPS implmentation wants to make use of connection migration
+without featuring a workaround as in CTaps. Since TAPS also supports adding
+endpoints during the lifetime of a Connection, it cannot rely on the Connection
+always first binding to an ephemeral socket if it wants to make use of migration.
 
 \subsection{Research Question Two}
+While the TAPS API differs to a very large degree from the typical interface
+used to interact with the transport layer which is that of a transport layer
+protocol implementation. This means that there is certain control and
+interactions which naturally differ between TAPS and actual transport protocols.
+This is a very intentional feature of the design since TAPS is designed for the
+application to interact with the network by stating its intentions instead of
+requiring it to prescribe the exact behavior of the underlying protocol. This
+is at the core of the second research question as there is naturally large
+parts of the QUIC standard which is not directly controllable through TAPS,
+but as this is intentional the more pertient analysis is whether the intentions
+which can be registered with a TAPS implementation maps well to the features 
+which are made availbale through QUIC, or if there are parts of the QUIC API
+which is impossible ot access through the intention-based model of TAPS.
+
+The primary result of this research question can be seen in \cref{tab:quic-taps-mapping}.
+This table is a compilation of QUIC features as well as how they map to
+the intention-based API of TAPS. The TAPS API being intention-based is
+a key aspect here since there are QUIC features which are not avilable
+through TAPS directly, but since TAPS is intention-based, the application
+is able to state a desired result, and if the desired result can be expected
+to be a result of the given QUIC feature, then a TAPS implementation can
+reasonably make use of the given feature. A good example of this is the
+settings related to ACKs, \mono{ack_delay_exponent} and \mono{max_ack_delay}.
+
+While the application could in theory want to set the 
+\mono{ack_delay_exponent} and \mono{max_ack_delay} transport parameters
+for their own sake, it is far more likely it is far more likely that
+these would be configured in order to acheive some downstream effect.
+For the ACKs settings specifically, they could be modified in order
+to for example optimize the latency of a connection, minimizing the
+ack settings in order to be informed as quickly as possible about
+a possible outage. TAPS reflects this not directly through the
+exposing ACK settings directly but instead through the underlying
+intention, allowing the appliaction to set the \mono{connCapacityProfile}
+enumerator for the connection to Low Latency/Interactive. This will
+cause the TAPS system to perform whatever it can to minimize the latency
+for that given connection, including setting the ACK settings if available.
+
+While this does not provide the granular control of setting ACK delays
+explicitly, it also greatly simplifies the actual interaction and creates
+a single unified interface for minimizing latency for all protocols.
+The application does not have to perform research on which settings
+actually reduce latency for the various protocols, instead having
+it be handled by a single central library.
+
+By looking through the this lens of intentionality and the desire
+of the application, nearly all QUIC features can be made use of
+by a TAPS system to various degrees. There are some concepts which
+do not map cleanly such as starting a unidirectional stream on an
+existing QUIC connection, but these are minor features attached
+to a supported operation. If needed, these can be supported easily
+by the TAPS implementation for example taking a flag parameters
+which can be set to enable these specific featues.
+
+When using TAPS and connecting to a peer using QUIC the expected
+behavior of this conneciton is preserved well. For example multistreaming
+is available through the clone API. This is the expected behavior
+as laid out by the TAPS RFCs and it maps cleanly. Connection migration
+is available thorugh using mulitple local endpoint and setting
+the \mono{multipath} selection property to enabled. Even more granular
+control is available thorugh the \mono{multipathPolicy}. These
+controls ensure that the underlying QUIC connection does not
+deviate from the behavior that is mandated by the application.
+
+Since TPAS is an intention-based API then it naturally follows
+that when using QUIC then QUIC too will act according to the
+stated intentions of the application. This tracks well to the
+insight gained from implementing TAPS with QUIC support
+through CTaps. QUIC behaves as expected, with the single large
+caveat of the connection being represented through the Connection Group
+instead of the Connection object.
+
+When it comes to the internal architecture and mapping of objects
+there are also certain parts of QUIC which a TAPS implementation
+has to take into account if it wants to expose as many features
+of QUIC as possible. The largest of these features is multistreaming,
+which requires that the underlying QUIC connection is treated as a
+Connection Group in TAPS, since this is the abstraction TAPS
+uses for connected streams. As is dicussed in \cref{sec:quic-streams-under-taps}
+this means that a decision has to be made surrounding the semantics for closing
+a TAPS Connection when QUIC is the underlying protocol. If the
+implementation desired to present exactly the same API at all
+points with no deviations then each stream must be forcefully closed
+through a \mono{STOP_SENDING}, in order to have \mono{close()}
+close the Connection in both directions, as is expected for TCP
+and UDP.
+
+If the implementation instead, like CTaps, prioritizes having
+\mono{close()} represent only a graceful teardown, then \mono{close()}
+has to be reinterpreted to mean that the application is done
+writing on a Connection if QUIC is the underlying connection.
+Since an application can achieve unified behavior through always
+interacting with a Connection Group then this is not a breaking
+issue but it is a deviation from how a application would expect
+to interact with the network coming purely from TCP.
+
+An additional consideratoin when adding support for QUIC to a
+TAPS implementation is that QUIC connctions always transfer
+data over streams. This means that if the implementation
+wishes to consistenly map a QUIC connection to a connection group
+and a stream to a Connection, then all Connections will have
+to belong to a Connection Group if they are based on top of
+QUIC. CTaps has chosen to follow the pattern of a Connection
+always belonging to a Connection Group for all Connections, no
+matter what the underlying protocol is. This greatly simplifies
+internal logic related to Connection Groups. This also greatly
+simplifies the implementation of the single unified way of
+interacting with Connection Groups, which ensures that applications
+can be written without taking the underlying protocol into account.
 
 \section{Scope and Limitations}
 CTaps is an exploratory work, intended to show how an implementation of a TAPS

@@ -2,10 +2,46 @@
   Here comes your preface, including acknowledgments and thanks.
 \end{preface}
 
-\section{AI tools}
-In order to gauge the usefulness of large language models in software development,
-several AI tools were used when writing software for this thesis. This consisted
-of several different models, primarily UiOGPT, which is based on Chat GPT, 
-Google Gemini, GitHub Copilot and Anthropic's Claude. \todo{cite and expand}
+\newpage
+\section{Declaration of the use of generative artificial intelligence}
+In this scientific work, generative artificial intelligence (AI) has been used.
+All data and personal information have been processed in accordance with the
+University of Oslo's regulations, and I, as the author of the document,
+take full responsibility for its content, claims, and references.
+An overview of the use of generative AI is provided below.
 
-The thesis itself was written without the use of any large language model.
+\begin{itemize}
+  \item \textbf{Figures:} Claude~\cite{claude}, developed by Anthropic has been used to generate initial scaffolding for all TikZ figures
+      featured in the thesis. After initial scaffolding they have
+      been heavily modified by the author to achieve their final design.
+    \item \textbf{Source Code:} Claude has been used to generate various parts of the
+      source code.
+      All AI-generated code has been reviewed and modified
+      when necessary.
+      The behavior of these
+      sections has been verified both through manual inspection and interaction with
+      tests and other parts of CTaps.
+    \item \textbf{Tooling:} Claude has been used for
+      architecture discussions, bug fixes and other minor interventions in all
+      parts of this project.
+      Claude has also been used to debug \LaTeX{} code for this document.
+      It has also been used to discover
+      new features of \LaTeX{} such as microtype, which is used in this thesis.
+    \item \textbf{Benchmarking:}
+      Claude has been used for initial design of
+      benchmarks and discussing what results would be valuable to display.
+      Claude has also been used for generating the scaffolding around benchmarking
+      and visualization. Claude has been used to generate
+      the associated ping servers and the Python scripts \mono{run_benchmarks.py} and
+      \mono{visualize.py}. These have been modified by the author after-the-fact
+      and have been verified to work as expected through manual inspection.
+    \item \textbf{Prose:} For the thesis text itself Claude has been
+      used to proofread and for feedback on structure, but all
+      actual writing has been done by the author.
+    \item \textbf{External Documents:} Claude has been used to discuss the content of large documents
+      such as RFC~9000~\cite{rfc9000}. Any findings were always confirmed
+      in the original document.
+    \item \textbf{Other AI models:} Other models such as Gemini \cite{gemini} developed by Google and GPT UiO, maintained
+      by the UiO IT-department with support for various models, have been used in the
+      same way as Claude, but to a much smaller degree.
+\end{itemize}
