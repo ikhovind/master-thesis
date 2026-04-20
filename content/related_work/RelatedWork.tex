@@ -1,4 +1,11 @@
-\chapter{Related work}
+\chapter{Related work}\label{chap:related-work}
+CTaps is not the only implementation of TAPS, as several
+related open and closed source projects exist. This chapter
+will describe the current state of the existing TAPS implementations,
+forming a basis for why a new open source implementation is still
+valuable. It will also compare the features currently present in CTaps with
+the most complete previous implementations of TAPS, highlighting strengths
+and weaknesses of CTaps.
 
 \section{NEAT}
 One of the first open source implementations of TAPS is 
@@ -113,7 +120,7 @@ is in the very early stages of development and has not had
 active development since 2021, several years before the
 finalzation of the TAPS RFCs.
 
-\section{Comparison of TAPS implementations}
+\section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
 \todo{Discuss and finish table}
 
 \begin{table}[htbp]
@@ -125,7 +132,7 @@ finalzation of the TAPS RFCs.
 \begin{tabular}{lccccc}
 \toprule
 \rowcolor{gray!25}
-\textbf{Feature}              & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.fwork}     & \textbf{CTaps}\\
+\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.fwork}     & \textbf{CTaps}\\
 \midrule
 \multicolumn{1}{l||}{Targeting RFC 9622\tnote{2}}    & \xmark                   & \xmark          & \xmark                     & \cmark         \\
 \multicolumn{1}{l||}{Language}                       & Python                   & Python          & Switf/Obj. C?               & C         \\
