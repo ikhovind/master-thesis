@@ -538,7 +538,7 @@ explicitly, even if the application passes multiple Local Endpoints
 to a Preconnection.
 
 If an application states
-an ephemeral address as the second Local Endpoint to a Preconnection,
+an wildcard address as the second Local Endpoint to a Preconnection,
 then CTaps could in theory make use if this instead, but this
 is unlikely due to how ordering is implemented in candidate gathering.
 
@@ -549,12 +549,12 @@ to utilize path migration as seen in the benchmark in
 a more robust connection migration without having to
 perform CTaps-specific workarounds are discussed in \cref{sec:future-work}.
 
-The described workaround is to explicitly bind to an ephemeral endpoint,
+The described workaround is to explicitly bind to an wildcard endpoint,
 while still passing alternative paths to the Preconnection when first
 initiating a Connection.
 CTaps only probes paths explicitly passed to the Preconnection,
 and therefore alternative paths must be passed to the Preconnection,
-even if binding to an ephemeral endpoint.
+even if binding to an wildcard endpoint.
 
 An example of utilizing
 this can be seen in the excerpt from the migration benchmarking
@@ -774,12 +774,12 @@ support setting the from address on a regular \mono{uv_udp_t} handle,
 as \mono{uv_udp_send()} does not feature a from address as a parameter~\cite{libuv_udp_send}.
 Packets sent over a \mono{uv_udp_t} handle will therefore use the
 IP address the socket is bound to as a from address.
-If the socket is bound to a ephemeral address, then the kernel will
+If the socket is bound to a wildcard address, then the kernel will
 select the from address itself.
 
 This becomes an issue for CTaps when utilizing the connection migration
 workaround described in \cref{sec:connection-migration-impl}, as 
-the socket currently has to be bound to an ephemeral address for migration
+the socket currently has to be bound to an wildcard address for migration
 to work. If the from address does not match the address expected
 by Picoquic then it cannot successfully reason about which paths are
 available and which are not. This causes Picoquic to be unable to perform connection migration
@@ -861,8 +861,8 @@ The full implementation of the protocol implementation struct for QUIC can be se
     node[lbl, right, midway] {Data received from socket};
 
 \end{tikzpicture}
-\caption[Internal data flow between CTaps, Picoquic and libuv]
-{Data flow between application, CTaps, Picoquic and libuv, with CTaps using Picoquic as a QUIC engine, but managing the network socket itself through libuv.}
+\caption[Current Internal data flow between CTaps, Picoquic and Network]
+{Data flow between application, CTaps and Picoquic with CTaps using Picoquic as a QUIC engine, but managing the network socket itself through libuv.}
 \label{fig:ctaps-quic-loop}
 \end{figure}
 
