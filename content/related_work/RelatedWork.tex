@@ -132,7 +132,7 @@ finalzation of the TAPS RFCs.
 \begin{tabular}{lccccc}
 \toprule
 \rowcolor{gray!25}
-\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.fwork}     & \textbf{CTaps}\\
+\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.framework}     & \textbf{CTaps}\\
 \midrule
 \multicolumn{1}{l||}{Post TAPS release\tnote{2}}    & \xmark                   & \xmark          & \cmark                     & \cmark         \\
 \multicolumn{1}{l||}{Language}                       & Python                   & Python          & Swift / Obj.-C              & C         \\
@@ -143,7 +143,7 @@ finalzation of the TAPS RFCs.
 \multicolumn{1}{l||}{Early data}                     & \xmark                   & \xmark          & \cmark\tnote{6}            & \cmark         \\
 \multicolumn{1}{l||}{Multistreaming}                 & \xmark                   & \xmark          & \cmark                     & \cmark         \\
 \multicolumn{1}{l||}{Rendezvous}                     & \xmark                   & \xmark          & \cmark                     & \xmark         \\
-\multicolumn{1}{l||}{OS support\tnote{7}}            & W, L, M(?)               & W, L, M(?)      & M                          & L         \\
+\multicolumn{1}{l||}{OS support\tnote{7}}            & B, L, M                  & L, M\tnote{8}   & M                          & L         \\
 \multicolumn{1}{l||}{Open source}                    & \cmark                   & \cmark          & \xmark                     & \cmark         \\
 \bottomrule
 \end{tabular}
@@ -152,13 +152,14 @@ finalzation of the TAPS RFCs.
     \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
     \item[2] Whether the project has been under active development after the full release of the TAPS RFCs in 2025.
     \item[3] Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing as described by TAPS.
-    \item[4] Taken to mean a single connection can use more than one path over a single session,
+    \item[4] Taken to mean that a single connection can use more than one path in a single session,
         either concurrently or through connection migration.
-    \item[5] Can be achieved through multipath TCP~\cite{apple_multipathservicetype}, QUIC support is unclear.
+    \item[5] Supports multipath TCP~\cite{apple_multipathservicetype}, QUIC support is unclear.
     \item[6] Supported for TCP~\cite{apple_allowfastopen}.
         Not supported in QUIC according to an Apple Engineer's post on the Apple Developer Forums in 2023~\cite{apple_dts_0rtt_2023}.
         Lacks explicit support in the NWProtocolQUIC.Options class~\cite{apple_nwprotocolquic}.
-    \item[7] W = Windows, L = Linux, M = macOS.
+    \item[7] B = BSD, L = Linux, M = macOS, W = Windows.
+    \item[8] Based on PyTAPS' README
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
