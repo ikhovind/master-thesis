@@ -114,6 +114,8 @@
   {\titlerule*[1pc]{.}\contentspage}
 \titlecontents{table}[3.0em]{\sf}{\contentslabel{3.0em}}{\hspace*{-3.0em}}
   {\titlerule*[1pc]{.}\contentspage}
+\titlecontents{listing}[3.0em]{\sf}{\contentslabel{3.0em}}{\hspace*{-3.0em}}
+  {\titlerule*[1pc]{.}\contentspage}
 
 %% Redefine \begin{abstract}...\end{abstract} and
 %% define \begin{xabstract}[heading] ... \end{xabstract}

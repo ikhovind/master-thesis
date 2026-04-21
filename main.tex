@@ -11,14 +11,27 @@
 \usepackage[
   hidelinks,
   hypertexnames=false,
+  linktoc=all,
   pdftitle={CTaps: An Implementation of IETF Transport Services over QUIC, TCP and UDP},
   pdfauthor={Ingebrigt Kristoffer Thomassen Hovind},
   pdfsubject={Master's thesis},
   pdfkeywords={TAPS, transport layer, Linux}
 ]{hyperref}
 \usepackage{bookmark}
-\usepackage[cache=true]{minted}
+\usepackage[cache=false]{minted}
+\counterwithin{listing}{chapter}
+\makeatother
 \setminted[text]{numbers=none}
+\contentsuse{listing}{lol}
+
+\makeatletter
+\newcommand{\mylistoflistings}{%
+  \chapter*{List of Listings}%
+  \markboth{Listings}{}%
+  \addcontentsline{toc}{chapter}{Listings}%
+  \@starttoc{lol}%
+}
+
 \usepackage{xr}
 \usepackage[section]{placeins}
 \captionsetup{format=plain, font=small, labelfont=bf}
@@ -67,6 +80,10 @@
 \usepackage[normalem]{ulem}
 
 \usepackage{import}     % Enable importing of sections
+\usepackage{etoolbox}
+\makeatletter
+\pretocmd{\chapter}{\addtocontents{lol}{\protect\addvspace{10\p@}}}{}{}
+\makeatother
 
 \title{CTaps: An Implementation of IETF Transport Services over QUIC, TCP and UDP}        %% ... or whatever
 \subtitle{A library to remove the compile-time binding to transport layer protocols}         %% ... if any
@@ -124,7 +141,7 @@
 
 \tableofcontents{}
 \listoffigures{}
-\listoflistings{}
+\mylistoflistings{}
 \listoftables{}
 
 \listoftodos{}
