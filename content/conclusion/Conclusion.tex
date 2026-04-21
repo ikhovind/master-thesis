@@ -361,6 +361,8 @@ protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.
 
 \section{Future Work}\label{sec:future-work}
+
+\subsection{Candidate Interlaving}
 If an attempt was to be made to make CTaps into a real-world production
 ready system, then candidate interleaving would likely be one of the first
 features to be implemented.
@@ -381,6 +383,7 @@ as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolu
 to give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
 
+\subsection{CTaps API}
 If CTaps were to be developed into a fully featured TAPS library, it would likely
 be wise to first strip away the parts of the external API which currently have
 no support in the internal implementation. This would allow a gradual addition of
@@ -390,6 +393,7 @@ future development to focus on more important improvements, instead of implement
 as much of the API as possible in order to make the features exposed by the API actually
 real.
 
+\subsection{Connection Migration}
 While connection migration is currently supported in CTaps, an important piece
 of future work would be to make it available without having to perform the workaround
 described in \cref{sec:connection-migration-impl}. This means that the application
@@ -446,6 +450,11 @@ without having to implement this filtering internally in CTaps.
 This would also allow for separate applications to bind to a separate
 interface on the same port, without coming into conflict with the
 QUIC connection.
+
+\subsection{Framers}
+Multiple framers
+
+Internal buffer in framers, statefulness (void* pointer?)
 
 
 \subsection{Alternative QUIC Backends}\label{sec:sans-io}
