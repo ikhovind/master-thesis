@@ -123,7 +123,7 @@ finalzation of the TAPS RFCs.
 \section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
 In order to compare the state with known existing work a table
 comparing the features of CTap swith the known features of existing
-TAPS implementations have been compiled and are displayed in \cref{tab:comparison}.
+TAPS implementations have been compiled and are displayed in~\cref{tab:comparison}.
 Here, the most complete found TAPS implementations are compared in order to give an accurate
 comparison point of the current state of CTaps. For the sake of brevity not all
 implemnetations are included, instead the implementations which are deemed the
@@ -191,7 +191,7 @@ protocol at compile time, by passing a NWParameters object which matches a speci
 protocol when first creating the NWConnection.
 
 An example of this pattern can be
-seen in \cref{lst:network-framework-example}. Here a new connection is opened through
+seen in~\cref{lst:network-framework-example}. Here a new connection is opened through
 QUIC using the ALPN \enquote{myproto}, the state handler is recognized and the conneciton
 is started. This naturally reduces the flexibility of the system and forces applications
 to bind to the underlying protocol, even though it is naturally more flexible than a pure
@@ -219,7 +219,7 @@ connection.start(queue: queue)
 \label{lst:network-framework-example}
 \end{listing}
 
-While the Network.framework example in \cref{lst:network-framework-example} naturally belongs to
+While the Network.framework example in~\cref{lst:network-framework-example} naturally belongs to
 the currently most complete and production-ready implementation of TAPS, it also shows the areas
 where CTaps has a chance to innovate and why an open source implementation of TAPS is valuable
 despite the existence of Network.framework. Network.framework features a common interface

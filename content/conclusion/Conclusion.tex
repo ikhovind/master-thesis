@@ -23,7 +23,7 @@ TAPS API except for peer-to-peer connection establishment. Internally this means
 support for asynchronous candidate gathering, filtering, sorting and candidate racing. 
 This means that a single CTaps client can connect to multiple servers supporting
 different protocols. The effect of candidate racing is clearly illustrated
-in \cref{fig:handshake-kde}.
+in~\cref{fig:handshake-kde}.
 
 In addition to the development of CTaps this thesis also contains
 an extensive analysis of how QUIC maps onto TAPS and what architectural
@@ -34,7 +34,7 @@ own benefit.
 
 \section{Key Findings and Research Questions}
 The development of CTaps has been undertaken with a goal of produdcing
-answers to the key research questions as stated in \cref{chap:intro}.
+answers to the key research questions as stated in~\cref{chap:intro}.
 As part of the development an analysis has been performed of those
 research questions, in addition to performing benchmarks to compare
 the performance of CTaps with pure QUIC and TCP clients. These
@@ -51,10 +51,10 @@ but may be avialable through a more complete TAPS implementation.
 
 \subsection{Key Findings}
 The key findings of CTaps conists of the performed benchmarks benchmarks
-as described in \cref{chap:eval}, the analysis of the mapping of QUIC
-features onto the TAPS API in \cref{tab:quic-taps-mapping} and the
+as described in~\cref{chap:eval}, the analysis of the mapping of QUIC
+features onto the TAPS API in~\cref{tab:quic-taps-mapping} and the
 reflectios around the architecture required for utilizing QUIC under
-a TAPS system as described in \cref{sec:quicUnderTaps}.
+a TAPS system as described in~\cref{sec:quicUnderTaps}.
 
 The performed benchmarks show CTaps can achieve equal performance
 to a native TCP and a Picoquic clients in the modelled scenarios.
@@ -65,7 +65,7 @@ performance of a TAPS system under load or a large number of established Connect
 as this has not been tested.
 
 Another key finding is the complexity
-of the benchmarking clients as described in \cref{sec:client-complexity}.
+of the benchmarking clients as described in~\cref{sec:client-complexity}.
 These show that wihle a TAPS system front-loads complexity for creating
 very simple clients, the final client still successfully hides a lot of
 complexity compared to the features actually presented to the client.
@@ -119,7 +119,7 @@ the need to be compliant with the architecture, functionality
 and features as described in TAPS. The most important of these
 are that TAPS is asynchronous at its core. This limits the actual
 simplest naive implementation which is to simply interact with
-the network in a blocking manner. As described in \cref{sec:async-background}
+the network in a blocking manner. As described in~\cref{sec:async-background}
 this means that TAPS implementations have two primary design
 in order to achieve this asynchrony. Either use multiple threads
 or be asynchronous.
@@ -214,7 +214,7 @@ which can be registered with a TAPS implementation maps well to the features
 which are made availbale through QUIC, or if there are parts of the QUIC API
 which is impossible ot access through the intention-based model of TAPS.
 
-The primary result of this research question can be seen in \cref{tab:quic-taps-mapping}.
+The primary result of this research question can be seen in~\cref{tab:quic-taps-mapping}.
 This table is a compilation of QUIC features as well as how they map to
 the intention-based API of TAPS. The TAPS API being intention-based is
 a key aspect here since there are QUIC features which are not avilable
@@ -278,7 +278,7 @@ has to take into account if it wants to expose as many features
 of QUIC as possible. The largest of these features is multistreaming,
 which requires that the underlying QUIC connection is treated as a
 Connection Group in TAPS, since this is the abstraction TAPS
-uses for connected streams. As is dicussed in \cref{sec:quic-streams-under-taps}
+uses for connected streams. As is dicussed in~\cref{sec:quic-streams-under-taps}
 this means that a decision has to be made surrounding the semantics for closing
 a TAPS Connection when QUIC is the underlying protocol. If the
 implementation desired to present exactly the same API at all
@@ -396,7 +396,7 @@ real.
 \subsection{Connection Migration}
 While connection migration is currently supported in CTaps, an important piece
 of future work would be to make it available without having to perform the workaround
-described in \cref{sec:connection-migration-impl}. This means that the application
+described in~\cref{sec:connection-migration-impl}. This means that the application
 would be able to select two specific local endpoints and migrate between them, instead
 of being forced to select an ephmeeral local endpoint first, before adding any local
 endpoints to migrate between. This workaround is necessary because of the tight coupling
@@ -452,7 +452,7 @@ interface on the same port, without coming into conflict with the
 QUIC connection.
 
 \subsection{Framers}\label{sec:future-framer}
-As described in \cref{sec:framer-impl} the current support for framers
+As described in~\cref{sec:framer-impl} the current support for framers
 in CTaps is largely a proof-of-concept, and should be improved if CTaps
 is to be further developed. The largest limitation is that Connections
 only support a single framer. Multiple framers were deemed to be out of scope, but
@@ -495,7 +495,7 @@ developed by Microsoft. With MsQuic being a cross-platform library it would
 further enable CTaps to become cross-platform as well, since the core dependencies
 of Libuv and MsQuic would be cross-platform. For CTaps, the QUIC
 implementation of the protocol interface is already by far the most complicated
-of the current protocol implementations as seen in \cref{tab:loc_complexity}.
+of the current protocol implementations as seen in~\cref{tab:loc_complexity}.
 MsQuic is a far larger library than Picoquic at $\sim135~000$ LoC compared to
 Picoquic's $\sim84~000$. While this means that more features and performance
 is available, this would also likely lead to a larger amount of complexity
@@ -523,8 +523,8 @@ through picoquic instead of using a timer to wake up at set times.
 CTaps would then have to monitor this event queue object with \mono{uv_poll_t}
 instead of using a \mono{uv_timer_t} handle as with Picoquic.
 Examples from the MsQuic documentation creating a event
-queue object and draining it can be seen in \cref{lst:msquicCustomEpoll}
-and \cref{lst:msquicCustomLoop}.
+queue object and draining it can be seen in~\cref{lst:msquicCustomEpoll}
+and~\cref{lst:msquicCustomLoop}.
 
 While this shows that CTaps is not very tightly bound
 to Picoquic itself, it is very tightly bound to libuv and
@@ -570,7 +570,7 @@ while (!AllDone) {
   
 \section{Broader Significance}
 While CTaps could be developed to a real production-ready library
-through the steps described in \cref{sec:future-work}, the broader
+through the steps described in~\cref{sec:future-work}, the broader
 significance is connected to it being the first implementation of
 TAPS after the finalization of the RFCs as well as the first open source
 TAPS implementation to feature QUIC as one of the underlying protocols.

@@ -10,7 +10,7 @@ that TAPS is trying to solve, as well as why
 the problem exists in the first place.
 Extra care is taken in describing QUIC, as exposing
 the features of QUIC forms a basis for both the design
-of CTaps, as well as the benchmarking in \cref{chap:eval}.
+of CTaps, as well as the benchmarking in~\cref{chap:eval}.
 
 
 \section{Network Interfaces and Paths}
@@ -133,7 +133,7 @@ or reliable delivery as needed.
 
 The primary reason for why protocols choose to use UDP as a substrate
 instead of developing directly over IP is network ossification. This
-is discussed further in \cref{sec:transport-protocol-barriers}.
+is discussed further in~\cref{sec:transport-protocol-barriers}.
 
 \section{TLS}
 TLS is a cryptographic protocol which provides secure communication
@@ -188,7 +188,7 @@ If a packet is lost, only applications using the streams contained
 in that packet will be affected.
 
 The format of a QUIC stream frame as described in RFC~9000 can
-be seen in \cref{lst:stream-frame-format}.
+be seen in~\cref{lst:stream-frame-format}.
 
 \begin{listing}[htbp]
     \centering
@@ -213,7 +213,7 @@ and can therefore exist in states belonging to both sending and
 receiving streams as described previously.
 
 A flow chart describing the QUIC stream state machine can be
-seen in \cref{fig:stream_states}.
+seen in~\cref{fig:stream_states}.
 
 \begin{figure}[htbp]
     \centering
@@ -402,7 +402,7 @@ is able to continue the same connection over cellular, whereas the TCP
 connection would break.
 
 A figure comparing a TCP and QUIC connection before and after an
-IP address becomes unavailable can be seen in \cref{fig:connectionBeforeAfterMigration}.
+IP address becomes unavailable can be seen in~\cref{fig:connectionBeforeAfterMigration}.
 Here, a local address becomes unavailable and the TCP connection is therefore broken,
 as with a new IP address it would be considered a completely new connection. The
 QUIC connection on the other hand is able to survive this change, as the connection
@@ -561,7 +561,7 @@ how much the application layer has to adapt to the underlying transport
 layer, and minimizes the coupling between the two layers.
 
 The difference in API models for socket and for TAPS can be
-seen in \cref{fig:socket-programming-api-model} and
+seen in~\cref{fig:socket-programming-api-model} and
 \cref{fig:taps-api-model}.
 
 \begin{figure}[htbp]
@@ -614,7 +614,7 @@ seen in \cref{fig:socket-programming-api-model} and
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
 RFC~9621 describes the underlying architecture of and a set of requirements
-for TAPS, a diagram of this architecture can be seen in \cref{fig:tapsArch}~\cite{rfc9621}.
+for TAPS, a diagram of this architecture can be seen in~\cref{fig:tapsArch}~\cite{rfc9621}.
 A TAPS system consists of two primary parts, the Transport Services
 API and the Transport System Implementation. The Transport Services
 API is the public facing API used by the application. This contains
@@ -773,7 +773,7 @@ the desired format. Framers can also pack multiple Messages into a single transp
 datagram by using the same formatting as it would for a stream-based protocol.
 
 Conceptually, a framer resides on a separate layer between a Connection and the
-underlying Transport Protocol Stack as seen in \cref{fig:tpsStack}.
+underlying Transport Protocol Stack as seen in~\cref{fig:tpsStack}.
 
 \begin{figure}[htbp]
 \centering
@@ -813,7 +813,7 @@ protocol should behave during the lifetime of the Connection.
 Selection properties are the subset of Transport Properties which
 used to select the protocol stack
 to use for a given Connection when performing candidate gathering as described
-in \cref{sec:candidate-gathering}.
+in~\cref{sec:candidate-gathering}.
 
 Typical Selection Properties are specified as
 a \term{Preference}, with the possible values being \term{Require},
@@ -1018,7 +1018,7 @@ of needed attempts to find a Connection. When racing IP addresses,
 TAPS implementations should follow the algorithm described
 in RFC~8305~\cite{rfc8305}, also known
 as Happy Eyeballs. The relevance
-of this algorithm for TAPS is described in \cref{happyEyeballs}.
+of this algorithm for TAPS is described in~\cref{happyEyeballs}.
 
 Failover racing is the process of racing a single candidate
 at a time, only attempting the next candidate if the previous

@@ -128,7 +128,7 @@ state tracking
 is extracted to the Socket Manager, which is an internal data structure
 responsible for network sockets.
 
-An overview of the architecture of CTaps can be seen in \cref{fig:ctaps-arch}.
+An overview of the architecture of CTaps can be seen in~\cref{fig:ctaps-arch}.
 Here, all the core aspects of CTaps can be seen, with the Socket Manager
 acting as an intermediary between the CTaps API and the
 protocol interface, which provides a common API to the different
@@ -223,7 +223,7 @@ map QUIC connections to a TAPS Connection, but this would make
 multistreaming unavailable through the TAPS API, since TAPS
 features no equivalent concept of a stream within a Connection.
 Multistreaming is a core benefit of QUIC and allows for more
-efficient bandwidth usage, as showcased in \cref{sec:smallfiletransfer}.
+efficient bandwidth usage, as showcased in~\cref{sec:smallfiletransfer}.
 
 The consequence of this mapping is that the behavior 
 when closing a single Connection depends on the underlying
@@ -241,7 +241,7 @@ with the expected behavior from TCP.
 This differing behavior can be mitigated by only interacting
 with Connection Groups when wanting to shut down a logical connection,
 which is compatible with how TCP support is implemented.
-This is discussed in detail in \cref{sec:quicUnderTaps}.
+This is discussed in detail in~\cref{sec:quicUnderTaps}.
 
 \subsection{Socket Manager} \label{sec:socket-manager-design}
 The Socket Manager is an internal structure in CTaps responsible
@@ -265,7 +265,7 @@ and the Socket Manager has to be asynchronous as well. The Socket
 Manager features a structure with internal callbacks which are invoked by the protocol
 implementation at appropriate times, for example to notify
 the Socket Manager that a Connection has been closed after teardown
-has completed. This callback structure can be seen in \cref{lst:socket-manager-callbacks}.
+has completed. This callback structure can be seen in~\cref{lst:socket-manager-callbacks}.
 
 This pattern of the protocol implementation exclusively speaking
 to the Socket Manager only applies to memory-critical paths, in order
@@ -424,7 +424,7 @@ appendix. \todo{Add to appendix}
 Since TAPS itself is object oriented CTaps aims to emulate this.
 This affects how CTaps presents data structures to external application
 and how it structures them internally. An example can be 
-seen with the Remote Endpoint object in \cref{lst:remote-endpoint}.
+seen with the Remote Endpoint object in~\cref{lst:remote-endpoint}.
 This object contains all the context related to remote endpoints, which then is used
 in Connections and Listeners. The object has dedicated functions to operate
 on it, and therefore encapsulates all responsibilities related to Remote Endpoints.
@@ -442,7 +442,7 @@ features forward declarations of objects. This means that the application
 cannot interact directly with the struct members and instead must
 interact with the objects through a list of functions exposed by CTaps,
 which are used to allocate a struct on the heap and to modify the object using
-its pointer, a pattern which can be seen in \cref{lst:using-remote-endpoint}.
+its pointer, a pattern which can be seen in~\cref{lst:using-remote-endpoint}.
 
 This pattern was chosen in order to make it more clear exactly which fields it is
 allowed to interact with, and which fields are only used internally in CTaps. This
@@ -516,7 +516,7 @@ through a callback invoked later.
 When registering callbacks in CTaps this is done as close
 to the relevant event as possible, for example Connection-related callbacks 
 are registered when the Preconnection is initiated, an example of flow
-and the registration of callbacks can be seen in \cref{lst:preconnection-init-flow}.
+and the registration of callbacks can be seen in~\cref{lst:preconnection-init-flow}.
 Not all callbacks have to be registered, although not registering important
 callbacks such as the \mono{ready()} or \mono{closed()} would lead 
 to the application missing important events that it should react to.

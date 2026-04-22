@@ -15,8 +15,8 @@ the required lines of code with standalone TCP and QUIC clients.
 
 \subsection{Hardware}
 In order to get consistent results, all benchmarks were run on a single
-machine which is described in \cref{tab:machine-specs} and
-local networking was emulated as described in \cref{sec:softwaretools}.
+machine which is described in~\cref{tab:machine-specs} and
+local networking was emulated as described in~\cref{sec:softwaretools}.
 All tests were run on localhost, so the network emulation was used to
 show CTaps behavior under different network conditions.
 
@@ -57,7 +57,7 @@ in the handshake benchmark.
 
 In the migration test, iptables~\cite{iptables_man} was used in order to block a specific path based on
 source IP, destination IP, protocol and destination port. The specific command
-used when blocking a local path can be seen in \cref{lst:iptables-command}.
+used when blocking a local path can be seen in~\cref{lst:iptables-command}.
 An equivalent command blocking
 TCP data was also run, in order to illustrate the TCP connection failing after a path event.
 
@@ -114,7 +114,7 @@ can be found in the \mono{benchmark/scripts/} folder of the main CTaps repositor
 together with a README on how to reproduce the benchmarks.}.
 
 \subsection{Single Endpoint Handshake}
-This benchmark can be seen in \cref{fig:racing-handshake} and
+This benchmark can be seen in~\cref{fig:racing-handshake} and
 intends to show that a single CTaps client
 can connect to multiple servers
 serving different protocols and
@@ -132,13 +132,13 @@ and therefore require only one RTT to set up compared to the two RTTs required
 for QUIC.
 
 Because the handshake client used for CTaps here is the same as
-the client used in \cref{sec:handshake-kde}, the client has a preference
+the client used in~\cref{sec:handshake-kde}, the client has a preference
 for QUIC and is given two remote endpoints. This is the reason for the
 \qty{500}{\milli\second} stagger delay between the CTaps TCP and QUIC
 handshake times, since CTaps tries two remote endpoints for QUIC before trying TCP
 and the stagger delay is a static \qty{250}{\milli\second} for each attempt.
 The implications of this delay and possible improvements are discussed further
-in \cref{sec:discussion}.
+in~\cref{sec:discussion}.
 
 For each of the handshakes
 the bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
@@ -151,11 +151,11 @@ does not have an effect on the time taken for the initial handshake.
 \end{figure}
 
 \subsection{Candidate Racing Benchmark} \label{sec:handshake-kde}
-This benchmark can be seen in \cref{fig:handshake-kde}. It intends to
+This benchmark can be seen in~\cref{fig:handshake-kde}. It intends to
 show the benefits of candidate racing and how it helps find the
 endpoint with the smallest delay.
 This benchmark was modeled after the theoretical
-scenario described in \cref{fig:racingSeqDiagram} in \cref{chap:impl}.
+scenario described in~\cref{fig:racingSeqDiagram} in~\cref{chap:impl}.
 
 Two possible paths were used with different remote endpoints.
 The slow endpoint had a delay of \qty{150}{\milli\second}
@@ -192,13 +192,13 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 \end{figure}
 
 \subsection{Small File Transfer} \label{sec:smallfiletransfer}
-This benchmark can be seen in \cref{fig:small-file-bar} and the
+This benchmark can be seen in~\cref{fig:small-file-bar} and the
 intention is to show that a TAPS system can benefit
 from QUIC multistreaming while using a generic TAPS client
 compatible with both TCP and QUIC.
 
 This benchmark shows an example of lost capacity when performing Connection Cloning
-over TCP when compared to QUIC, as modeled in \cref{fig:connection-clone-gains} in 
+over TCP when compared to QUIC, as modeled in~\cref{fig:connection-clone-gains} in 
 \cref{chap:impl}.
 In order to show that the performance gap between TCP and QUIC grows with increasing delay
 the benchmark sweeps across four delays of
@@ -214,7 +214,7 @@ Before the small file transfer was started, a large file of \qty{4.6}{\mega\byte
 transferred in order to increase the CWND to be greater than the size of the small file.
 This ensures that the small file transfer could be performed in a single RTT if the
 CWND is reused. This large file is the same as the one used in the migration benchmark
-described in \cref{sec:path-migration}.
+described in~\cref{sec:path-migration}.
 
 To verify that the small file transfer can actually be completed in
 a single RTT we need to check that the large file is large enough for the CWND to ramp up to at least 70~packets
@@ -246,7 +246,7 @@ to carry the small file for all tested delay values.
 \end{figure}
 
 \subsection{Connection Migration} \label{sec:path-migration}
-This benchmark can be seen in \cref{fig:migration-throughput} and intends
+This benchmark can be seen in~\cref{fig:migration-throughput} and intends
 to show the benefits of connection migration
 and that it is available with minimal code changes in CTaps.
 
@@ -260,13 +260,13 @@ to transfer after recovering from the path failure.
 This test uses two local IP addresses consisting of \mono{127.0.0.1} and \mono{127.0.0.2}.
 All client successfully connect through \mono{127.0.0.1} and start the transfer,
 but after five seconds the local endpoint is blocked through iptables as
-described in \cref{sec:softwaretools}.
+described in~\cref{sec:softwaretools}.
 
 After the local endpoint is blocked both CTaps and the Picoquic client
 detect this failure and
 start the connection migration process, while TCP fails and cannot recover.
 
-This benchmark was gathered with the CTaps and QUIC client described in \cref{sec:client-complexity},
+This benchmark was gathered with the CTaps and QUIC client described in~\cref{sec:client-complexity},
 showing that connection migration is made available through CTaps with minimal complexity
 for the application.
 
@@ -289,7 +289,7 @@ features available through minimal code changes for an application.
 When collecting these benchmarks, the same Picoquic, CTaps and TCP clients
 were used for the small file transfer and the connection migration benchmarks.
 Their relative complexity measured in lines of code
-can be seen in \cref{tab:loc_complexity}. This is intended to
+can be seen in~\cref{tab:loc_complexity}. This is intended to
 show that while a CTaps client is more complex than a QUIC or TCP client
 individually, it is less complex than the each of them combined while
 still supporting both protocols.
@@ -331,7 +331,7 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 
 \section{Discussion} \label{sec:discussion}
 \subsection{Single Endpoint Handshake Benchmark} \label{sec:single-endpoint-handshake-discussion}
-When it comes to CTaps, the results in \cref{fig:racing-handshake} are promising
+When it comes to CTaps, the results in~\cref{fig:racing-handshake} are promising
 but also illustrate some weaknesses.
 The benchmark shows that 
 there is little overhead in connection setup for
@@ -386,7 +386,7 @@ follow the recommendations for racing on multihomed hosts as
 described in~\cite{rfc8421} more closely.
 
 Other potential mitigations for this problem with interleaving are discussed further
-in \cref{sec:future-work}.
+in~\cref{sec:future-work}.
 
 In addition to the stagger delay, the connection establishment time of
 a CTaps client is also vulnerable to slow DNS resolutions,
@@ -452,7 +452,7 @@ with little overhead, there are however still many scenarios that are not
 supported by CTaps. These would not present extra complexity to the
 application, but would lead to quite a bit of internal CTaps complexity.
 
-As discussed in \cref{sec:connection-migration-impl},
+As discussed in~\cref{sec:connection-migration-impl},
 the current implementation is a workaround, and there is currently no support
 for a CTaps client to migrate from a socket that is bound to a non-wildcard IP.
 This naturally limits the number of situations in which the client is actually able to migrate.
@@ -479,7 +479,7 @@ not be able to fully make use of all the resources available to it on a host sys
 
 % Discuss CTaps client complexity
 \subsection{Client Complexity}
-The complexity of each benchmarking client as seen in \cref{tab:loc_complexity}
+The complexity of each benchmarking client as seen in~\cref{tab:loc_complexity}
 tells a very clear story and CTaps successfully abstracts away the complexity presented
 to client applications interacting with the network. It does so not only when accessing
 advanced features of QUIC such as connection migration, but also in the protocol
@@ -494,7 +494,7 @@ While CTaps is the most complex
 individual client by lines of code, it provides TCP and QUIC support, connection racing,
 and several QUIC benefits at less than the combined complexity of the QUIC
 and TCP clients. A combined TCP and QUIC client would likely feature
-some shared logic, so the naive sum in \cref{tab:loc_complexity} can
+some shared logic, so the naive sum in~\cref{tab:loc_complexity} can
 be viewed as an upper bound for the non-CTaps clients. 
 
 However, in order to develop a replacement of CTaps the TCP and QUIC

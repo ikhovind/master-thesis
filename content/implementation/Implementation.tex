@@ -1,6 +1,6 @@
 \chapter{Implementation}\label{chap:impl}
 This chapter will cover how the design decisions described
-in \cref{chap:design} are implemented in CTaps.
+in~\cref{chap:design} are implemented in CTaps.
 This chapter will focus on how the internal architecture and
 internal TAPS functionality were realized, in addition
 to describing how CTaps is built and tested.
@@ -10,14 +10,14 @@ to describing how CTaps is built and tested.
 \section{Internal Architecture}
 This section will describe the key implementations
 for achieving the internal architecture of
-CTaps as described in \cref{sec:ctaps-arch-design}.
+CTaps as described in~\cref{sec:ctaps-arch-design}.
 This includes the Socket Manager as an intermediary
 between the Connections and the underlying protocol implementations, the protocol interface
 which provides a common API for the Socket Manager to interact with, and
 the internal communication and error handling in CTaps.
 
 \subsection{Socket Manager} \label{sec:socketManager}
-The need for a Socket Manager was described in \cref{sec:socket-manager-design},
+The need for a Socket Manager was described in~\cref{sec:socket-manager-design},
 with the most important responsibilities being managing the lifetimes
 of sockets as well as acting as an intermediary between Connections
 and the various protocol implementations.
@@ -35,7 +35,7 @@ in the callback in
 Separately from keeping track of the number of open Connections,
 the Socket Manager is also reference counted in order to ensure
 that the internal state remains valid as long as at least one associated
-object remains valid, as can be seen in \cref{lst:socketManagerRefCount}.
+object remains valid, as can be seen in~\cref{lst:socketManagerRefCount}.
 
 \begin{listing}[htbp]
   \begin{minted}{C}
@@ -83,7 +83,7 @@ void ct_socket_manager_listener_closed_cb(ct_socket_manager_t* socket_manager) {
 \end{listing}
 
 \subsection{Protocol Interface}
-As mentioned in \cref{sec:ctaps-arch-design} the protocol interface
+As mentioned in~\cref{sec:ctaps-arch-design} the protocol interface
 in CTaps provides a common API for the Socket Manager to communicate with the
 underlying protocol. This interface itself is implemented as a struct
 which defines the required properties and function properties which a
@@ -91,7 +91,7 @@ protocol implementation must implement.
 
 The concrete protocols themselves are then defined as global instances
 of this struct and are stored in a global array of currently supported protocols.
-An example declaration can be seen in \cref{lst:udp-protocol-decl}, where
+An example declaration can be seen in~\cref{lst:udp-protocol-decl}, where
 the global UDP protocol implementation is declared in \mono{udp.h}. Since
 the protocol implementations themselves have no state, it is safe to use a
 single global instance of each protocol among multiple Socket Managers.
@@ -149,7 +149,7 @@ will race them according to the specification from RFC~9623
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
 system follows the same procedure as specified in Happy Eyeballs V2~\cite{rfc8305},
-which was originally designed to increase IPv6 adoption as described in \cref{happyEyeballs}.
+which was originally designed to increase IPv6 adoption as described in~\cref{happyEyeballs}.
 TAPS takes racing a step further by not only racing IP-address families, but also
 racing potential protocol configurations and endpoints.
 
@@ -161,9 +161,9 @@ are canceled upon the first success.
 Since CTaps has no internal cache and therefore no support for RTT estimation, the delay
 between each candidate is set to a fixed \qty{250}{\milli\second} which is the recommended value
 in Happy Eyeballs V2~\cite{rfc8305}. In a real-world
-use case this is a major limitation, which is discussed further in \cref{sec:discussion}.
+use case this is a major limitation, which is discussed further in~\cref{sec:discussion}.
 
-An example flow of candidate racing can be seen in \cref{fig:racingSeqDiagram}.
+An example flow of candidate racing can be seen in~\cref{fig:racingSeqDiagram}.
 Here, DNS resolution resolves two endpoints with delays of
 RTT of \qty{300}{\milli\second} and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
 but the faster RTT leads to the second endpoint winning the race and being
@@ -380,10 +380,10 @@ does not support it.
 
 The implications of the application having to make an effort to write
 protocol-agnostic code when using Connection cloning in CTaps is discussed
-in \cref{sec:quicUnderTaps}.
+in~\cref{sec:quicUnderTaps}.
 
 A theoretical example displaying the benefits of Connection cloning and multistreaming
-in general can be seen in \cref{fig:connection-clone-gains}. Here, two
+in general can be seen in~\cref{fig:connection-clone-gains}. Here, two
 transfers are performed sequentially. After the first transfer completes successfully,
 the application makes use of connection cloning in CTaps and starts a second transfer.
 
@@ -398,7 +398,7 @@ TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
 of QUIC benefits when available.
 
 A benchmark showing the measured benefits of utilizing Connection cloning in
-CTaps over QUIC vs. TCP can be seen in \cref{sec:smallfiletransfer}.
+CTaps over QUIC vs. TCP can be seen in~\cref{sec:smallfiletransfer}.
 
 \begin{figure}[htbp]
 \centering
@@ -547,7 +547,7 @@ a research project and a workaround exists, allowing applications
 to utilize path migration as seen in the benchmark in
 \cref{sec:path-migration}. Improvements to achieve
 a more robust connection migration without having to
-perform CTaps-specific workarounds are discussed in \cref{sec:future-work}.
+perform CTaps-specific workarounds are discussed in~\cref{sec:future-work}.
 
 The described workaround is to explicitly bind to an wildcard endpoint,
 while still passing alternative paths to the Preconnection when first
@@ -558,7 +558,7 @@ even if binding to an wildcard endpoint.
 
 An example of utilizing
 this can be seen in the excerpt from the migration benchmarking
-client featured in \cref{lst:explicit-binding-to-ephem}.
+client featured in~\cref{lst:explicit-binding-to-ephem}.
 
 \begin{listing}[htbp]
   \centering
@@ -692,7 +692,7 @@ UDP is the simplest of the three currently supported protocols in CTaps
 and it has native
 support in libuv through the libuv \mono{uv_udp_t} handle~\cite{libuvLibuvUDPHandle}.
 The relative protocol complexity is discussed further in
-in \cref{sec:protocolComplexity}.
+in~\cref{sec:protocolComplexity}.
 
 UDP does not fit perfectly into the model assumed by
 TAPS, which is that of a Connection-based system. There are therefore
@@ -712,7 +712,7 @@ to demultiplex incoming UDP messages, mapping Remote Endpoints
 to Connections.
 
 The list of selection properties set for UDP by CTaps is discussed
-in \cref{sec:protocol-impl-sel-props}.
+in~\cref{sec:protocol-impl-sel-props}.
 
 \subsubsection{TCP}
 TCP is one of the three protocols currently supported by CTaps, and has native
@@ -747,7 +747,7 @@ have been spawned from this Listener will have received their own separate
 Socket Managers, since they are connected to separate sockets.
 
 The list of selection properties set for TCP by CTaps is discussed
-in \cref{sec:protocol-impl-sel-props}.
+in~\cref{sec:protocol-impl-sel-props}.
 
 \subsubsection{QUIC} \label{sec:quicImpl}
 With the standardization of QUIC being fairly recent,
@@ -784,7 +784,7 @@ If the socket is bound to a wildcard address, then the kernel will
 select the from address itself.
 
 This becomes an issue for CTaps when utilizing the connection migration
-workaround described in \cref{sec:connection-migration-impl}, as 
+workaround described in~\cref{sec:connection-migration-impl}, as 
 the socket currently has to be bound to an wildcard address for migration
 to work. If the from address does not match the address expected
 by Picoquic then it cannot successfully reason about which paths are
@@ -797,9 +797,9 @@ The resulting file descriptor is
 monitored using a generic
 \mono{uv_poll_t} libuv handle. This does not create much extra
 complexity, apart from having to manually build the message header
-as seen in \cref{lst:pktinfo-send-packet} in \cref{app:code-examples}.
+as seen in~\cref{lst:pktinfo-send-packet} in~\cref{app:code-examples}.
 A model of the data flow between CTaps, Picoquic and the network can be
-seen in \cref{fig:ctaps-quic-loop}.
+seen in~\cref{fig:ctaps-quic-loop}.
 
 When initiating a CTaps Connection over QUIC, CTaps needs to open a socket on
 the a Local Endpoint and inform Picoquic about wanting to open a QUIC connection.
@@ -828,10 +828,10 @@ supports it.
 In situations with many possible ALPN values, this
 will lead to a larger delay in connection establishment than strictly
 necessary. The consequences of this stagger delay as it is currently
-implemented in CTaps is discussed further in \cref{sec:single-endpoint-handshake-discussion}.
+implemented in CTaps is discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
 
 The full implementation of the protocol implementation struct for QUIC can be seen in
-\cref{lst:quic-impl-struct} in \cref{app:code-examples}.
+\cref{lst:quic-impl-struct} in~\cref{app:code-examples}.
 
 \definecolor{taskgreen}{HTML}{A5D6A7}
 \begin{figure}[htbp]
@@ -940,7 +940,7 @@ a Connection and the Selection Properties fulfilled by each protocol as defined 
 The protocol implementations in CTaps differ
 greatly in complexity. This can be easily seen in the number of lines
 of code required to implement the protocol interface for each protocol,
-as seen in \cref{tab:protocolLoc}. In addition to the interface implementation
+as seen in~\cref{tab:protocolLoc}. In addition to the interface implementation
 of QUIC being \textasciitilde2.6 larger than that of TCP, QUIC support also requires a fairly
 complex external dependency to handle incoming and outgoing data instead of
 relying on built-in libuv support.
@@ -1001,7 +1001,7 @@ such as with the \mono{-}\mono{-}\mono{wrap} flag in the GNU linker~\cite{gnuLin
 This can be used to redirect all invocations of a function
 to its mock at link time, avoiding any issues with symbol conflicts.
 
-An example of function mocking using FFF can be seen in \cref{lst:example-fff-mocking}.
+An example of function mocking using FFF can be seen in~\cref{lst:example-fff-mocking}.
 
 \begin{listing}[htbp]
 \begin{minted}{Cpp}
@@ -1084,7 +1084,7 @@ used to simplify the logic required to be implemented within CTaps itself.
 These are again divided into statically and dynamically linked dependencies.
 
 A description of the difference between statically linked and dynamically linked
-dependencies can be found in \cref{sec:build-system}. CTaps statically links against
+dependencies can be found in~\cref{sec:build-system}. CTaps statically links against
 Picoquic and log.c, while it uses dynamic linking for
 more general dependencies which it expects application developers to have present
 on their machine. This includes GLib and libuv.
@@ -1094,7 +1094,7 @@ that when compiling CTaps, dependencies are required to be present on the compil
 system, while downstream applications only require the runtime libraries to be present.
 
 \subsection{GLib}
-As mentioned in \cref{sec:glib-design-reason}, CTaps uses GLib 
+As mentioned in~\cref{sec:glib-design-reason}, CTaps uses GLib 
 for certain internal data structures to avoid having to re-implement them
 internally.
 This includes the candidate tree when performing candidate gathering
@@ -1104,7 +1104,7 @@ and hash tables keeping track of Connections associated with a Connection Group.
 Libuv is CTaps' most core dependency and it has therefore shaped the implementation
 of CTaps itself. CTaps uses libuv abstractions where possible and relies on libuv
 to perform all asynchronous interactions with the network. An example with this
-can be seen in the CTaps DNS lookup function \cref{lst:get-addrinfo-uv}, where CTaps relies on the asynchronous
+can be seen in the CTaps DNS lookup function~\cref{lst:get-addrinfo-uv}, where CTaps relies on the asynchronous
 \mono{uv_getaddrinfo()} to perform an asynchronous DNS lookup, instead of the synchronous
 \mono{getaddrinfo()}.
 
@@ -1143,4 +1143,4 @@ for the next wakeup time after interacting with a QUIC instance,
 and then the timer fires when necessary, to help Picoquic send
 the necessary data to the network. The timer callback function
 invoked by the libuv timer can be seen in
-\cref{lst:timer-callback-function} in \cref{app:code-examples}.
+\cref{lst:timer-callback-function} in~\cref{app:code-examples}.
