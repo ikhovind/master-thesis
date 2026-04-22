@@ -451,10 +451,31 @@ This would also allow for separate applications to bind to a separate
 interface on the same port, without coming into conflict with the
 QUIC connection.
 
-\subsection{Framers}
-Multiple framers
+\subsection{Framers}\label{sec:future-framer}
+As described in \cref{sec:framer-impl} the current support for framers
+in CTaps is largely a proof-of-concept, and should be improved if CTaps
+is to be further developed. The largest limitation is that Connections
+only support a single framer. Multiple framers were deemed to be out of scope, but
+it would be natural for an application to desire to wrap or unwrap messages
+to and from the network using multiple different framing protocols. The implementation
+itself would be quite simple, as the Connection structure could be
+expanded to support a dynamic array of Framers, iterating through the array
+and invoking each Framer whenever the Connection receives or sends data.
 
-Internal buffer in framers, statefulness (void* pointer?)
+In addition, CTaps should add support for a Framer combining multiple
+messages into a single one, or splitting a single message into multiple
+before transferring them over the network. Since Framers are already
+asynchronous this would require relatively little modification to their
+current operation. Since the application is expected to implement
+its own Framer it could simply be given an additional void pointer
+as a parameter to the framing function. The application could then
+define an internal message buffer to store messages in, combining
+them or splitting them before passing them along to the network or
+the associated Connection. Whe nadding this functionality care
+would have to be taken that the ownership model of the Messages
+created inside Framer functions is clear, so that applications
+can implement functions to both combine and split Messages
+without having to risk memory leaks.
 
 
 \subsection{Alternative QUIC Backends}\label{sec:sans-io}

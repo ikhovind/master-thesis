@@ -121,7 +121,14 @@ active development since 2021, several years before the
 finalzation of the TAPS RFCs.
 
 \section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
-\todo{Discuss and finish table}
+In order to compare the state with known existing work a table
+comparing the features of CTap swith the known features of existing
+TAPS implementations have been compiled and are displayed in \cref{tab:comparison}.
+Here, the most complete found TAPS implementations are compared in order to give an accurate
+comparison point of the current state of CTaps. For the sake of brevity not all
+implemnetations are included, instead the implementations which are deemed the
+most complete are included. For this sake NEAT has also been excluded since
+it would be a subset of the features achieved through the NEATPy shim layer.
 
 \begin{table}[htbp]
 \centering
@@ -163,3 +170,71 @@ finalzation of the TAPS RFCs.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
+
+While the most complete and production-ready implementation is Apple's Network.framework, it
+also has several limitations. The largest limitation is naturally that it is a closed-source
+implementation and is only designed to be compatible with the Apple ecosystem. This means
+that the implementation cannot be adapted for other use cases outside of the Apple ecosystem.
+The fact that Network.framework is closed source also means that the exact features supported
+are harder to verify than for open-source implementations, since the exact
+logic cannot be inspected. In the overview it has therefore been assumed that any feature not
+documented clearly, such as connection migration for QUIC is not supported. THe external
+API of Network.framewok is fairly true to the TAPS API, featuring abstractions such as the
+NWConnection, NWListener and the NWConnectionGroup. 
+
+There are however still large differences
+in both the external and internal API of Network.framework and a true TAPS system. The largest
+difference is that Network.framework does not support candidate racing as described in TAPS
+RFC~9623~\cite{rfc9623}. While Network.framework supports Happy Eyeballs-style IP-family racing
+it does not support racing multiple protocols and clients have to bind to a specific
+protocol at compile time, by passing a NWParameters object which matches a specific
+protocol when first creating the NWConnection.
+
+An example of this pattern can be
+seen in \cref{lst:network-framework-example}. Here a new connection is opened through
+QUIC using the ALPN \enquote{myproto}, the state handler is recognized and the conneciton
+is started. This naturally reduces the flexibility of the system and forces applications
+to bind to the underlying protocol, even though it is naturally more flexible than a pure
+socket implementation.
+
+\begin{listing}[htbp]
+\begin{minted}{swift}
+// Create a connection using QUIC
+let connection = NWConnection(host: "example.com", port: 443, using: .quic(alpn: ["myproto"]))
+
+// Set the state update handler to be notified when the connection is ready
+connection.stateUpdateHandler = { newState in
+    switch newState {
+    case .ready:
+        print("Connected using QUIC!")
+    default:
+        break
+    }
+}
+
+// Start the connection with callback queue
+connection.start(queue: queue)
+\end{minted}
+\caption{Network.framework example code of opening a QUIC connection to example.com~\cite{WWDC2021_10094}.}
+\label{lst:network-framework-example}
+\end{listing}
+
+While the Network.framework example in \cref{lst:network-framework-example} naturally belongs to
+the currently most complete and production-ready implementation of TAPS, it also shows the areas
+where CTaps has a chance to innovate and why an open source implementation of TAPS is valuable
+despite the existence of Network.framework. Network.framework features a common interface
+to interact with transport protocols and only forces the application to set the underlying
+protocol once when first opening the Connection, it still forces the application to know
+which protocol it wants to use, to implement fallback logic if the Connection over that
+given protocl should fail and it is not completely intention-based since the application
+is interacting with the name of the protoocl instead of which service it provides to the transport layer.
+
+A full TAPS implementation would take the flexibility to another level as it would include
+not only an abstract use of Selection Properties, but would also include candidate racing
+allowing the application to only care about which service the transport protocol provides
+instead of having to bind to a single protocol at compile time. This would also include automatic
+connectin fallbacks if establishment fails, leading to a more robust client which could be
+compatible with multiple different remote endpoints. In addition an open-source implementation would
+be valuable as it would allow for public insight into special concerns when implementing
+a TAPS system, enabling a wider adoptoin of TAPS and intention-based networking at the
+transport layer, enabling faster innovation.

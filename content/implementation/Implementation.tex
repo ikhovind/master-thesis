@@ -598,7 +598,7 @@ migration initiated by a client. Migration initiated by the remote
 is supported as long as the \mono{multipath} Selection Property is not
 disabled.
 
-\section{Framers}
+\section{Framers}\label{sec:framer-impl}
 Framers in CTaps consists of a structure with two function
 pointers, which are expected to be implemented by downstream applications.
 
@@ -607,8 +607,14 @@ Message data itself is owned by the protocol stack. The
 Framer can therefore modify the message in place and does not have to allocate new
 memory unless it is extending the length of the message.
 
-The Framer interface as defined in CTaps can be seen in \cref{lst:framer-struct-def},
-while an example implementation from the CTaps framing tests can be seen in \cref{lst:framingTestImpl}.
+There are currently two major limitations with how framers are implemented
+in CTaps in that each Connection object currently only supports a single
+framer and that framers are designed to only operate on a single message
+at a time. Mitigations for both of these limitations are discussed as
+pieces of future work in~\cref{sec:future-framer}.
+
+The Framer interface as defined in CTaps can be seen in~\cref{lst:framer-struct-def},
+while an example implementation from the CTaps framing tests can be seen in~\cref{lst:framingTestImpl}.
 
 \begin{listing}[htbp]
 \begin{minted}{C}
