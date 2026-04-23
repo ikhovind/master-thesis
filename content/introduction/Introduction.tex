@@ -65,10 +65,8 @@ But there is no implementations of the library supposed to make is suck less...
 While there are open source implementations of TAPS, such as NEAT~\cite{neatCode}
 and PyTAPS~\cite{frankePythonasynciotaps2025}, none of them are feature complete
 and none of them were written after the TAPS RFCs were published in 2025~\cite{rfc9622}.
-There are key features in TAPS which are not featured in any current open or closed source
-implemtations of TAPS. The most important of these is candidate racing \todo{is this true?}.
-In addition, no previous open source implementations of TAPS feature support for QUIC as one
-of the underlying protocols. Since the TAPS RFCs were finalized before the publishing of the
+no previous open source implementations of TAPS feature support for QUIC as one
+of the underlying protocols and since the TAPS RFCs were finalized before the publishing of the
 QUIC RFCs there is currently no guidance in RFC~9623~\cite{rfc9623} on how to map QUIC to
 the TAPS API, although an open draft exists~\cite{transportServicesMappingForQuic}.
 
@@ -85,8 +83,8 @@ There is no open source implementations of TAPS developed after the finalization
 there is no open source implementation of TAPS with support for QUIC. These were then formulated
 into two research questions which this thesis will attempt to answer.
 
-\newcommand{\rqone}{What design and architectural considerations have to be taken when implementing TAPS, in order to maintain flexibility?}
-\newcommand{\rqtwo}{How well does the TAPS API capture QUIC semantics, both in coverage and preserving expected behavior?}
+\newcommand{\rqone}{What implicit architectural constraints does the TAPS specification impose on an implementation?}
+\newcommand{\rqtwo}{To what extent does the TAPS API expose the distinctive features of QUIC?}
 
 \begin{enumerate}
     \item \rqone

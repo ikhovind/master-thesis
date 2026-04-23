@@ -533,7 +533,7 @@ Exactly which Transport Services are provided by which transport
 protocols has been mapped by the IETF in RFC~8095, as part of the
 TAPS working group~\cite{rfc8095}.
 
-\section{TAPS}
+\section{TAPS}\todo{Make sure that properties are defined properly, transport, connection, message, selection}
 The TAPS WG was an IETF working group which aimed to solve the strong
 coupling between application
 level code and the underlying transport protocol through
@@ -1064,7 +1064,7 @@ while step two and three map into the TAPS concept of candidate racing.
 
 Since waiting for each of the four steps to fully complete before moving
 on to the next one would lead to unecessary delay Happy Eyeballs v2 recommends
-that connection attempts are started eiteher immeditately on
+that connection attempts are started eiteher immediately on
 the first response if it is IPv6, or after a \qty{50}{\milli\second} resolution
 delay if the first received resolution if IPv4~\cite{rfc8305}.
 This helps mitigate potential slow DNS resolutions, especially
@@ -1114,57 +1114,26 @@ is required for major innovations on the transport layer.
 The naive way to write a networking application is to treat
 any interaction with the network like a normal CPU-bound task,
 waiting for I/O bound operations to complete before progressing.
-Conceptually this is a very simple model, but it is very inefficient
-since the CPU will be spending much of its time idling, waiting
-for I/O.
+This is a simple, but very inefficient model and the CPU will
+be spending much of its time waiting for I/O.
 
-There are two primary ways of mitigating this unnecessary waiting,
-either creating dedicated threads to interact
-with the network or transitioning an asynchronous model. 
-
-In a multithreaded program a dedicated thread
-can be created for each incoming connection, yielding the CPU
-while it is waiting for a response from the peer.
-
-For an asynchronous model,
-any function which initiates some
-piece of asynchronous work returns immediately. The application
-will then later be notified when the results of the asynchronous
-operation is complete, usually through a callback.
-
-When it comes to complexity, dedicated networking threads allows the
-program to modeled sequentially, allowing the structure to be more similar
-to a normal CPU-bound program, but it requires multithreading, which
-can be complex in the form of forcing synchronization of shared data structures,
-as well as potential overhead when creating a large amount of threads. 
-An asynchronous model with a single worker thread avoids both of these issues
-by using a single thread, but requires a very different mental model
-from normal sequential programming.
-
-Instead of a sequential flow, asynchronous programs utilize callbacks
-in order to notify the application of when a task completes.
-Since asynchronous programs are usually informed of an I/O-bound task completing
-through a callback, it naturally
-follows that any work relating to this completed task has to be performed
-within this callback. This also means that the application cannot know
-whether or not the request succeeded until the callback is invoked.
-
-To make use of an asynchronous programming model the most common approach
-is to use an event loop. An event loop is a single threaded program which
-performs tasks in order. Tasks are added to the event loop either on
-startup or in reaction to an invoked callback. This means that
-when a message is received over the network then the invocation
-of the callback registered by the application is added to the queue, and
-is performed when the preceeding tasks have completed.
+There are two primary ways of mitigating this. The first is multithreading,
+where the application creates a thread per connection and threads yield
+the processor while waiting for blocking I/O. The second is an event
+loop\footnote{Exotic alternatives to event loops for achieving asynchronous
+I/O do exist, for example the POSIX AIO interface, but these are rarely
+used in practice.}. An event loop is a single-threaded program that executes tasks in order.
+Functions that initiate asynchronous work return immediately and the
+application is later notified of the result, usually through a callback.
+Tasks are added to the queue either by the application itself or in
+reaction to some asynchronous result being ready, such as incoming
+data.
 
 An illustration of an event loop with a simple queue can be seen in
 \cref{fig:event-loop-queue}. Here, epoll is used to monitor non-blocking
 sockets and the associated receive calls are added to the queue.
 This allows the single-threaded event loop to be handle
-several different connections at once. Although real implementations
-naturally feature more advanced features, the overall model of
-the asynchronous event loop model is very common, and is used for example
-in Node.js~\cite{nodejsEventLoop} and Python's asyncio~\cite{pythonAsyncio}.
+several different connections at once.
 
 \begin{figure}[htpb]
 \centering
@@ -1226,12 +1195,36 @@ in Node.js~\cite{nodejsEventLoop} and Python's asyncio~\cite{pythonAsyncio}.
  
 \end{tikzpicture}
 \caption[Event loop with FIFO queue]{
-Illustration of the epoll API adding tasks
-to a simple FIFO event loop queue, which are then executed 
-in order.
+An event loop driven by epoll. When a monitored socket becomes ready,
+epoll signals the event loop, which enqueues the corresponding receive
+callback. The event loop executes callbacks from the queue in order,
+allowing a single thread to service multiple connections
 } 
 \label{fig:event-loop-queue}
 \end{figure}
+
+
+The threaded model allows code to be written sequentially within each thread,
+closer to the mental model of a normal CPU-bound program, but requires synchronisation
+of shared data structures between threads. An event-loop model avoids the
+synchronisation issue by running in a single thread, but spreads control
+flow across callbacks.
+
+The two models also differ in how they scale. Multithreading makes use of
+multiple CPU cores easily, but adds a non-negligible overhead if
+creating a large number of threads.
+Event loops scale well on a single core are more difficult to use with
+multiple cores. They are also more difficult to
+integrate into external applications.
+The two models are not entirely mutually exclusive
+as event loop libraries can use threads internally to achieve an asynchronous flow
+for synchronous operations, but from the view of an application
+interacting with the network they are fairly distinct.
+
+Although real implementations naturally feature more advanced features than
+illustrated in \cref{fig:event-loop-queue}, the overall model of the asynchronous
+event loop model is very common, and is used for example in Node.js~\cite{nodejsEventLoop}
+and Python's asyncio~\cite{pythonAsyncio}.
 
 \section{Libuv}
 Libuv~\cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.

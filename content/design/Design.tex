@@ -8,42 +8,38 @@ of CTaps, before expanding on the chosen dependencies, internal architecture
 and the external API presented to applications.
 
 \section{Choice of Scope}
-One of the key research questions motivating the development of CTaps is exactly
-how well the TAPS API as it currently exists can be presented programmatically.
-CTaps therefore aims to present as much of the TAPS API as possible, despite
-implementing several features as no-ops.
+The CTaps API currently features all major aspects of the TAPS API
+described in RFC~9622 except for rendezvous.
+Internally it implements the most important parts
+of a TAPS system and supports 
+candidate gathering, candidate racing, TCP, UDP and QUIC.
 
-As it stands now, CTaps implements a large subset of the TAPS API and presents
-several of the most beneficial features of the TAPS API such as candidate gathering
-and candidate racing, as well as support for TCP, UDP and QUIC. In addition
-it presents all of the core objects of the TAPS API, such as Connections, Listeners and
-Connection Groups. It allows the application to set all Transport Properties listed
-in RFC~9622, although not all properties are supported internally and setting them has no effect.
-When performing
-racing the most desirable protocols are attempted first and staggered racing
-is performed for less desirable protocols, as described in RFC~9623
-\cite{rfc9623}.
-\todo{Check in on this later, describe how large of a subset}
+While nearly all major parts of the TAPS API is present
+in the CTaps API, there are individual functions which are
+not implemented and the CTaps API does not
+feature stubbed implementations. These
+are protocol-specific endpoints, multicast endpoints,
+addint endpoints to an established Connection, partial
+message sends and batching message sends.
+
+All Transport Properties from RFC~9622 are present in the CTaps API and
+can be set, but not all are supported internally.
+Unsupported Transport Properties are ignored and have
+no effect on the underlying Connection, expcept for Selection
+Properties which still affect candidate gathering.
+This means that for example setting \mono{perMsgReliability} to Require will filter
+out protocols which have this property set to Prohibit, but the application
+will not be able to transfer individual messages as reliable, since this
+is not supported in CTaps. 
 
 The parts of the TAPS API that were prioritized for CTaps are common features related
 to establishing client and server connections, transferring data and managing
-the lifetime of Connections. The highest prioritized internal TAPS features
-were the most unique parts of the TAPS API, which only a software library
-presenting a generic interface to the transport layer could present. This
-is naturally candidate gathering and candidate racing, which allows a single
+the lifetime of Connections.
+For the internal features of a TAPS system as described in RFC~9623,
+the most unique parts of the TAPS API has been prioritized during development.
+This is naturally candidate gathering and candidate racing, which allows a single
 client to be able to connect to multiple different endpoints using different
 protocols.
-
-Certain parts of the TAPS API are not present in CTaps, the
-largest of which is the peer to peer connection functionality.
-Implementing this was deemed to be out of scope, while presenting
-the API as a no-op was deemed to be of little value, since CTaps would not be able to predict
-how the internal rendezvous implementation would affect the external API.
-
-Other functionality which is not present in the CTaps API is, among others,
-being able to add endpoints to an active Connection.
-This is omitted because an actual implementation was deemed
-out of scope, and presenting it as a no-op was deemed to be of little value.
 
 Overall, CTaps serves as a reference
 to show the architectural and design decisions which are necessary when
@@ -884,12 +880,12 @@ and how they may into CTaps and TAPS in general can be seen in
 \multicolumn{1}{l||}{Bidirectional streams} & \mono{Clone()}\\
 \multicolumn{1}{l||}{Stream Priority} & Connection Property\\
 \midrule
-\multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior\tnote{1}}} \\
+\multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior}} \\
 \midrule
 \multicolumn{1}{l||}{QUIC connection\tnote{2}} & Connection Group\\
 \multicolumn{1}{l||}{QUIC stream} & Connection\\
 \multicolumn{1}{l||}{Unidirectional stream close (FIN)} & Connection \mono{Close()}\\
-\multicolumn{1}{l||}{Connection migration\tnote{7}} & Selection Property\\
+\multicolumn{1}{l||}{Connection migration\tnote{3}} & Selection Property\\
 \multicolumn{1}{l||}{Path change events} & Per-Connection callback\\
 \multicolumn{1}{l||}{\mono{initial_max_streams_bidi}} & Connection Property \\
 \midrule
@@ -901,9 +897,9 @@ and how they may into CTaps and TAPS in general can be seen in
 \multicolumn{1}{l||}{Key Update~\cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
 \multicolumn{1}{l||}{ECN} & Message Property \\
 \multicolumn{1}{l||}{\mono{disable_active_migration}} & Selection Property\\
-\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{3}} & Connection Property \\
-\multicolumn{1}{l||}{\mono{STOP_SENDING}\tnote{8}} & Connection \mono{Abort()}\\
-\multicolumn{1}{l||}{\mono{RESET_STREAM}\tnote{8}} & Connection \mono{Abort()}\\
+\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{4}} & Connection Property \\
+\multicolumn{1}{l||}{\mono{STOP_SENDING}\tnote{5}} & Connection \mono{Abort()}\\
+\multicolumn{1}{l||}{\mono{RESET_STREAM}\tnote{5}} & Connection \mono{Abort()}\\
 \midrule
 \multicolumn{2}{l}{\textit{Not supported through TAPS}} \\
 \midrule
@@ -916,7 +912,7 @@ and how they may into CTaps and TAPS in general can be seen in
 \multicolumn{1}{l||}{Directional \mono{initial_max_streams_*}} & ---\\
 \multicolumn{1}{l||}{\mono{preferred_address}} & ---\\
 \multicolumn{1}{l||}{\mono{Stateless reset}    } & --- \\
-\multicolumn{1}{l||}{Connection ID handling\tnote{4}} & ---\\
+\multicolumn{1}{l||}{Connection ID handling\tnote{7}} & ---\\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}
@@ -925,16 +921,15 @@ and how they may into CTaps and TAPS in general can be seen in
 mapping which behaves consistently with the protocol-agnostic TAPS API. Generally this means matching 
 or exceeding the behavior of TCP as the underlying protocol.
 \item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
-\item[3] Requires that recvMsgMaxLen is communicated to the peer.
-\item[4] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
-\item[6] CTaps can set Connection timeout, but only when \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
-\item[7] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC. This means that a TAPS implementation filtering
+\item[3] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC. This means that a TAPS implementation filtering
     protocols in candidate gathering cannot know if this property is mandatory in a protocol or not.
-\item[8] Only available in unison through TAPS, not individually.
+\item[4] Requires that the recvMsgMaxLen Connection Property \cite[Sec. 8.1.11.5]{rfc9622} is communicated to the peer.
+\item[5] Only available in unison through TAPS, not individually.
+\item[6] CTaps can set Connection timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
+\item[7] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
-\todo{Fix ordering of notes}
 
 Since the TAPS RFCs were written mostly before the QUIC design was finalized
 in RFC~9000~\cite{rfc9000}, part of the motivation for developing CTaps
@@ -961,7 +956,6 @@ with the principle of least surprise as described in RFC~9622~\cite{rfc9622}, it
 greater flexibility and consistent behavior to the downstream application.
 
 \section{Candidate Racing}
-\todo{Think about talking about generic candidate racing too}
 When it comes to connection racing, it is a useful feature but can
 be hard to map to non-connection oriented protocols such as UDP, leading to
 unexpected or even undesirable behavior.
@@ -976,15 +970,36 @@ if the remote is does not support UDP, the racing will be unable to detect
 this and UDP can potentially win the candidate racing,
 but the remote will be unreachable.
 
-An alternative
-solution would be to send a test message and to wait for a reply, but
-this relies on the remote peer having implemented this functionality and
-therefore  risks designating legitimate endpoints as unresponsive. Since
-the default preferences rank UDP lower than other supported protocols, it was
+A possible mitigation for this would be through transport options
+as described in RFC~9868~\cite{rfc9868}.
+This RFC describes a backwards compatible way of extending UDP functionality
+by exploiting the fact that the UDP hedaer contains a length
+field independent of the IP header length field. This allows
+to create space in the UDP packet beyond the user data, which
+can then be used to specify transport options.
+One of these transport options is the echo request
+and the echo response \cite[Sec. 11.7]{rfc9868}
+The request sends a 4-byte token requesting that the peer
+respond with the same token.
+
+For candidate racing in
+CTaps this could be used to verify that a peer is reachable
+through UDP, and a replacement for a UDP handshake when
+racing with UDP. 
+This is naturally not a perfect solution since there is no
+way to differentiate between the peer not being reachable
+by UDP and the peer simply not supporting this UDP transport option.
+The use of UDP options is also the responsibility of the layer
+utilzing UDP, not the UDP layer itself. This means that if a server
+is reachable over UDP, then CTaps would be reliant on the server
+itself supporting this transport option in order to get a UDP
+response.
+
+Since the default preferences rank UDP lower than other supported protocols, it was
 deemed that for CTaps the risk of UDP being ranked higher than other protocols when
 the endpoint does not support it is quite low. The simple solution of
 of assuming an established connection on opening the socket is adequate was therefore
-chosen, for lack of a better option. \todo{Cite rfc 9868 or smth.}
+chosen, for lack of a better option.
 
 \section{Security}
 The security of a TAPS system is reliant on the security of the underlying protocols.

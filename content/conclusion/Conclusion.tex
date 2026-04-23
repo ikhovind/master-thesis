@@ -113,91 +113,44 @@ were:
 \end{enumerate}
 
 \subsection{Research Question One}
-For the analysis of architecgture requirements and considerations
-fo rTAPS implementations most of the requirements stem from
-the need to be compliant with the architecture, functionality
-and features as described in TAPS. The most important of these
-are that TAPS is asynchronous at its core. This limits the actual
-simplest naive implementation which is to simply interact with
-the network in a blocking manner. As described in~\cref{sec:async-background}
-this means that TAPS implementations have two primary design
-in order to achieve this asynchrony. Either use multiple threads
-or be asynchronous.
+The TAPS API mandates several features such as asynchrony
+and flexible protocol handling, but leaves details up to the
+implementations themselves. This means that there are several
+implicit architectural requirements posed by TAPS, but not
+stated explicitly in the RFCs. This section will answer which
+requirements a TAPS implementation needs to take into account
+to support the full range of TAPS features.
 
-The exact nature of which model should be folloewed
-depends on the goals of the implementation. Asynchrony
-is a more complicated model, both because of it deviation
-from normal sequential programming, but also because
-it requires an event loop \todo{always required?} which
-requires a fairly heavy dependency.
-
-Asynchronous models do however avoid the added overhead
-of creating a large number of threads, as well as the
-complexity needed for avoiding race conditions if the
-implemnetation features any shared resources between the
-threads.
-
-Assuming that the implementation settles for an
-asynchronous model like CTaps has then TAPS
-requires that it pulls in an event loop
-library such as libuv. 
-
-Apart from the required asynchrony TAPS also mandates that the implementation
-is flexible in which prtocol and andpoints a Connection can be attached to. Large parts
-of the internal architcture is also prescribed through the candidate gathering and
-candidate racing descriptions from RFC~9623. These prescribe how a Connection is created and how
-the candidates are fetches. This is owever broad strokes and the exact implementation
-is left up to the implementation. TAPS prescribes
-nothing other than that it needs to be capable
-of racing and able
-to gather avrious candidates based
-on the passed selection properties and
-endpoints.
-
-With the flexibility of binding between Conenction, Listener and underlying protocol and endpoints
-required by CTaps there are also several implicit architectural constraints.
-While not strictly required, in order to be as maintainable as possible
-all TAPS implementaitons should feature some sort of generic way of representing
-a protocol, such as the protocol interface in CTaps. This is to avoid the internal
-implementation code becoming very tightly bound to specific protocols, making it
+While not strictly required per the TAPS RFCs, all TAPS implementations
+should use a generic protocol interface internally, in order to be as maintainable as possible.
+Without a generic intercae, the internal implementaiton code
+risks becoming very tightly bound to specific protocols, making it
 far more difficult to adapt the TAPS implementation to support new protocols.
 
-In addition to the flexibility for established sockets, a true TAPS implementation
-also needs a way to listen for incoming data for multiple different protocols
-when opening a listener. Since RFC~9623 recommends that a listener should
+RFC~9623 recommends that a Listener should
 be able to receive from multiple transport protocols at once over a single
-socket \cite[Sec. 4.7]{rfc9623}, the internal structure used to represent protocols and manage
-sockets need to reflect this advanced behavior. This means that the application
-is barred from using simple abstractions such as the TCP and UDP handles in
-libuv which do not support it. Instead it needs to implement more advanced
+socket \cite[Sec. 4.7]{rfc9623}, TAPS implementations should therefore
+implement internal logic to listen for incoming data for multiple different protocols
+when opening a Listener. This means that the implementation
+would be barred from using simple abstractions such as the TCP and UDP handles in
+libuv when listening. Instead it needs to implement more advanced
 connection handling parsing incoming data directly.
 
-With TAPS being connection-oriented it also mandates certain features
-and therefore intermediary structures between the protocol and Connections.
-In CTaps' case the requirement of TAPS being connection oriented comes into
-play when supporing UDP. A TAPS implementation has to maintain its own Connections
-for UDP, which can be done by emulating the four-tuple as used by TCP.
-Incoming datagrams can be compared with a map of previous remote addresses
-for the given local socket and demultiplexed accordingly. If no matching remote
-can be found in the map then the datagram belongs to a new Connection.
-This sets a hard requirement for internal data structures, as it
-prescribes each socket having some sort of state in order to make these
-lookups and that this state is stored together with the socket.
-The requirements of multiple Connections sharing a single socket
-also mandates handling which makes sure that the socket is not closed
-until all associated Connections have been closed. This means that the
-implementation will likely have to implement even more state in the form
-of a counter or list keeping track of the number of open Connections still
-using the given socket.
+With TAPS being connection-oriented it also mandates that the
+implementation can maintain these Connections over connectionless
+protocols. This requires that sockets for connectionless protocols
+have some associated internal state as they will have to perform
+lookups when receiving datagrams. Since multiple Connections can be
+received over a single socket, TAPS implementations are also
+required to maintain the lifetime of a socket until
+the last associated Connection has closed.
 
-Since TAPS explicitly supports connection migration and multipath as well
-as multiple local andpoints, the architecture must also be adopted to make
-sure that the actual socket and Local Endpoint used for a given Connection
-is flexible. This means that a Connection cannot be tightly bound to a single
-endpoint if the TAPS implmentation wants to make use of connection migration
-without featuring a workaround as in CTaps. Since TAPS also supports adding
-endpoints during the lifetime of a Connection, it cannot rely on the Connection
-always first binding to an wildcard IP address for the  socket if it wants to make use of migration.
+Since TAPS explicitly supports connection migration and multipath,
+the architecture must also be adopted to make sure that the underlying 
+socket and Local Endpoints used for a given Connection are flexible.
+This means that a Connection should for example be able to send
+and receive over more than one socket concurrently and can
+therefore not be bound one-to-one with sockets.
 
 \subsection{Research Question Two}
 While the TAPS API differs to a very large degree from the typical interface
@@ -361,6 +314,30 @@ protocol. QUIC may then cache the packets internally and the application
 cannot therefore use the sent callbacks to reliably get the state of the send buffers.
 
 \section{Future Work}\label{sec:future-work}
+Due to the nature of CTaps being an exploratory project it is not
+production ready. There are several major features which are not implemented
+which should be improved, if CTaps is to be developed further. The
+most important of them are discussed here.
+
+\subsection{Error Handling}
+The most important improveent which could be made to CTaps is imrpoved error handling.
+Since a lot of focus in CTaps has been to develop the various happy paths
+of different TAPS features to serve as proof of concepts, the failure paths
+in the same features have not been extensively developed or tested. For
+a concrete example the \mono{soft_error()} callback is never invoked and
+there are several paths where the previously allocated memory is not freed.
+
+This has not been the benchmarking itself since these have been run over
+a simultated network on a single computer, but for a real-world usage
+the application needs to both be notified about and not risk memory errors
+when an error occurred.
+
+While there are two many possible failure branches to mention a full list,
+in further development of CTaps care should be taken to add testing for
+all failure paths ensuring that the errors are handled correctly and recovered
+from when possible. In addition memory checks should be added to these tests,
+ensuring that CTaps does not leak allocated memory when encountering such
+an error path.
 
 \subsection{Candidate Interlaving}
 If an attempt was to be made to make CTaps into a real-world production

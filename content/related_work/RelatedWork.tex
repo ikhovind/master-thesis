@@ -90,19 +90,17 @@ relaxed.% and the prioritization has been moved from being
 % selection properties will affect the path selection.
 
 \section{Network.framework}
-Apple's Network.framework~\cite{networkFramework} follows some of the same concepts
-laid out by TAPS, although it is not a complete implementation. It
-features several of the same abstraction objects
-such as Connections and Listeners and presents itself as an alternative 
-to using sockets directly~\cite{wwdc2018}. There are however several key differences between
-Network.framework and a fully fledged TAPS system, with the most important
-being the lack of Selection Properties and racing of protocol candidates.
-\todo{Cite that repo where apple says its a taps impl.}
+Apple's Network.framework~\cite{networkFramework} is Apple's closed-source
+TAPS implementation. It features several important TAPS abstractions
+such as the Connection and Listener, but does also differ from the official
+API described in the TAPS RFCs. The most important difference between
+Network.framework and TAPS is that Network.framework does not currently
+suppot generic Selection Properties as applications have to bind to a
+specific transport protocol when initiating a Connection.
 
-With Network.framework, the underlying transport protocol is specified in
-the constructor of the Connection object, and while it does support
-Happy Eyeballs-style racing of IPv4/IPv6 addresses, it does not support
-racing across multiple remote endpoints or across different transport protocols, as TAPS describes.
+Network.framework does Happy Eyeballs-style racing of IPv4/IPv6 addresses,
+but it does not support racing across multiple remote endpoints or across
+different transport protocols, as described in RFC~9623~\cite{rfc9623}.
 
 \section{PyTAPS}
 PyTAPS~\cite{frankePythonasynciotaps2025} is a Python library aiming
