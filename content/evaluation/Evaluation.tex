@@ -156,7 +156,7 @@ does not have an effect on the time taken for the initial handshake.
     \label{fig:racing-handshake}
 \end{figure}
 
-\subsection{Candidate Racing Benchmark} \label{sec:handshake-kde}
+\subsection{Candidate Racing Benchmark}\label{sec:handshake-kde}
 This benchmark can be seen in~\cref{fig:handshake-kde}. It intends to
 show the benefits of candidate racing and how it helps find the
 endpoint with the smallest delay.
@@ -197,7 +197,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
     \label{fig:handshake-kde}
 \end{figure}
 
-\subsection{Small File Transfer} \label{sec:smallfiletransfer}
+\subsection{Small File Transfer}\label{sec:smallfiletransfer}
 This benchmark can be seen in~\cref{fig:small-file-bar} and the
 intention is to show that a TAPS system can benefit
 from QUIC multistreaming while using a generic TAPS client
@@ -251,7 +251,7 @@ to carry the small file for all tested delay values.
   \label{fig:small-file-bar}
 \end{figure}
 
-\subsection{Connection Migration} \label{sec:path-migration}
+\subsection{Connection Migration}\label{sec:path-migration}
 This benchmark can be seen in~\cref{fig:migration-throughput} and intends
 to show the benefits of connection migration
 and that it is available with minimal code changes in CTaps.
@@ -283,7 +283,7 @@ for the application.
     \label{fig:migration-throughput}
 \end{figure}
 
-\subsection{Client complexity} \label{sec:client-complexity}
+\subsection{Client complexity}\label{sec:client-complexity}
 While the advantages of QUIC are clear are clear, they
 are also available through using a QUIC library directly
 and do not require a TAPS system.
@@ -336,7 +336,7 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 \end{table}
 
 \section{Discussion} \label{sec:discussion}
-\subsection{Single Endpoint Handshake Benchmark} \label{sec:single-endpoint-handshake-discussion}
+\subsection{Single Endpoint Handshake Benchmark}\label{sec:single-endpoint-handshake-discussion}
 When it comes to CTaps, the results in~\cref{fig:racing-handshake} are promising
 but also illustrate some weaknesses.
 The benchmark shows that 

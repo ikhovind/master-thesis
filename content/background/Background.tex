@@ -1122,7 +1122,7 @@ where the application creates a thread per connection and threads yield
 the processor while waiting for blocking I/O. The second is an event
 loop\footnote{Exotic alternatives to event loops for achieving asynchronous
 I/O do exist, for example the POSIX AIO interface, but these are rarely
-used in practice.}. An event loop is a single-threaded program that executes tasks in order.
+used in practice. TODO - make sure this is true}. An event loop is a single-threaded program that executes tasks in order.
 Functions that initiate asynchronous work return immediately and the
 application is later notified of the result, usually through a callback.
 Tasks are added to the queue either by the application itself or in
