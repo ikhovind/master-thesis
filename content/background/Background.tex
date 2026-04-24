@@ -1,44 +1,36 @@
 \chapter{Background}\label{chap:background}
 This chapter will lay out background information which forms the
-basis of the motivation as well as the background for both the
-current design and limitations of CTaps.
+basis for both the current design and the limitations of CTaps.
 It will describe the low level networking concepts,
 transport layer protocols and the current barriers
-for innovation on the transport layer. These
-are all needed in order to understand the problem
-that TAPS is trying to solve, as well as why
-the problem exists in the first place.
+for innovation on the transport layer.
 Extra care is taken in describing QUIC, as exposing
-the features of QUIC forms a basis for both the design
-of CTaps, as well as the benchmarking in~\cref{chap:eval}.
+QUIC features forms the basis for the design
+of CTaps and the benchmarking in~\cref{chap:eval}.
 
 
 \section{Network Interfaces and Paths}
-A machine is considered to be multihomed if it is connected to more than
-one network. In practice, this is often the case for modern devices,
-where a laptop may be connected to both a Wi-Fi network and a wired Ethernet.
+Modern devices are often connected to multiple networks simultaneously.
+For example, a laptop may be connected to both a Wi-Fi network and a wired Ethernet at the same time.
+Each separate network is interacted with through a separate network interface
+and each network interface is associated with distinct source IP addresses for outgoing data.
+If a device can reach the same endpoint through several network interfaces,
+then it can utilize multiple interfaces for a single network connection as long as this is supported
+by the underlying transport protocol.
 
-Each separate network is interacted with through a separate network interface,
-although these are often virtualized, for example with the loopback interface.
-Since each network interface is connected to a different network, each one
-features a different IP address, and therefore may be used as a source
-address for outgoing traffic, if packets can be routed through the associated network.
-
-Given that a machine features more than one network interface which can reach
-the same destination, this can be used to improve reliability and performance
-of a connection. Each
-local interface represents a different network path, but can
-be used to reach the same destination.
-
-Within QUIC, a network path is a term used for the combination of
-source IP, source port, destination IP and destination port~\cite{rfc9000}.
-This term has become necessary since QUIC decouples
-the path from the connection itself. More details about this can be found in~\cref{sec:quic}.
+The combination of source IP, source port, destination IP and destination port
+is referred to as a \term{network path} following the terminology used in RFC~9000~\cite{rfc9000}.
+Since each network interface is associated with distinct IP addresses,
+each interface that can reach the same destination will represent a distinct network path.
+Utilizing multiple network interfaces for a single connection can improve
+both stability and the throughput of the connection.
+Support for multiple network paths is a notable feature of QUIC
+and is described in detail in~\cref{sec:quic}.
 
 \section{Network Sockets}
 When it comes to network programming,
 the network socket in its most basic definition is an abstraction
-for a network connection, through which an application can send
+for a network connection through which an application can send
 and receive data~\cite[p. 8]{donahooTCPIPSockets2009}. 
 First mentioned in 1970 in relation to ARPANET, the
 simplicity of sockets and their ubiquity in all UNIX distributions
@@ -63,8 +55,7 @@ for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
 example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
 for a reliable stream of bytes. The type usually corresponds to a
-single transport layer protocol, usually UDP and TCP, the two
-most common transport layer protocols.
+single transport layer protocol, usually UDP and TCP.
 
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
@@ -91,15 +82,10 @@ this ossification, transport layer protocols are often built
 using UDP as a substrate, allowing them to use the same IP
 protocol number as UDP. Examples of this include QUIC \cite{rfc9000} and
 SCTP over UDP \cite{rfc6951}.
-
-While building on top of UDP this way does present some overhead,
+While this does present some overhead,
 it is fairly minimal with the UDP header only being \qty{8}{\Bytes}.
-
-Applications can themselves implement needed features
-such as reliability and congestion control.
-This way of designing new protocols has become so common that
-it has prompted an official RFC~from the IETF, describing
-the best practices for implementing congestion control on top of UDP~\cite{rfc5405}.
+Since UDP presents no guarantees of reliability or ordered
+delivery, protocols can choose to develop only the features they need.
 
 \section{TCP}
 TCP is by far the most common transport layer protocol used on the
@@ -125,19 +111,10 @@ prioritize low latency over reliability, such as real-time applications.
 UDP is designed to be a very lightweight protocol with as little
 overhead as possible. It uses a very simple 8-byte header, containing 
 only the source port, destination port, length and checksum.
-Since UDP does not mandate
-advanced features such as in-order delivery or reliability, it
-allows protocols using it as a substrate
-to develop their own algorithms for congestion control
-or reliable delivery as needed.
-
-The primary reason for why protocols choose to use UDP as a substrate
-instead of developing directly over IP is network ossification. This
-is discussed further in~\cref{sec:transport-protocol-barriers}.
 
 \section{TLS}
-TLS is a cryptographic protocol which provides secure communication
-over a computer network. It is commonly used on top of TCP, and is
+Transport layer security (TLS) is a cryptographic protocol which provides secure communication
+over a computer network. It is commonly used on top of TCP and is
 most visible as the basis for HTTPS, the secure version of HTTP.
 
 TLS features its own handshake protocol when establishing a connection,
@@ -155,36 +132,40 @@ with \qty{95}{\percent} of all connections in Chrome on Windows using an encrypt
 connection~\cite{google2026transparency}.
 
 \section{QUIC}\label{sec:quic}
-QUIC is a protocol developed by Google and formalized
-through RFC~9000 in 2021~\cite{rfc9000}.
-Intended to be a replacement for TCP, it has achieved
-a fairly high adoption, for example with over \qty{75}{\percent}
-of traffic to Meta servers using QUIC in 2020~\cite{joras2020quic}.
+QUIC is a protocol which was originally developed by Google and then formalized
+through RFC~9000 in 2021~\cite{rfc9000}. It is developed in user-space over UDP
+and is
+intended to be a replacement for TCP, it has achieved a fairly high adoption. 
+By 2020, over \qty{75}{\percent} of traffic to Meta servers was already using
+QUIC~\cite{joras2020quic}.
 
-QUIC is a connection-oriented protocol and provides reliability,
-despite being implemented in user-space on top of
-UDP. QUIC enables several features which either are not available
-or do not have a wide adoption in TCP, among these are
-0-RTT connection establishment and multistreaming.
-TLS is a mandatory part of the protocol and QUIC
-also encrypts its header, unlike TLS over TCP.
+QUIC is a reliable, connection-oriented protocol and provides several
+features which either are not available or do not have a wide adoption
+in TCP. Among these are 0-RTT connection establishment, multistreaming
+and support for multiple network paths. TLS is a mandatory part of QUIC 
+and most of the QUIC header is also encrypted, unlike TLS over TCP.
+
+Encrypting the header hides as much as the wire image as possible
+form middleboxes, combating future network ossification~\cite{rfc9170}.
 
 While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream.
-A stream is an either
-unidirectional or bidirectional ordered stream of data, much
-like what an application sees when using TCP. Streams can be created and
-closed by either endpoint, and multiple streams can exist over a
-single QUIC connection. QUIC mandates support for in-order delivery within a single
-stream, but not between streams. This way a new stream can be
-used for each object transferred, solving the issue of
-head-of-line blocking which is present in TCP.
+A stream is a unidirectional or bidirectional ordered
+continious transfer of data, much like what an application sees when using
+TCP. Streams can be created and closed by either endpoint,
+and multiple streams can exist over a single QUIC connection.
+QUIC mandates support for in-order delivery within a single
+stream, but not between streams. This avoids the issue
+of head of line blocking, where the
+transfer of a small object potentially has to wait for the
+transfer of a previous large object to complete before being
+handed to the application.
 
 For QUIC, a single connection can exist over several paths and
 congestion control is done on a per-path basis. Multiple streams
 can be transmitted over a single connection and data from
 multiple stream frames can be transmitted in a single packet.
-If a packet is lost, only applications using the streams contained
+If a packet is lost, only the streams with data contained
 in that packet will be affected.
 
 The format of a QUIC stream frame as described in RFC~9000 can
@@ -201,17 +182,14 @@ STREAM Frame {
   Stream Data (..),
 }
 \end{BVerbatim}
-    \caption{Format of a QUIC stream frame~\cite{rfc9000}}
+\caption[Format of QUIC Stream Frame]{Format of a QUIC stream frame~\cite{rfc9000}}
     \label{lst:stream-frame-format}
 \end{listing}
 
 A given stream can exist in several different states.
-These states differ whether the stream is sending or receiving
-data.
-A bidirectional stream consists of both sending and receiving parts,
-and can therefore exist in states belonging to both sending and
-receiving streams as described previously.
-
+These states differ based on whether the stream is sending or receiving
+data. A bidirectional stream consists of both sending and receiving parts,
+and each part has a separate state.
 A flow chart describing the QUIC stream state machine can be
 seen in~\cref{fig:stream_states}.
 
@@ -249,64 +227,46 @@ seen in~\cref{fig:stream_states}.
 | Recvd |                   | Recvd |
 +-------+                   +-------+
     \end{BVerbatim}
-    \caption{States of a QUIC stream sending data~\cite{rfc9000}}
+    \caption[QUIC Stream State Machine]{States of a QUIC stream sending data from RFC~9000~\cite{rfc9000}}
     \label{fig:stream_states}
 \end{figure}
 
-Much like TCP, QUIC also implements congestion control, there are
-however some key differences between the algorithms. A key concept
-to QUIC's congestion control is the 'packet number space'. Packet
-number spaces are \enquote{the context in which a packet can be processed
+\subsubsection{Congestion Control}
+Like TCP, QUIC also implements congestion control, but there are
+some differences between the algorithms. A key concept
+to QUIC's congestion control is the \term{packet number space} which
+is defined as \enquote{the context in which a packet can be processed
 and acknowledged}~\cite{rfc9000}. 
-This context reflects the level of encryption and there 
-are therefore three separate packet number spaces. Initial space,
-for the initial handshake packets, handshake space, for packets
-exchanged during the cryptographic handshake, and application
-data space, for packets exchanged after the cryptographic handshake
-has been completed. Separating these spaces allows QUIC to
-avoid spurious retransmission from one space affecting another,
-and allows QUIC to handle retransmissions more efficiently, for
-example by using a different expected acknowledgment delay for packets sent
-in the initial space, as these are not expected to be cached
-by the peer. Although the packet number spaces are handled
-separately when it comes to acknowledgments, they are still
+
+The packet number space reflects the level of encryption that has been reached and there 
+are three separate packet number spaces. \term{Initial space},
+for the initial handshake packets, \term{handshake space}, for packets
+exchanged during the cryptographic handshake, and \term{application
+data space}, for packets exchanged after the cryptographic handshake
+has been completed.
+
+Separating these spaces ensures that acknowledgements of packets at one level do not cause
+spurious retransmission at another encryption level.
+Although the packet number spaces are handled
+separately for acknowledgments, they are
 unified when it comes to congestion control and round trip
-time measurements.
+time measurements~\cite[Sec.~4.1]{rfc9002}.
 
 Another difference between how QUIC and TCP handle acknowledgments
 is that QUIC separates the transmission order from the delivery order.
 This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
-of retransmissions, making RTT measurements in these cases more accurate~\cite{rfc9000}.
+of retransmissions, making RTT measurements in these cases more accurate~\cite[Sec.~4.2]{rfc9002}.
 
-Future network ossification related to QUIC is also mitigated 
-by mandating TLS 1.3 and by encrypting the header.
-Unlike TLS which does not encrypt the TCP header, QUIC obscures
-as many details as possible from middleboxes, ensuring that they
-cannot grow reliant on the contents of the packet.
-
-\subsubsection{Transport parameters}
+\subsection{Transport parameters}
 Transport parameters in QUIC are settings which are transferred to the
 peer during the QUIC handshake. These can be used to for example
 limit the initial amount of streams the peer can open or the amount
 of data it can send.
 
-\subsection{Flow control}
-By default QUIC provides a guarantee of reliable in-order delivery
-within streams, but provides so such guarantee between streams.
-Applications can use this to transfer each object through a 
-separate stream. This avoids head of line blocking where the
-transfer of a small object potentially has to wait for the
-transfer of a previous large object to complete, due to the
-guarantee of in-order delivery. This is a problem with TCP
-when several objects are transferred over a single connection,
-which is treated as a single stream.
-
 \subsection{Frames}
-In QUIC a frame is defined as \mono{a unit of structured protocol information}~\cite{rfc9000}.
-The payload in QUIC packets after discounting packet protection consists
-of a series of complete frames.
+In QUIC, a frame is defined as \enquote{a unit of structured protocol information}~\cite{rfc9000}.
 Different types of frames are used to carry different types of information
 and data. Examples are \mono{STREAM} frames which are used to carry
 data over a stream or \mono{NEW_CONNECTION_ID} which are used
@@ -323,60 +283,43 @@ carried in the cleartext part of both the short and the long QUIC header.
 The long header carries a source connection ID in addition to the mandatory
 destination ID.
 
-Since the connection IDs are in the cleartext part of the QUIC header
-they could be used to link a QUIC connection accross events such
-as path migration. In order to mitigate this each endpoint
-can siwtch the used destination ID to a new one from the list
-generated by the peer.
 In order to prevent observers from being able to link a connection
 through its connection IDs, QUIC connections rotate the IDs used.
-A connection can switch the destionation connection ID it is using
-at any time to one of the approved IDs previously shared by the peer. Endpoints
-must also switch connection IDs when transmitting from a new local address, such
-as after a path migration~\cite[Sec. 9.5]{rfc9000}.
-New valid connection IDs which the peer can use as destination IDs can be
-shared through the \mono{NEW_CONNECTION_ID} frame.
+A connection can switch the destination connection ID it is using
+to one of the approved IDs previously shared by the peer at any time.
+Endpoints must switch connection IDs when transmitting from a new
+local address, such as after connection migration~\cite[Sec. 9.5]{rfc9000}.
 
 Connection IDs make addressing in QUIC independent of addressing in lower layer
-protocols~\cite{rfc9000}. This allows QUIC to survive
-changes in the underlying four-tuple and therefore enables connection migration.
+protocols~\cite{rfc9000} which allows QUIC to survive
+changes in the underlying four-tuple and therefore enables
+connection migration.
 
 \subsection{Connection Migration}\label{sec:connection-migration}
-% TODO - only clients can currently migrate, disable_active_migration
-% multipath vs. migration
 Since a QUIC connection uses connection IDs to identify a connection,
 this means that QUIC connections can survive changes to the underlying
-four-tuple, unlike TCP.
+four-tuple. In the current version of QUIC, only clients are able to migrate~\cite[Sec.~1]{rfc9000},
+servers can however state a preferred local IP address and request that the client
+migrate through the \mono{preferred_address} transport parameter,
+but this can only be done during the initial TLS handshake~\cite[Sec.~9.6.1]{rfc9000}.
 
-This means that an endpoint can receive packets from a new remote
-endpoint which was not previously associated with the peer. This
-can take two forms, either a probing packet containing a \mono{PATH_CHALLENGE}
-frame or a normal non-probing frame. Probing is used to validate 
-that a peer can receive data over a path, while connection migration
-can be initiated by simply sending data over a new local endpoint.
-Since each endpoint validates the that the peer is willing to receive
-data on their remote endpoint the initial
-handshake, an endpoint can initiate local path migration without
-first validating a new path.
-
-In the current version of QUIC, only clients are able to migrate~\cite[Sec. 1]{rfc9000}.
-This means that a client knows that a server will continue to send
-on the same local endpoint for the lifetime of the connection, while
-a server should support migration from the client. A client can request
-that the client migrates to a new local address for the server through
-by stating a preferred local IP address through the \mono{preferred_address}
-parameter, but this can only be done during the initial TLS handshake~\cite[Sec. 9.6.1]{rfc9000}.
-
-
-If the server does not
-support migration, for example if it is behind a load balancer which multiplexes
+If the server does not support migration, such as when it is behind a simple load balancer which multiplexes
 by source IP instead of the QUIC connection ID, then the server can mandate
 that the client does not change local address by setting the \mono{disable_active_migration}
-transport paramter~\cite[Sec. 5.2.3]{rfc9000}.
+transport parameter~\cite[Sec. 5.2.3]{rfc9000}.
 
-If an endpoint recieves new non-probing frames from a new remote endpoint which is
-not associated with the peer then it must initiate path validation in
-order to verify the peers ownership of the endpoint.
+Initiating a path migration
+can take one two forms, either it is a probing packet containing a \mono{PATH_CHALLENGE}
+frame or it is a normal packet containing non-probing frames that is
+sent from a new local endpoint. Probing is used to verify that a peer
+can respond from a given remote endpoint, but this is not strictly
+necessary when sending over a new local endoint, since the fact that
+the peer can communicate over their remote endpoint is validated
+in the initial handshake.\todo{Kom hit, må begge validate eller bare én??}
+
+If an endpoint receives non-probing data from a previously unrecognized remote, it
+must then initiate path validation in order to verify that the peer
+owns the endpoint and avoid potential amplification attacks.
 
 Path validation is done by using
 \mono{PATH_CHALLENGE} and \mono{PATH_RESPONSE} 
