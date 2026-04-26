@@ -33,7 +33,7 @@ degree.
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-\caption{Specifications of machine running benchmarks.}
+    \caption{Specifications of machine running benchmarks.}
 \label{tab:machine-specs}
 \small
 \begin{tabular}{ll}
@@ -152,7 +152,7 @@ does not have an effect on the time taken for the initial handshake.
 
 \begin{figure}[htbp]
     \input{./resources/racing_handshake.pgf}
-    \caption[Single Endpoint Handshake Benchmark]{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
+    \caption[Single endpoint handshake benchmark]{Measured handshake times for TCP, Picquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
 \end{figure}
 
@@ -192,7 +192,7 @@ $\qty{150}{\milli\second} \cdot 4 = \qty{600}{\milli\second}$ respectively.
 
 \begin{figure}[htbp]
     \input{./resources/handshake_kde.pgf}
-    \caption[Candidate Racing Benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
+    \caption[Candidate racing benchmark]{Distribution of handshake times when a fast and a slow endpoint are available, but the slow
     endpoint is attempted first, showing the benefit of candidate racing. ($N = 200$)}
     \label{fig:handshake-kde}
 \end{figure}

@@ -16,10 +16,12 @@ candidate gathering, candidate racing, TCP, UDP and QUIC.
 
 While nearly all major parts of the TAPS API is present
 in the CTaps API, there are individual functions which are
-not implemented and the CTaps API does not
-feature stubbed implementations. These
-are protocol-specific endpoints, multicast endpoints,
-addint endpoints to an established Connection, partial
+not implemented and where the CTaps does not
+feature stubbed implementations. These 
+are protocol-specific endpoints, hop limits, multicast endpoints,
+resolving preconnections before initiation,
+adding endpoints to an established Connection, partial
+message receives, partial
 message sends and batching message sends.
 
 All Transport Properties from RFC~9622 are present in the CTaps API and
@@ -32,6 +34,11 @@ out protocols which have this property set to Prohibit, but the application
 will not be able to transfer individual messages as reliable, since this
 is not supported in CTaps. 
 
+For Security Parameters only the essential paramaters required to support
+all parameters except for session cache options and pre shared keys.
+In addition, CTaps does not support trust callbacks. Only parameters
+needed for TLS 1.3 and session resumption for QUIC have any effect.
+
 The parts of the TAPS API that were prioritized for CTaps are common features related
 to establishing client and server connections, transferring data and managing
 the lifetime of Connections.
@@ -40,6 +47,10 @@ the most unique parts of the TAPS API has been prioritized during development.
 This is naturally candidate gathering and candidate racing, which allows a single
 client to be able to connect to multiple different endpoints using different
 protocols.
+
+There are several parameters which are marked as optional in RFC~9622 which
+are not available in CTaps. This is timeout when initiating Connections,
+minimum incomplete length and maximum length when receiving,
 
 Overall, CTaps serves as a reference
 to show the architectural and design decisions which are necessary when
@@ -111,11 +122,8 @@ and pure C implementation, making it easy to integrate
 with CTaps.
 
 \section{Architecture of CTaps} \label{sec:ctaps-arch-design}
-As mentioned, CTaps aims to conform to the asynchronous TAPS API described
-in RFC~9622~\cite{rfc9622}. Since CTaps is asynchronous it has
-to rely on the result of any asynchronous operation being passed via
-callback, which affects the look of the external API and
-the internal architecture.
+Since CTaps is asynchronous it has pass results of asynchronous operations to
+the application via callback.
 
 CTaps features a shared protocol API internally and is therefore extensible
 when it comes to adding support for new protocols.
@@ -189,7 +197,7 @@ architecture of CTaps and the reasoning behind each of them.
 \draw[->, thick] (pico) -- (pico |- libuvraw.north);
 \draw[->, thick] (libuvraw) -- (libuvraw |- os.north);
 \end{tikzpicture}
-\caption[CTaps Architecture Overview]
+\caption[CTaps architecture overview]
 {
 An overview of the architecture of CTaps, featuring the Socket Manager as common as a
 mediator between the external functions and the API, with the common protocol interface 
@@ -355,7 +363,7 @@ void (*listener_ready)(ct_listener_t* listener);
 void (*closed_listener)(struct ct_socket_manager_s* socket_manager);
 } ct_socket_manager_callbacks_t;
 \end{minted}
-\caption[Socket Manager Internal Callbacks]{The internal callbacks used for communication between
+\caption[Socket Manager internal callbacks]{The internal callbacks used for communication between
 the Socket Manager and the protocol implementation.}
 \label{lst:socket-manager-callbacks}
 \end{listing}
@@ -446,7 +454,7 @@ also allowed CTaps to differentiate between read-only Connection Properties and 
 Connection Properties as described in the TAPS API~\cite[Sec. 8.1.11]{rfc9622}.
 
 \begin{listing}[htbp]
-\caption[Remote Endpoint Structure]
+\caption[Remote Endpoint structure]
 {The internal definition of a Remote Endpoint in CTaps, with example functions from the CTaps API.}
 \begin{minted}{C}
 typedef struct ct_remote_endpoint_s {
@@ -814,7 +822,7 @@ future version of CTaps.
 \begin{table}[htbp]
   \centering
   \begin{threeparttable}
-    \caption{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations}
+      \caption[Behavior \mono{multipath}/\mono{multipathPolicy} in TAPS]{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations}
     \label{tab:multipath-combinations}
     \begin{tabular}{llp{7cm}}
       \toprule
@@ -863,7 +871,7 @@ and how they may into CTaps and TAPS in general can be seen in
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-\caption{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
+    \caption[QUIC feature mapping to CTaps API]{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
 \label{tab:quic-taps-mapping}
 \small
 \begin{tabularx}{\textwidth}{lX}

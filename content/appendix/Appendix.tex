@@ -99,7 +99,7 @@ void on_socket_timer(uv_timer_t* timer_handle) {
     reset_quic_timer(socket_state);
 }
     \end{minted}
-    \caption[libuv Timer Callback Function]{libuv timer callback function which checks in on Picoquic when required.}
+    \caption[libuv timer callback function]{libuv timer callback function which checks in on Picoquic when required.}
     \label{lst:timer-callback-function}
 \end{listing}
 
@@ -152,7 +152,7 @@ static int ct_quic_send_packet_with_pktinfo(ct_udp_poll_handle_t* poll_handle,
     return 0;
 }
     \end{minted}
-    \caption[Sending Message Over UDP for QUIC]
+    \caption[Sending message over UDP for QUIC]
     {
 Function used to send QUIC packets over UDP for Picoquic, manually
 building the message header
