@@ -11,6 +11,8 @@ overleaf_token
 *.pdf
 *.xml
 *.toc
+*.tdo
+*.wc
 
 *.fdb_latexmk
 *.fls
