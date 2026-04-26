@@ -144,14 +144,13 @@ features which either are not available or do not have a wide adoption
 in TCP. Among these are 0-RTT connection establishment, multistreaming
 and support for multiple network paths. TLS is a mandatory part of QUIC 
 and most of the QUIC header is also encrypted, unlike TLS over TCP.
-
 Encrypting the header hides as much as the wire image as possible
-form middleboxes, combating future network ossification~\cite{rfc9170}.
+from middleboxes, combating future network ossification~\cite{rfc9170}.
 
 While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream.
 A stream is a unidirectional or bidirectional ordered
-continious transfer of data, much like what an application sees when using
+continuous transfer of data, much like what an application sees when using
 TCP. Streams can be created and closed by either endpoint,
 and multiple streams can exist over a single QUIC connection.
 QUIC mandates support for in-order delivery within a single
@@ -245,7 +244,7 @@ exchanged during the cryptographic handshake, and \term{application
 data space}, for packets exchanged after the cryptographic handshake
 has been completed.
 
-Separating these spaces ensures that acknowledgements of packets at one level do not cause
+Separating these spaces ensures that acknowledgments of packets at one level do not cause
 spurious retransmission at another encryption level.
 Although the packet number spaces are handled
 separately for acknowledgments, they are
@@ -279,7 +278,7 @@ valid IDs which it shares with the peer. The peer can then use one
 of these IDs as a destination when transferring data~\cite{rfc9000}.
 
 Since Connection IDs are needed for routing packets they are
-carried in the cleartext part of both the short and the long QUIC header.
+carried in the clear text part of both the short and the long QUIC header.
 The long header carries a source connection ID in addition to the mandatory
 destination ID.
 
@@ -547,7 +546,7 @@ seen in~\cref{fig:socket-programming-api-model} and
 RFC~9621 describes the required architecture for TAPS is described in 
 and a diagram of this architecture can be seen in~\cref{fig:tapsArch}~\cite{rfc9621}.
 RFC~9621 also describes overarching requirements of a TAPS System and the
-key concepts for both the TAPS Implementation and the TAPS API. EXamples
+key concepts for both the TAPS Implementation and the TAPS API. Examples
 of these include the basic objects used to interact with TAPS such as
 the Connection and Listener, as well as candidate racing which forms
 the basis of how a TAPS Implementation initiates a Connection.
@@ -848,7 +847,7 @@ with several candidates at once, but with a delay between each attempt.
 This delay is configurable, but should be based
 on the expected handshake time~\cite[Sec.~4.3.2]{rfc9623}. 
 The most desirable candidates are raced first, and all subsequent
-attempts are cancelled after the first success.
+attempts are canceled after the first success.
 RFC~9623 recommends following the algorithm described in
 RFC~8305~\cite{rfc8305}, known as Happy Eyeballs, when performing staggered racing of IP addresses.
 Happy Eyeballs is a staggered racing algorithm designed to maximize IPv6 usage by
@@ -1005,9 +1004,9 @@ allowing a single thread to service multiple connections.
 
 
 The threaded model allows code to be written sequentially within each thread,
-closer to the mental model of a normal CPU-bound program, but it requires synchronisation
+closer to the mental model of a normal CPU-bound program, but it requires synchronization
 of shared data structures between threads. An event-loop model avoids the
-synchronisation issue by running in a single thread, but spreads control
+synchronization issue by running in a single thread, but spreads control
 flow across callbacks.
 
 The two models also differ in how they scale. Multithreading makes use of
@@ -1030,9 +1029,9 @@ and Python's asyncio~\cite{pythonAsyncio}.
 Libuv~\cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
 It is primarily developed for Node.js, but is used in several other large projects as well.
 Libuv is centered the \mono{uv_loop_t} structure which represents a single event loop.
-Applications can register work to a loop through the use of handles and requsts~\cite{libuv_design}.
+Applications can register work to a loop through the use of handles and requests~\cite{libuv_design}.
 Handles are long-lived objects for certain types of work, while requests are short-lived operations.
-When intial handles and requests have been registered, the application must invoke \mono{uv_run()}
+When initial handles and requests have been registered, the application must invoke \mono{uv_run()}
 in order to execute the event loop. This
 will take over the invoking thread and by default run until all registered handles
 have been closed.

@@ -149,17 +149,10 @@
     abstract =  {This document describes, surveys, and classifies the protocol mechanisms provided by existing IETF protocols, as background for determining a common set of transport services. It examines the Transmission Control Protocol (TCP), Multipath TCP, the Stream Control Transmission Protocol (SCTP), the User Datagram Protocol (UDP), UDP-Lite, the Datagram Congestion Control Protocol (DCCP), the Internet Control Message Protocol (ICMP), the Real-Time Transport Protocol (RTP), File Delivery over Unidirectional Transport / Asynchronous Layered Coding (FLUTE/ALC) for Reliable Multicast, NACK- Oriented Reliable Multicast (NORM), Transport Layer Security (TLS), Datagram TLS (DTLS), and the Hypertext Transport Protocol (HTTP), when HTTP is used as a pseudotransport. This survey provides background for the definition of transport services within the TAPS working group.},
 }
 
-@online{FginetPythonasynciotapsTAPS,
-  title = {Fg-Inet/Python-Asyncio-Taps: {{A TAPS}} Implementation Based on {{Python}} Asyncio},
-  url = {https://github.com/fg-inet/python-asyncio-taps/tree/master},
-  urldate = {2025-05-23},
-  file = {/home/ikhovind/Zotero/storage/N6ME9S74/master.html}
-}
-
 @software{frankePythonasynciotaps2025,
   title = {Python-Asyncio-Taps},
   author = {Franke, Max},
-  date = {2025-05-05},
+  year = {2020},
   url = {https://github.com/fg-inet/python-asyncio-taps},
   urldate = {2025-05-05}
 }
@@ -1197,4 +1190,44 @@
   year   = {2016},
   url    = {https://snarky.ca/network-protocols-sans-i-o/},
   urldate = {2026-04-25},
+}
+
+@techreport{neat-d23,
+  author       = {Khademi, Naeem and Bozakov, Zdravko and Brunstrom, Anna
+                  and Dale, {\O}ystein and Damjanovic, Dragana
+                  and Evensen, Kristian Riktor and Fairhurst, Gorry
+                  and Fischer, Andreas and Grinnemo, Karl-Johan
+                  and Jones, Tom and Mangiante, Simone and Petlund, Andreas
+                  and Ros, David and R{\"u}ngeler, Irene and Stenberg, Daniel
+                  and T{\"u}xen, Michael and Weinrank, Felix and Welzl, Michael},
+  editor       = {Khademi, Naeem},
+  title        = {Final Version of Core Transport System},
+  type         = {Deliverable},
+  number       = {D2.3},
+  institution  = {NEAT Project},
+  note         = {H2020-ICT-05-2014, Grant agreement no.~644334},
+  year         = {2017},
+  month        = aug,
+  url          = {https://neat.nntb.no/wp-content/uploads/2017/10/D2.3.pdf},
+  urldate      = {2026-04-26}
+}
+
+@manual{pytaps_docs,
+  title        = {PyTAPS Documentation},
+  author       = {Franke, Max},
+  year         = {2020},
+  url          = {https://pytaps.readthedocs.io/en/latest/index.html},
+  urldate      = {2026-04-26}
+}
+
+@software{pytaps_connection_constructor,
+  title = {{PyTAPS: \texttt{Connection.\_\_init\_\_()}, \texttt{connection.py}}},
+  url = {https://github.com/fg-inet/python-asyncio-taps/blob/master/pytaps/connection.py#L33},
+  urldate = {2026-04-26},
+}
+
+@software{pytaps_listener_constructor,
+  title = {{PyTAPS: \texttt{Listener.\_\_init\_\_()}, \texttt{listener.py}}},
+  url = {https://github.com/fg-inet/python-asyncio-taps/blob/master/pytaps/listener.py#L31},
+  urldate = {2026-04-26},
 }

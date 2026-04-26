@@ -10,8 +10,7 @@ either either the Transmission Control Protocol (TCP)
 or the User Datagram Protocol (UDP). In addition to limiting innovation in
 the form of new protocols, network ossification also limits
 the possible innovations for existing protocols such as TCP.
-This can be caused by implementations havin bugs which cause
-them to not support rarely used features, or by network
+This can be caused by implementations featuring bugs in rarely used features, or by network
 middleboxes not supporting changes to the wire image of
 a protocol~\cite{rfc9170}.
 
@@ -27,7 +26,7 @@ transport layer is the network effect required in order to
 start utilizing new protocols. Servers will not spend
 time adding support for a new transport layer protocol
 if no applications are using it, and no applications
-will utilize a new protcol if no servers support it.
+will utilize a new protocol if no servers support it.
 If a fallback to TCP is always needed, then all applications
 can avoid a great deal of complexity by simply utilizing
 TCP.
@@ -46,10 +45,10 @@ intent instead of the concrete action of the transport protocol,
 Transport Services allows the application to be served by any
 protocol which fulfills the requirements stated by the application.
 
-For a TAPS system the transport protocol fallback is built into the libary
+For a TAPS system the transport protocol fallback is built into the library
 itself and presents no extra complexity to the application. Because
 TAPS is based on intentions as well, it allows the applications to state
-their ideal intentions when interactin with the network, but still have
+their ideal intentions when interacting with the network, but still have
 it be compatible no matter which underlying protocol is used. This means
 that an application utilizing multistreaming and connection migration
 when QUIC is available does not have to change or update its interaction
@@ -65,7 +64,7 @@ RFC~9623~\cite{rfc9623} also provides no guidance on mapping QUIC to the TAPS AP
 though an open draft exists~\cite{transportServicesMappingForQuic}. Together, these knowledge
 gaps form the basis of the research questions addressed in this thesis.
 
-\section{Resarch Questions}
+\section{Research Questions}
 To address the knowledge gaps presented in \cref{sec:prob-statement}, two
 research questions were formulated which this thesis will attempt to answer.
 
@@ -88,7 +87,7 @@ CTaps has support for several key QUIC features such as multistreaming
 and connection migration and candidate racing.
 Applications utilizing these features through CTaps can be written independently
 of the underlying protocol, allowing a single client to be
-compatible with multiple protoocls and still make 
+compatible with multiple protocols and still make 
 use of new transport layer features when available.
 
 In addition, CTaps also supports key TAPS
@@ -119,8 +118,8 @@ may feature bugs which would arise in a real-world environment.
 
 \subsection{Source Code}
 CTaps is open source and is available under the MIT license
-on Github~\cite{cTaps}. Associated Doxygen documentation is available both
-as a static web page~\cite{ctapsDocs} hosted through Github pages
+on GitHub~\cite{cTaps}. Associated Doxygen documentation is available both
+as a static web page~\cite{ctapsDocs} hosted through GitHub pages
 and as an attachment to this thesis in~\cref{chap:doxygen-appendix}.
 
 \section{Thesis Structure}

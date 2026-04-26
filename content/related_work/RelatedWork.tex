@@ -1,199 +1,74 @@
 \chapter{Related work}\label{chap:related-work}
-CTaps is not the only implementation of a TAPS, and several
-existing projects exist. This chapter
-will describe the current state of the existing TAPS implementations,
-forming a basis for why a new open source implementation is still
-valuable. It will also compare the features currently present in CTaps with
-the previous implementations of TAPS, highlighting strengths
-and weaknesses of CTaps.
+This chapter will describe existing TAPS implementations, compare them with CTaps
+and demonstrate why a new open source implementation
+is valuable.
 
 \section{NEAT}
-One of the first open source implementations of TAPS is 
-NEAT~\cite{khademiNEATPlatformProtocolIndependent2017, neatCode},
-whose development was funded by the EU horizon 2020 project
+NEAT~\cite{khademiNEATPlatformProtocolIndependent2017},
+is an open source \cite{neatCode} TAPS implementation whose development was funded by the EU Horizon 2020 program 
 from 2015 to 2018~\cite{neatFunding}.
-Developed alongside TAPS, the development of TAPS and NEAT naturally
-affected each other. However, while NEAT halted development in 2018,
-the TAPS API has continued to evolve, and the final TAPS RFC~was published
-in 2025~\cite{rfc9622}.
+Developed alongside TAPS, NEAT and TAPS naturally
+influenced each other. NEAT halted development in 2018, but work on
+TAPS continued until the final release of the TAPS RFCs in 2025.
 
-NEAT is an asynchronous library and
-uses an event loop, allowing for users to add their own callbacks.
+NEAT features an asynchronous, event-driven API. It uses an event loop
+powered by libuv in order interact asynchronously with the network.
+Underlying connections
+can be configured through what is referred to as \term{NEAT Properties}.
+NEAT Properties are key-value pairs and serve the same role as Transport Properties
+do in TAPS. NEAT uses the concept of a flow 
+as an abstraction for an underlying connection.
 
-The core architecture of TAPS and NEAT are similar, with both being
-asynchronous, event-driven APIs, where the underlying connections
-can be configured through properties.
+In NEAT, the transport protocols to be used can either be set directly by the application
+via the \mono{transport} property, or be chosen by the \term{Policy Manager}.
+The Policy Manager is a separate process configured
+to run as a daemon~\cite[p.~81]{neat-d23} and other NEAT components communicate with it through Unix domain
+sockets~\cite[p.~72]{neat-d23}. It is responsible for
+generating a ranked list of candidates which fulfill the application's requirements. 
 
-Within the documented properties, NEAT has a different approach
-to central concepts than TAPS. For example with the Transport Property,
-the application can specify reliable, but also directly
-specify one or more potential transport protocols to use. This
-is in contrast to TAPS, where the application only interfaces
-with the protocol through selection properties.
+NEAT supports TLS, DTLS, TCP, UDP, UDP-Lite, SCTP and SCTP/UDP~\cite[p.~92]{neat-d23}.
+QUIC had not yet been standardized by the IETF when development
+of NEAT ended. NEAT does feature support for Connection Groups
+and multistreaming over SCTP.
+
 
 \section{NEATPy}
 NEATPy~\cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
-is a Python library developed as a master's thesis at UiO in 2020.
-It was developed as an attempt to create a
+is an open source Python library developed as a master's thesis at UiO in 2020.
+It was developed as a
 Python layer to bridge the growing gap between NEAT and TAPS. Among
 the goals was to move away from specifying the protocol at design time
 instead using Selection Properties as specified by TAPS.
 
 Because NEATPy is a Python shim on top of NEAT, certain parts of it are
 limited by NEAT itself. For example,
-using NEATPy it is not possible to specify the \texttt{Interface Instance or Type}
-or the \texttt{Use Temporary Local Address} Selection Properties 
-\cite{NEATPyDocumentationNEATPy}. In addition, NEATPy does not
-support QUIC, as this is not supported by NEAT. 
+using NEATPy it is not possible to specify the \mono{interface}
+or the \mono{useTemporaryLocalAddress} Selection Properties 
+\cite{NEATPyDocumentationNEATPy}.
 
-Another
-limitation of NEATPy is that it was developed before the finalization of
-the TAPS standard. Developed in 2020, NEATPy is based mostly on
-version 4 and 5 of the TAPS interface draft~\cite[p. 109]{gundersenNEATPyStandardsConformantProtocolIndependent2020}.
-The TAPS API has since evolved, and was 
-published as a proposed standard in January 2025
-\cite{rfc9622}.
-
-Since the finalization of NEATPy which implements
-version 5 of the TAPS draft~\cite{ietf-taps-interface-05} several
-new features have been added to TAPS.
-For example, the support for giving more than one local and remote
-endpoint when creating a Preconnection. This is done when the application
-wants to indicate that several endpoints are eligible for the connection
-or provide the same service.
-
-In addition, there are several new Selection Properties that have been added
-to TAPS. These are:
-\begin{itemize}
-    \item Keep-Alive Packets
-    \item Use Temporary Local Address
-    \item Multipath Transport
-    \item Advertisement of Alternative Addresses
-    \item Initiating Side Is Not the First to Write
-\end{itemize}
-
-Some selection properties have also been removed from the TAPS API:
-\begin{itemize}
-    \item Parallel Use of Multiple Paths
-    \item Notification of excessive retransmissions
-\end{itemize}
-
-In addition to the outward differences to the API, there are also several
-changes to the required internal workings of TAPS since the development of NEATPy.
-For example, in the final RFC~TAPS has loosened the required
-order of operations when working with selection properties.
-Previously, there was a strict precedence in the order of
-which preference values were to be applied.
-This has since been
-relaxed.% and the prioritization has been moved from being
-% related to the preference level, to being ordered by which
-% selection properties will affect the path selection.
+Another limitation of NEATPy is that it was developed before the finalization of
+the TAPS RFCs. NEATPy is based mostly on
+version 4 and 5 of the TAPS interface draft~\cite[p.~109]{gundersenNEATPyStandardsConformantProtocolIndependent2020}.
+but several changes have been made to TAPS since then.
+An example of a new feature in the TAPS API is the support for passing more than one local and remote
+endpoint when creating a Preconnection.
+This is used to indicate that several endpoints are eligible for the connection
+and is needed to support connection migration.
+NEATPy has not had active development since 2020.
 
 \section{Network.framework}
-Apple's Network.framework~\cite{networkFramework} is Apple's closed-source
+Network.framework~\cite{networkFramework} is Apple's closed source
 TAPS implementation. It features several important TAPS abstractions
-such as the Connection and Listener, but does also differ from the official
-API described in the TAPS RFCs. The most important difference between
-Network.framework and TAPS is that Network.framework does not currently
-suppot generic Selection Properties as applications have to bind to a
-specific transport protocol when initiating a Connection.
+such as Connections, Listeners
+and a common interface to interact with transport protocols.
 
-Network.framework does Happy Eyeballs-style racing of IPv4/IPv6 addresses,
-but it does not support racing across multiple remote endpoints or across
-different transport protocols, as described in RFC~9623~\cite{rfc9623}.
-
-\section{PyTAPS}
-PyTAPS~\cite{frankePythonasynciotaps2025} is a Python library aiming
-to be fully compliant with TAPS. Unlike NEATPy, PyTAPS is not built
-on top of NEAT, and therefore does not suffer from the same limitations
-that NEATPy does. However, PyTAPS is based on the fourth version of the TAPS
-interface draft~\cite{frankePythonasynciotaps2025} and has not had active
-development since 2020. As such, it naturally suffers from the same
-issues as NEATPy when it comes to the changes in the TAPS API.
-
-\section{Dynamic TAPS}
-dynamic-taps is a C implementation of TAPS, developed by the
-American technology company F5~\cite{dukeDynamictaps2025}. It
-is in the very early stages of development and has not had
-active development since 2021, several years before the
-finalzation of the TAPS RFCs.
-
-\section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
-In order to compare the state with known existing work a table
-comparing the features of CTap swith the known features of existing
-TAPS implementations have been compiled and are displayed in~\cref{tab:comparison}.
-Here, the most complete found TAPS implementations are compared in order to give an accurate
-comparison point of the current state of CTaps. For the sake of brevity not all
-implemnetations are included, instead the implementations which are deemed the
-most complete are included. For this sake NEAT has also been excluded since
-it would be a subset of the features achieved through the NEATPy shim layer.
-
-\begin{table}[htbp]
-\centering
-\begin{threeparttable}
-\caption{Comparison of features of various TAPS implementations}
-\label{tab:comparison}
-\small
-\begin{tabular}{lccccc}
-\toprule
-\rowcolor{gray!25}
-\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.framework}     & \textbf{CTaps}\\
-\midrule
-\multicolumn{1}{l||}{Post TAPS release\tnote{2}}    & \xmark                   & \xmark          & \cmark                     & \cmark         \\
-\multicolumn{1}{l||}{Language}                       & Python                   & Python          & Swift / Obj.-C              & C         \\
-\multicolumn{1}{l||}{Candidate Racing}               & \cmark                   & \cmark          & \xmark\tnote{3}            & \cmark         \\
-\multicolumn{1}{l||}{TLS support}                    & \cmark                   & \xmark          & \cmark                     & \xmark         \\
-\multicolumn{1}{l||}{QUIC support}                   & \xmark                   & \xmark          & \cmark                     & \cmark         \\
-\multicolumn{1}{l||}{Multipath\tnote{4}}             & \xmark                   & \xmark          & \cmark\tnote{5}            & \cmark         \\
-\multicolumn{1}{l||}{Early data}                     & \xmark                   & \xmark          & \cmark\tnote{6}            & \cmark         \\
-\multicolumn{1}{l||}{Multistreaming}                 & \xmark                   & \xmark          & \cmark                     & \cmark         \\
-\multicolumn{1}{l||}{Rendezvous}                     & \xmark                   & \xmark          & \cmark                     & \xmark         \\
-\multicolumn{1}{l||}{OS support\tnote{7}}            & B, L, M                  & L, M\tnote{8}   & M                          & L         \\
-\multicolumn{1}{l||}{Open source}                    & \cmark                   & \cmark          & \xmark                     & \cmark         \\
-\bottomrule
-\end{tabular}
-\begin{tablenotes}
-    \footnotesize
-    \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
-    \item[2] Whether the project has been under active development after the full release of the TAPS RFCs in 2025.
-    \item[3] Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing as described by TAPS.
-    \item[4] Taken to mean that a single connection can use more than one path in a single session,
-        either concurrently or through connection migration.
-    \item[5] Supports multipath TCP~\cite{apple_multipathservicetype}, QUIC support is unclear.
-    \item[6] Supported for TCP~\cite{apple_allowfastopen}.
-        Not supported in QUIC according to an Apple Engineer's post on the Apple Developer Forums in 2023~\cite{apple_dts_0rtt_2023}.
-        Lacks explicit support in the NWProtocolQUIC.Options class~\cite{apple_nwprotocolquic}.
-    \item[7] B = BSD, L = Linux, M = macOS, W = Windows.
-    \item[8] Based on PyTAPS' README
-\end{tablenotes}
-\end{threeparttable}
-\end{table}
-
-While the most complete and production-ready implementation is Apple's Network.framework, it
-also has several limitations. The largest limitation is naturally that it is a closed-source
-implementation and is only designed to be compatible with the Apple ecosystem. This means
-that the implementation cannot be adapted for other use cases outside of the Apple ecosystem.
-The fact that Network.framework is closed source also means that the exact features supported
-are harder to verify than for open-source implementations, since the exact
-logic cannot be inspected. In the overview it has therefore been assumed that any feature not
-documented clearly, such as connection migration for QUIC is not supported. THe external
-API of Network.framewok is fairly true to the TAPS API, featuring abstractions such as the
-NWConnection, NWListener and the NWConnectionGroup. 
-
-There are however still large differences
-in both the external and internal API of Network.framework and a true TAPS system. The largest
-difference is that Network.framework does not support candidate racing as described in TAPS
-RFC~9623~\cite{rfc9623}. While Network.framework supports Happy Eyeballs-style IP-family racing
-it does not support racing multiple protocols and clients have to bind to a specific
-protocol at compile time, by passing a NWParameters object which matches a specific
-protocol when first creating the NWConnection.
-
-An example of this pattern can be
-seen in~\cref{lst:network-framework-example}. Here a new connection is opened through
-QUIC using the ALPN \enquote{myproto}, the state handler is recognized and the conneciton
-is started. This naturally reduces the flexibility of the system and forces applications
-to bind to the underlying protocol, even though it is naturally more flexible than a pure
-socket implementation.
+During initiation, Network.framework requires that
+applications specify a \term{NWParameters} object matching
+a specific transport layer protocol. This causes the application
+to be bound to this protocol at compile time. An example client
+can be seen in~\cref{lst:network-framework-example}, where
+a new connection to \enquote{example.com} is opened through QUIC
+using the custom ALPN \enquote{myproto}.
 
 \begin{listing}[htbp]
 \begin{minted}{swift}
@@ -217,22 +92,88 @@ connection.start(queue: queue)
 \label{lst:network-framework-example}
 \end{listing}
 
-While the Network.framework example in~\cref{lst:network-framework-example} naturally belongs to
-the currently most complete and production-ready implementation of TAPS, it also shows the areas
-where CTaps has a chance to innovate and why an open source implementation of TAPS is valuable
-despite the existence of Network.framework. Network.framework features a common interface
-to interact with transport protocols and only forces the application to set the underlying
-protocol once when first opening the Connection, it still forces the application to know
-which protocol it wants to use, to implement fallback logic if the Connection over that
-given protocl should fail and it is not completely intention-based since the application
-is interacting with the name of the protoocl instead of which service it provides to the transport layer.
+Network.framework does not support candidate racing between protocols and endpoints
+as described by TAPS,
+only performing Happy Eyeballs-style IP-family racing.
 
-A full TAPS implementation would take the flexibility to another level as it would include
-not only an abstract use of Selection Properties, but would also include candidate racing
-allowing the application to only care about which service the transport protocol provides
-instead of having to bind to a single protocol at compile time. This would also include automatic
-connectin fallbacks if establishment fails, leading to a more robust client which could be
-compatible with multiple different remote endpoints. In addition an open-source implementation would
-be valuable as it would allow for public insight into special concerns when implementing
-a TAPS system, enabling a wider adoptoin of TAPS and intention-based networking at the
-transport layer, enabling faster innovation.
+\section{PyTAPS}
+PyTAPS~\cite{frankePythonasynciotaps2025} 
+is a standalone open source TAPS implementation
+in Python using asyncio. PyTAPS is based on version 4 of the TAPS
+interface draft and it has not had active
+development since 2020. It features support for TCP and UDP\footnote{
+PyTAPS' documentation claims support
+for TLS~\cite{pytaps_docs}, but this is not reflected in the code. 
+The security context created when passing Security Parameters
+to a Preconnection in PyTAPS is overwritten both when creating
+a Listener \cite{pytaps_listener_constructor}
+and when creating a Connection \cite{pytaps_connection_constructor}.
+This means that the \mono{ssl} parameter passed to asyncio's
+\mono{create_connection()} and \mono{create_server()} is always
+None.
+}.
+
+\section{Dynamic TAPS}
+dynamic-taps is an open source C implementation of TAPS developed by the
+American technology company F5~\cite{dukeDynamictaps2025}. It
+is in the very early stages of development and has not had
+active development since 2021.
+
+\section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
+A table comparing the features of CTaps with the most complete existing
+TAPS implementations can be seen in~\cref{tab:comparison}.
+
+\begin{table}[htbp]
+\centering
+\begin{threeparttable}
+\caption{Comparison of features of various TAPS implementations}
+\label{tab:comparison}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\rowcolor{gray!25}
+\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.framework}     & \textbf{CTaps}\\
+\midrule
+\multicolumn{1}{l||}{Post TAPS release\tnote{2}}     & \xmark                   & \xmark          & \cmark                     & \cmark         \\
+\multicolumn{1}{l||}{Language}                       & Python                   & Python          & Swift / Obj.-C              & C         \\
+\multicolumn{1}{l||}{Candidate Racing}               & \cmark                   & \cmark          & \xmark\tnote{3}            & \cmark         \\
+\multicolumn{1}{l||}{TLS support}                    & \cmark                   & \xmark          & \cmark                     & \xmark         \\
+\multicolumn{1}{l||}{QUIC support}                   & \xmark                   & \xmark          & \cmark                     & \cmark         \\
+\multicolumn{1}{l||}{Multipath\tnote{4}}             & \xmark                   & \xmark          & \cmark\tnote{5}            & \cmark         \\
+\multicolumn{1}{l||}{Early data}                     & \xmark                   & \xmark          & \cmark\tnote{6}            & \cmark         \\
+\multicolumn{1}{l||}{Multistreaming}                 & \xmark                   & \xmark          & \cmark                     & \cmark         \\
+\multicolumn{1}{l||}{Rendezvous}                     & \xmark                   & \xmark          & \cmark                     & \xmark         \\
+\multicolumn{1}{l||}{OS support\tnote{7}}            & B, L, M                  & L, M\tnote{8}   & M                          & L         \\
+\multicolumn{1}{l||}{Open source}                    & \cmark                   & \cmark          & \xmark                     & \cmark         \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+    \footnotesize
+    \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
+    \item[2] Whether the project has been under active development after the full release of the TAPS RFCs in 2025.
+    \item[3] Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing.
+    \item[4] Taken to mean that a single connection can use more than one path in a single session,
+        either concurrently or through connection migration.
+    \item[5] Supports multipath TCP~\cite{apple_multipathservicetype}, QUIC support is unclear.
+    \item[6] Supported for TCP~\cite{apple_allowfastopen}.
+        Not supported in QUIC according to an Apple Engineer's post on the Apple Developer Forums in 2023~\cite{apple_dts_0rtt_2023}.
+        Lacks explicit support in the NWProtocolQUIC.Options class~\cite{apple_nwprotocolquic}.
+    \item[7] B = BSD, L = Linux, M = macOS, W = Windows.
+    \item[8] Based on PyTAPS' README
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+While the most complete and production-ready implementation is Apple's Network.framework, it
+also has several limitations. The largest limitation is naturally that it is a closed source
+implementation and is only designed to be compatible with the Apple ecosystem.
+This also means that the exact features supported
+are harder to verify than for open source implementations, since the exact
+logic cannot be inspected. In the overview it has therefore been assumed that any feature not
+documented clearly, such as connection migration for QUIC, is not supported.
+
+Compared to the existing implementations as shown in \cref{tab:comparison}, CTaps has
+had the chance to innovate in two primary areas. First, when compared to Network.framework it is open
+source and implements full candidate racing. Secondly, when compared to other open source
+implementations it has been developed after the finalization of the TAPS RFCs and is the
+first open source TAPS implementation to support QUIC. 
