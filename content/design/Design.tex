@@ -798,11 +798,12 @@ TAPS does not directly expose an equivalent to the
 transport parameter~\cite[Sec. 18.2]{rfc9000}, but a
 value can be inferred based on the \mono{interface}
 and \mono{advertisesAltaddr} Selection Properties.
-An application wishing for incoming Connections
-to a Listener to migrate could could set a preferred
-interface and the \mono{advertisesAltaddr}
-property to true. Any Connection attempts on non-preferred
-interfaces could then be asked to migrate to the highest preference.\todo{rewrite}
+If \mono{advertisesAltaddr} was set to true then
+CTaps could infer that the Listener would like
+incoming connections to migrate to its highest
+preference interface. This could then be used to
+set \mono{preferred_address} for incoming QUIC
+connections.
 
 The combination of \mono{multipath} and the \mono{multipathPolicy} 
 Connection Property~\cite[Sec. 8.1.7]{rfc9622} gives

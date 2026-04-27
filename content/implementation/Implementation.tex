@@ -1072,6 +1072,27 @@ are compiled by default, but the project can be downloaded directly
 in CMake using FetchContent, as exemplified in the CTaps example project
 \cite{ctaps-example-project}.
 
+\begin{listing}[htbp]
+    \begin{minted}{cmake}
+include(FetchContent)
+
+FetchContent_Declare(
+        CTaps
+        GIT_REPOSITORY https://github.com/ikhovind/ctaps.git
+        GIT_TAG v0.1.0
+)
+
+FetchContent_MakeAvailable(CTaps)
+    \end{minted}
+    \caption[Fetching CTaps through FetchContent]
+    {
+        Example of how an application
+        can fetch CTaps using FetchContent.
+        A full CMakeLists.txt file can be seen in \cref{lst:ctaps-cmakelists}.
+    }
+    \label{lst:ctaps-fetchcontent}
+\end{listing}
+
 \section{Dependencies}
 As with most libraries, CTaps has several external dependencies
 used to simplify the logic required to be implemented within CTaps itself.

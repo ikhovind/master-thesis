@@ -1,4 +1,17 @@
 \chapter{Example CTaps Applications}\label{app:ex-ctaps-apps}
+This appendix presents three examples of CTaps applications from the CTaps example
+project~\cite{ctaps-example-project}. \Cref{lst:ctaps-cmakelists} shows the full
+CMakeLists.txt used to build the examples. \Cref{lst:ctaps-ping-client,lst:ctaps-quic-ping-server,lst:ctaps-tcp-ping-server} show the client,
+QUIC server, and TCP server. The client shows how
+an application can benefit from multistreaming through Connection cloning,
+while still remaining compatible with TCP.
+Additionally, the use of Security Parameters, Transport properties
+and protocol racing is demonstrated.
+
+CTaps does not currently support listening for multiple protocols on a single
+listener, so two separate servers are created. An alternative would be
+to create two separate listeners in a single application. This gap is
+discussed in \cref{sec:protocol-ag-listener}.
 \begin{listing}[htbp]
     \begin{minted}{cmake}
 cmake_minimum_required(VERSION 3.21)
@@ -28,11 +41,11 @@ target_link_libraries(example_tcp_server PRIVATE CTaps)
 configure_file(resources/cert.pem resources/cert.pem COPYONLY)
 configure_file(resources/key.pem resources/key.pem COPYONLY)
     \end{minted}
-    \caption[CTaps application example CMakeLists.txt]
+    \caption[CTaps example application CMakeLists.txt]
     {
-        Example CMakeLists.txt for an application
+        Full example CMakeLists.txt for an application
         fetching CTaps as a dependency through FetchContent.
-        This file is used in the CTaps example project~\cite{ctaps-example-project}.
+        Taken from the CTaps example project~\cite{ctaps-example-project}.
     }
     \label{lst:ctaps-cmakelists}
 \end{listing}
@@ -151,13 +164,14 @@ int main() {
     return 0;
 }
 \end{minted}
-\captionof{listing}[CTaps exapmle client]
+\captionof{listing}[CTaps example client]
 {
 A CTaps client utilizing connection cloning.
 This client will attempt to establish a QUIC connection first,
 but is compatible with TCP as well. If the QUIC connection succeeds
 then the Connection cloning will utilize multistreaming. If TCP
 is selected then each clone will be a separate TCP connection.
+Taken from the CTaps example project~\cite{ctaps-example-project}.
 }
 \label{lst:ctaps-ping-client}
 }
@@ -220,7 +234,7 @@ int main() {
 
     ct_set_log_level(CT_LOG_ERROR);
 
-    const ct_local_endpoint_t* listener_endpoint = ct_local_endpoint_new();
+    ct_local_endpoint_t* listener_endpoint = ct_local_endpoint_new();
     ct_local_endpoint_with_interface(listener_endpoint, "lo");
     ct_local_endpoint_with_port(listener_endpoint, 1234);
 
@@ -277,7 +291,9 @@ int main() {
 }
 \end{minted}
 \captionof{listing}[CTaps example QUIC server]{A CTaps QUIC server
-that pings back any message received.}
+that pings back any message received.
+Taken from the CTaps example project~\cite{ctaps-example-project}.
+}
 \label{lst:ctaps-quic-ping-server}
 }
 
@@ -387,7 +403,9 @@ int main() {
 }
 \end{minted}
 \captionof{listing}[CTaps example TCP server]{A CTaps TCP server
-that pings back any message received.}
+that pings back any message received.
+Taken from the CTaps example project~\cite{ctaps-example-project}.
+}
 \label{lst:ctaps-tcp-ping-server}
 }
 
