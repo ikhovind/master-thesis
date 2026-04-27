@@ -19,7 +19,7 @@
   pdfkeywords={TAPS, transport layer, Linux}
 ]{hyperref}
 \usepackage{bookmark}
-\usepackage[cache=true]{minted}
+\usepackage[cache=true, newfloat]{minted}
 \counterwithin{listing}{chapter}
 \makeatother
 \setminted[text]{numbers=none}
@@ -76,6 +76,7 @@
 \usepackage{tablefootnote}
 \setlength{\marginparwidth}{3cm}
 \WarningFilter{latex}{Marginpar on page}
+\WarningFilter{caption}{\noexpand\captionsetup{type*=...}}
 
 % To make reference list properly aligned
 \usepackage[normalem]{ulem}

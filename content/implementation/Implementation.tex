@@ -796,7 +796,7 @@ The resulting file descriptor is
 monitored using a generic
 \mono{uv_poll_t} libuv handle. This does not create much extra
 complexity, apart from having to manually build the message header
-as seen in~\cref{lst:pktinfo-send-packet} in~\cref{app:code-examples}.
+as seen in~\cref{lst:pktinfo-send-packet} in~\cref{app:internal-code-examples}.
 A model of the data flow between CTaps, Picoquic and the network can be
 seen in~\cref{fig:ctaps-quic-loop}.
 
@@ -830,7 +830,7 @@ necessary. The consequences of this stagger delay as it is currently
 implemented in CTaps is discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
 
 The full implementation of the protocol implementation struct for QUIC can be seen in
-\cref{lst:quic-impl-struct} in~\cref{app:code-examples}.
+\cref{lst:quic-impl-struct} in~\cref{app:internal-code-examples}.
 
 \definecolor{taskgreen}{HTML}{A5D6A7}
 \begin{figure}[htbp]
@@ -1067,11 +1067,6 @@ then every user of downstream application would have to update every application
 using CTaps. If it was dynamically linked, then each user would only have to update
 a single shared object file.
 
-As a limitation of scope in the original thesis description, CTaps is only
-targeted towards Linux. However, since I/O and other system calls are handled
-by libuv which does support windows~\cite{Libuv2025}, CTaps is likely very close to being
-Windows-compatible, but this has not been tested.
-
 The library is distributed through GitHub~\cite{cTaps}. No binaries
 are compiled by default, but the project can be downloaded directly
 in CMake using FetchContent, as exemplified in the CTaps example project
@@ -1142,4 +1137,4 @@ for the next wakeup time after interacting with a QUIC instance,
 and then the timer fires when necessary, to help Picoquic send
 the necessary data to the network. The timer callback function
 invoked by the libuv timer can be seen in
-\cref{lst:timer-callback-function} in~\cref{app:code-examples}.
+\cref{lst:timer-callback-function} in~\cref{app:internal-code-examples}.
