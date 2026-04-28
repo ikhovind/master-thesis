@@ -236,9 +236,9 @@ or inferred from the intention-based API.
 The three genuine semantic gaps here are opening unidirectional
 streams, sending \mono{STOP_SENDING} without an accompanying
 \mono{RESET_STREAM} or vice versa and informing the peer about maximum data
-limits\footnote{Applications have access to flow control through the
+limits.\footnote{Applications have access to flow control through the
 \mono{receive()} invocations, but this cannot reliably be used to inform
-the peer of how much data to send.}.
+the peer of how much data to send.}
 
 The remaining unreachable features are fine-grained, low-level QUIC mechanics
 such as connection ID rotation and stateless resets.

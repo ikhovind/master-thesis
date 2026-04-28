@@ -102,12 +102,12 @@ iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j REJECT
 \label{lst:iptables-command}
 \end{listing}
 
-In addition to the clients used two servers \footnote{
+In addition to the clients, two servers were implemented for 
+benchmarking.\footnote{
 The servers and clients used for benchmarking can be found in the \mono{benchmark/src/server/}
 and \mono{benchmark/src/client/}
-folders in the main CTaps repository.
-} were implemented to peform
-benchmarking. Each server accepts incoming connections and supports
+folders in the main CTaps repository. }
+Each server accepted incoming connections and supported
 two commands, one for initiating the transfer of the small file and one
 for initiating the transfer of the large file.
 
@@ -115,9 +115,9 @@ for initiating the transfer of the large file.
 Benchmarking data was gathered through a common benchmarking Python script.
 This script is invoked with a specific set of command line arguments for each
 benchmark and these invocations were stored in dedicated per-benchmark shell
-scripts for the sake of reproducibility \footnote{The associated shell scripts
+scripts for the sake of reproducibility. \footnote{The associated shell scripts
 can be found in the \mono{benchmark/scripts/} folder of the main CTaps repository,
-together with a README on how to reproduce the benchmarks.}.
+together with a README on how to reproduce the benchmarks.}
 
 \subsection{Single Endpoint Handshake}
 This benchmark can be seen in~\cref{fig:racing-handshake} and
@@ -308,7 +308,7 @@ in the CTaps repository.}
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-\caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.$^1$}
+    \caption[Benchmark clients lines of code]{Lines of code of benchmarking clients uses in the small file transfer and migration benchmarks.\tnote{1}}
 \label{tab:loc_complexity}
 \begin{tabular}{lrrrr}
 \toprule
@@ -327,7 +327,7 @@ in the CTaps repository.}
 \end{tabular}
 \begin{tablenotes}
       \footnotesize
-      \item $^1$ The counts were obtained by classifying each non-blank,
+      \item[1] The counts were obtained by classifying each non-blank,
 non-comment line into one of six categories
 for each of the three clients used for benchmarking.
 Annotated source files used for counting are available at \mono{benchmark/annotations/} in the CTaps repository.

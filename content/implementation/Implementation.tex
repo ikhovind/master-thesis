@@ -917,8 +917,8 @@ a Connection and the Selection Properties fulfilled by each protocol as defined 
 \multicolumn{1}{l|}{UseTemporaryLocalAddr}  & \multicolumn{1}{c||}{Runtime dep.}  & No Pref. & No Pref. & No Pref. \\
 \multicolumn{1}{l|}{SoftErrorNotify}        & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
 \multicolumn{1}{l|}{ActiveReadBeforeSend}   & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{Multipath$^1$}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Pref. \\
-\multicolumn{1}{l|}{AdvertisesAltAddress$^2$} & \multicolumn{1}{c||}{false}       & false         & false         & false \\
+\multicolumn{1}{l|}{Multipath\tnote{1}}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Pref. \\
+\multicolumn{1}{l|}{AdvertisesAltAddress\tnote{2}} & \multicolumn{1}{c||}{false}       & false         & false         & false \\
 \multicolumn{1}{l|}{Direction}              & \multicolumn{1}{c||}{Bidir.} & Bidir. & Bidir. & Bidir. \\
 \multicolumn{1}{l|}{Interface}              & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
 \multicolumn{1}{l|}{Pvd}                    & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
@@ -926,9 +926,9 @@ a Connection and the Selection Properties fulfilled by each protocol as defined 
 \end{tabular}
 \begin{tablenotes}
     \footnotesize
-    \item $^1$ CTaps only supports multipath in terms of connection migration, and does
+    \item[1] CTaps only supports multipath in terms of connection migration, and does
       not support using multiple paths at once.
-    \item $^2$ AdvertisesAltAddress is set to a boolean RFC~9622~\cite[Sec. 6.2.15]{rfc9622},
+    \item[2] AdvertisesAltAddress is set to a boolean RFC~9622~\cite[Sec. 6.2.15]{rfc9622},
       but this cannot be used to reflect a protocol which can both advertise and not advertise.
       This becomes problematic if this value is used for filtering candidates.
 \end{tablenotes}
