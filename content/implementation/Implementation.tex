@@ -592,7 +592,7 @@ since the application is able to add both multiple Local and multiple Remote End
 to a Connection.
 Whether a system actually makes use of the multiple endpoints is however left up to the
 underlying transport protocol~\cite[Sec. 7.5]{rfc9622}. For QUIC CTaps therefore only 
-supports intitating migrating to new Local Endpoints and only supports
+supports initiating migrating to new Local Endpoints and only supports
 migration initiated by a client. Migration initiated by the remote
 is supported as long as the \mono{multipath} Selection Property is not
 disabled.
@@ -842,7 +842,7 @@ The full implementation of the protocol implementation struct for QUIC can be se
 ]
 
 
-\node[box, fill=blue!10] (app)      at ( 0,  4) {Application};
+\node[box, fill=gray!10] (app)      at ( 0,  4) {Application};
 \node[box, fill=gray!10] (ctaps)    at ( 0,  0) {CTaps};
 \node[box, fill=gray!10] (picoquic) at ( 5,  0) {Picoquic};
 \node[box, fill=gray!10] (libuv)    at ( 0, -4) {UDP Socket};

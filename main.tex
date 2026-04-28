@@ -33,6 +33,8 @@
   \@starttoc{lol}%
 }
 
+\usepackage{emptypage}
+
 \usepackage{xr}
 \usepackage[section]{placeins}
 \captionsetup{format=plain, font=small, labelfont=bf}
@@ -115,12 +117,6 @@
 % \setcounter{bottomnumber}{0}
 
 
-% \fancyhead[LE]{\textsf{\small A TAPS Implementation for Linux} \quad \textbar \quad \textsf{\small \nouppercase{\leftmark}}}
-% \fancyhead[LE]{\textsf{\small \nouppercase{\leftmark}}}
-\fancyhead[LE]{\textsf{\small \nouppercase{\leftmark}}}
-\fancyhead[RO]{\textsf{\small \nouppercase{\rightmark}}}
-% \fancyhead[LE]{\textsf{\small Your Thesis Title}}
-% \fancyhead[RO]{\textsf{\small \nouppercase{\rightmark}}}
 
 \uiomasterfp[
   supervisor={Michael Welzl},
@@ -133,6 +129,7 @@
   The Great Western Railway} (1844). The National Gallery, London.}
 ]
 \frontmatter{}
+\pagestyle{plain}
 
 
 
@@ -152,6 +149,11 @@
 \import{./}{Preface}\todo{Fjern wordcount}
 
 \mainmatter{}
+\pagestyle{fancy}
+
+\fancyhead[LE]{\textsf{\small \nouppercase{\leftmark}}}
+\fancyhead[RO]{\textsf{\small \nouppercase{\rightmark}}}
+
 
 \renewcommand{\headrulewidth}{0.4pt}  % ruler on running pages
 

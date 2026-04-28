@@ -1,9 +1,26 @@
-
-
 \begin{abstract}
-  Here come 3--6 sentences describing your thesis.
-\end{abstract}
+Network sockets have been the dominant way for applications to interact with the
+network for several decades. The design of the BSD socket API forces applications to
+bind to an underlying transport protocol at compile time, which, together
+with middlebox interference greatly hinder innovation at the transport layer.
 
-\begin{xabstract}[Sammendrag]               %% ... or Abstract or ...
-  Here comes he abstract in a different language.
-\end{xabstract}
+The Transport Services (TAPS) working group has produced a series of
+RFCs~9621-9623, describing an abstract, protocol-agnostic and asynchronous networking library. 
+While previous implementations of TAPS exist, none have been developed since the final
+release of RFC~9621, RFC~9622 and RFC~9623 in 2025. Additionally, no current implementations
+of TAPS support QUIC, making it unclear exactly how QUIC, as the most successful recent protocol innovation
+maps onto the TAPS API.
+
+This thesis presents CTaps, a C implementation of IETF Transport Services with support for QUIC, TCP and
+UDP. CTaps supports several important QUIC features, such as multistreaming, connection
+migration and session resumption, all through the TAPS API as described in
+RFC~9622. In addition, CTaps supports important TAPS features such as
+candidate gathering, and candidate racing.
+We find that QUIC maps well, with most
+features either being directly controllable or inferable through the TAPS API.
+Remaining feature gaps are minor, such as unidirectional stream resets.
+We evaluate CTaps against native TCP and Picoquic QUIC clients across handshake
+latency, multistream transfer, candidate racing and connection migration.
+We argue that CTaps effectively serves as a reference for future implementations of TAPS,
+especially when supporting QUIC.
+\end{abstract}

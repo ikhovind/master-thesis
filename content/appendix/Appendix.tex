@@ -152,7 +152,7 @@ int main() {
 
     // CTaps takes deep copies of the passed
     // objects internally, so the application retains
-    // ownership of the orignals
+    // ownership of the originals
     ct_local_endpoint_free(local);
     ct_security_parameters_free(security_parameters);
     ct_preconnection_free(preconnection);
@@ -317,7 +317,7 @@ void respond_and_close_on_message_received(ct_connection_t* connection, ct_messa
         ct_message_get_length(received_message)
     );
     // CTaps takes a deep copy and the application retains
-    // ownership of the orginal message, so remember to free!
+    // ownership of the original message, so remember to free!
     ct_send_message(connection, message);
     ct_message_free(message);
     // For TCP this will initiate normal teardown

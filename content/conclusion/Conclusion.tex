@@ -10,11 +10,11 @@ and future work if CTaps is to be further developed into a production-ready libr
 
 \section{Summary of Contributions}
 The primary contribution of this thesis is CTaps.
-CTas is an open source C-implementation of Transport Services as specified
+CTaps is an open source C-implementation of Transport Services as specified
 by RFC~9621--9623. CTaps features support for QUIC, TCP and UDP as underlying
-protocols and can therefore be used to analyse how well the features of these
+protocols and can therefore be used to analyze how well the features of these
 protocols can be represented through a TAPS API. Internally, CTaps uses libuv
-to serve as the central event loop allowing asyncronous interaction with the
+to serve as the central event loop allowing asynchronous interaction with the
 network and Picoquic as a QUIC engine to provide support for QUIC.
 
 CTaps implements large parts of the TAPS API as well
@@ -33,45 +33,45 @@ can use the lessons learned during the development of CTaps for their
 own benefit.
 
 \section{Key Findings and Research Questions}
-The development of CTaps has been undertaken with a goal of produdcing
+The development of CTaps has been undertaken with a goal of producing
 answers to the key research questions as stated in~\cref{chap:intro}.
 As part of the development an analysis has been performed of those
 research questions, in addition to performing benchmarks to compare
 the performance of CTaps with pure QUIC and TCP clients. These
-evaluations also serve to prove tha accessibility of QUIC features
+evaluations also serve to prove the accessibility of QUIC features
 through CTaps, and the availability of TAPS features themselves.
 
 This section will describe the key findings found during the
 development of CTaps. These have been found both through the
-actual practivcal development, such as the architectural
+actual practical development, such as the architectural
 necessities for respecting QUIC and TAPS, but also through
-analysis, allowing an analysis around requirements for TPAS
+analysis, allowing an analysis around requirements for TAPS
 features and QUIC features which are not supported in TAPS,
-but may be avialable through a more complete TAPS implementation.
+but may be available through a more complete TAPS implementation.
 
 \subsection{Key Findings}
-The key findings of CTaps conists of the performed benchmarks benchmarks
+The key findings of CTaps consists of the performed benchmarks benchmarks
 as described in~\cref{chap:eval}, the analysis of the mapping of QUIC
 features onto the TAPS API in~\cref{tab:quic-taps-mapping} and the
-reflectios around the architecture required for utilizing QUIC under
+reflections around the architecture required for utilizing QUIC under
 a TAPS system as described in~\cref{sec:quicUnderTaps}.
 
 The performed benchmarks show CTaps can achieve equal performance
-to a native TCP and a Picoquic clients in the modelled scenarios.
-This shows that the trnasport layer abstraction does not necessarily
-introduce large performance overheads, when comparing to simlar TCP and
+to a native TCP and a Picoquic clients in the modeled scenarios.
+This shows that the transport layer abstraction does not necessarily
+introduce large performance overheads, when comparing to similar TCP and
 Picoquic clients. It is however not possible to say anything about the
 performance of a TAPS system under load or a large number of established Connections,
 as this has not been tested.
 
 Another key finding is the complexity
 of the benchmarking clients as described in~\cref{sec:client-complexity}.
-These show that wihle a TAPS system front-loads complexity for creating
+These show that while a TAPS system front-loads complexity for creating
 very simple clients, the final client still successfully hides a lot of
 complexity compared to the features actually presented to the client.
 By using sane defaults which are suitable for most applications
-then a TAPS systems avoids unecessary setup, and can present an application
-with support for multiple protocols, candidate racing, dns resolution,
+then a TAPS systems avoids unnecessary setup, and can present an application
+with support for multiple protocols, candidate racing, DNS resolution,
 connection migration
 and an asynchronous interaction with the network, all at less than the
 combined complexity of a simple Picoquic and TCP client.
@@ -84,7 +84,7 @@ by QUIC, or present a consistent semantic of
 closing Connections, where the expected behavior is that invoking
 \mono{close()} closes the Connection in both directions.
 
-Another important architectural insight is thre requirement for a
+Another important architectural insight is the requirement for a
 demultiplexing layer and handling of socket lifetimes. This stems from the
 need to support multiple TAPS Connections over single sockets using
 protocols which are not connection-oriented. This means that internally
@@ -97,7 +97,7 @@ of a TAPS system is that the candidate gathering and candidate racing
 systems should be designed carefully and should be allowed to interoperate
 more than what is the case in CTaps. This is important in order to minimize
 the stagger delay present to the final TAPS implementation. Some sort
-of protocol interleaving must be implemented. Some sort of resoultion
+of protocol interleaving must be implemented. Some sort of resolution
 delay should also be implemented in the case of DNS resolution, instead
 of waiting for all DNS resolutions for all endpoints to finish before
 initiating racing, as is currently performed by CTaps.
@@ -125,7 +125,7 @@ to support the full range of TAPS features.
 One of the largest requirements from the TAPS API is that of flexibility.
 While not strictly required per the TAPS RFCs, all TAPS implementations
 should use a generic protocol interface internally, in order to be as maintainable as possible.
-Without a generic intercae, the internal implementaiton code
+Without a generic interface, the internal implementation code
 risks becoming very tightly bound to specific protocols, making it
 far more difficult to adapt the TAPS implementation to support new protocols.
 
@@ -176,10 +176,10 @@ interacting with a Connection Group then this is not a breaking
 issue but it is a deviation from how a application would expect
 to interact with the network coming from TCP.
 
-An additional consideratoin when adding support for QUIC to a
-TAPS implementation is that QUIC connctions always transfer
+An additional consideration when adding support for QUIC to a
+TAPS implementation is that QUIC connections always transfer
 data over streams. This means that if the implementation
-wishes to consistenly map a QUIC connection to a connection group
+wishes to consistently map a QUIC connection to a connection group
 and a stream to a Connection, then all Connections will have
 to belong to a Connection Group if they are based on top of
 QUIC. CTaps has chosen to follow the pattern of a Connection
@@ -206,8 +206,8 @@ unreachable\todo{Fill out after finalizing table}.
 \subsubsection{Directly exposed}
 Several key features of QUIC is directly supported through the TAPS
 API and give the application fine-grained control.
-Connection migration and multipath is available thorugh using
-mulitple local endpoint and the \mono{multipath}
+Connection migration and multipath is available through using
+multiple local endpoint and the \mono{multipath}
 Selection Property and the \mono{multipathPolicy} Connection Property.
 
 Multistreaming is available through the \mono{clone()} functionality. Note that
@@ -220,7 +220,7 @@ Most QUIC features which cannot be reached directly can still be
 utilized by a TAPS implementation by interpreting the intentions stated
 by the application. A good example here are
 the QUIC settings related to ACKs, \mono{ack_delay_exponent} and \mono{max_ack_delay}.
-Here the application could, by stating its hunderlying
+Here the application could, by stating its underlying
 intention through the \mono{connCapacityProfile} Connection Property,
 tell a TAPS implementation to do whatever it can to minimize the latency
 for that given connection, including setting the ACK settings if available.
@@ -303,7 +303,7 @@ which should be improved, if CTaps is to be developed further. The
 most important of them are discussed here.
 
 \subsection{Error Handling}
-The most important improveent which could be made to CTaps is imrpoved error handling.
+The most important improvement which could be made to CTaps is improved error handling.
 Since a lot of focus in CTaps has been to develop the various happy paths
 of different TAPS features to serve as proof of concepts, the failure paths
 in the same features have not been extensively developed or tested. For
@@ -311,7 +311,7 @@ a concrete example the \mono{soft_error()} callback is never invoked and
 there are several paths where the previously allocated memory is not freed.
 
 This has not been the benchmarking itself since these have been run over
-a simultated network on a single computer, but for a real-world usage
+a simulated network on a single computer, but for a real-world usage
 the application needs to both be notified about and not risk memory errors
 when an error occurred.
 
@@ -333,7 +333,7 @@ so interleaving with no care as to the order could lead to a lower ranked
 protocol being tried second after the most desirable one, to the application's
 surprise. It would also be beneficial to include the Local and Remote Endpoints
 in the interleaving algorithm somehow. In the hypothetical situation that the
-first candidates all try to connect to the same Eemote Endpoint, but that endpoint
+first candidates all try to connect to the same Remote Endpoint, but that endpoint
 turns out to be unreachable, the current stagger delay would lead to a one
 second delay before the next endpoint was tried.
 
@@ -358,12 +358,12 @@ While connection migration is currently supported in CTaps, an important piece
 of future work would be to make it available without having to perform the workaround
 described in~\cref{sec:connection-migration-impl}. This means that the application
 would be able to select two specific local endpoints and migrate between them, instead
-of being forced to select an ephmeeral local endpoint first, before adding any local
+of being forced to select an ephemeral local endpoint first, before adding any local
 endpoints to migrate between. This workaround is necessary because of the tight coupling
 between each Connection and its Socket Manager as it currently stands in CTaps.
-Throughout the lifetie of the Connection each Connection can only have a single Socket Manager
+Throughout the lifetime of the Connection each Connection can only have a single Socket Manager
 and a single Socket Manager can only bind to a single socket throughout its lifetime.
-This means that a single Connection is only able to bind to a single scket throughout its lifetime. 
+This means that a single Connection is only able to bind to a single socket throughout its lifetime. 
 In order to mitigate this the binding between Connection and Socket Manager should be
 changed from one-to-many to many-to-many.
 
@@ -382,28 +382,28 @@ do not support migration the implementation would be simple since Messages
 would always be routed to the same endpoint. For QUIC, messages would have to
 be routed through the local endpoint expected by Picoquic.
 
-It would be possile to always bind to a wildcard path internally, but
+It would be possible to always bind to a wildcard path internally, but
 this would not perfectly reflect the expected behavior from TAPS. This
 means that it would not be possible to bind to a subset of interfaces,
 and the Connection would receive data passed to any interface, unless
-filtering was implmented internally in CTaps. The improved solution,
+filtering was implemented internally in CTaps. The improved solution,
 allowing for listening to one, several or all interfaces would be
 to expand the internal protocol implementations to be expanded to
 support multiple sockets where applicable. For CTaps currently
 this would mean that the QUIC interface implementation would
 have an internal lazily initiated pool of sockets.
 
-When first inititating a client connection the quic implmentation
+When first initiating a client connection the quic implementation
 would open a UDP socket on the most desirable local endpoint
 and have Picoquic initiate a connection there. If a path
 later happens then the implementation could inform Picoquic
 about the intention to migrate. Whenever Picoquic returned
-a packet to send over the network the interface implemnetation
+a packet to send over the network the interface implementation
 would check if a socket associated with the given local address
-has already been created, if not, then it would initate a new
+has already been created, if not, then it would create a new
 UDP socket and start sending data over it.
 
-This would present an advantage over the alternaitve of simply
+This would present an advantage over the alternative of simply
 always binding to an wildcard IP address for the socket as it would allow the application
 to have full control over which interfaces to actually receive data on,
 without having to implement this filtering internally in CTaps.
@@ -431,7 +431,7 @@ its own Framer it could simply be given an additional void pointer
 as a parameter to the framing function. The application could then
 define an internal message buffer to store messages in, combining
 them or splitting them before passing them along to the network or
-the associated Connection. Whe nadding this functionality care
+the associated Connection. When adding this functionality care
 would have to be taken that the ownership model of the Messages
 created inside Framer functions is clear, so that applications
 can implement functions to both combine and split Messages
@@ -446,7 +446,7 @@ be expanded with two function pointers, one for
 interacting with a setup and one for interacting with
 teardown. Each function pointer could then return a buffer of data which
 it would want to transfer to the remote in association
-with each its associated lifecycle event. CTaps' internal logic would then have to
+with each its associated life-cycle event. CTaps' internal logic would then have to
 be updated to check for registered framers and query
 it for data to send, upon setup and teardown.
 
@@ -577,15 +577,15 @@ be made early, in order to support the flexibility mandated by TAPS.
 
 These insights are valuable for the ongoing work of trying
 to integrate networking into the C++ standard library based on IETF
-TAPS \cite{P3482R1}. For large works like this the expereince of
-implementing TAPS in a systems lanaguage will be invaluable.
+TAPS \cite{P3482R1}. For large works like this the experience of
+implementing TAPS in a systems language will be invaluable.
 
-Overall CTaps matters because TAPS matters. While thte API differs
+Overall CTaps matters because TAPS matters. While the API differs
 from the typical API to a very large degree, stating intentions
 is clearly the strongest way of making features available to 
 application programmers. This will help the adoption of not only
-new tranpsort protocols but also the features of those protocols.
-While adenced features might not be directly available, application
+new transport protocols but also the features of those protocols.
+While advanced features might not be directly available, application
 programmers will be able to achieve their goals to a larger degree,
 by stating them clearly, instead of having to individually tune the
 ACK delay transport parameter in QUIC.

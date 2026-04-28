@@ -8,40 +8,35 @@ of CTaps, before expanding on the chosen dependencies, internal architecture
 and the external API presented to applications.
 
 \section{Choice of Scope}
-The CTaps API currently features all major aspects of the TAPS API
+CTaps currently features all major aspects of the TAPS API
 described in RFC~9622 except for rendezvous.
 Internally it implements the most important parts
 of a TAPS system and supports 
 candidate gathering, candidate racing, TCP, UDP and QUIC.
 
-While nearly all major parts of the TAPS API is present
-in the CTaps API, there are individual functions which are
-not implemented and where the CTaps does not
-feature stubbed implementations. These 
+While CTaps supports most major parts of the TAPS API,
+there are individual functions which are
+not implemented. These 
 are protocol-specific endpoints, hop limits, multicast endpoints,
-resolving preconnections before initiation,
+resolving Preconnections before initiation,
 adding endpoints to an established Connection, partial
-message receives, partial
-message sends and batching message sends.
+message receives, partial message sends and batching message sends.
 
-All Transport Properties from RFC~9622 are present in the CTaps API and
-can be set, but not all are supported internally.
+All TAPS Transport Properties are present in the CTaps API,
+but not all are supported internally.
 Unsupported Transport Properties are ignored and have
-no effect on the underlying Connection, expcept for Selection
+no effect on the underlying Connection, except for Selection
 Properties which still affect candidate gathering.
 This means that for example setting \mono{perMsgReliability} to Require will filter
 out protocols which have this property set to Prohibit, but the application
 will not be able to transfer individual messages as reliable, since this
 is not supported in CTaps. 
 
-For Security Parameters only the essential paramaters required to support
-all parameters except for session cache options and pre shared keys.
+CTaps allows applications to set all Security Parameters described in RFC~9622,
+except for session cache options and pre shared keys.
 In addition, CTaps does not support trust callbacks. Only parameters
 needed for TLS 1.3 and session resumption for QUIC have any effect.
 
-The parts of the TAPS API that were prioritized for CTaps are common features related
-to establishing client and server connections, transferring data and managing
-the lifetime of Connections.
 For the internal features of a TAPS system as described in RFC~9623,
 the most unique parts of the TAPS API has been prioritized during development.
 This is naturally candidate gathering and candidate racing, which allows a single
@@ -60,12 +55,11 @@ be exposed through TAPS.
 \section{Choice of dependencies}
 \subsection{libuv} \label{sec:dependency-libuv}
 Since TAPS is an asynchronous API at its core, CTaps needed to
-reflect this. This could have been achieved in several ways,
-with the primary alternatives being internal threading or an event loop. For
-CTaps, the event loop was found to have several advantages,
-primarily avoiding race conditions and not having to guard shared
-state, since a single threaded event loop ensures that state
-is never accessed concurrently.
+reflect this. This could have been achieved in several ways
+as described in \cref{sec:async-background}.
+For CTaps, the event loop was chosen because the callbacks
+matched the even-driven API of TAPS, as well as avoiding
+the need for mutexes.
 
 When selecting a specific event loop library libuv~\cite{Libuv2025} presented
 several advantages such as built-in protocol handles for TCP
@@ -74,10 +68,12 @@ used in production systems such as Node.js~\cite{nodejsEventLoop}.
 Libuv is also the event loop engine behind
 NEAT, which influenced the decision of CTaps~\cite{neatCode}.
 
-Internally in CTaps, libuv provides the asynchronous interface
-which CTaps uses to interact with the network. It also provides
-a timer, which is used to query Picoquic at given intervals
-for new packets to send.
+Internally, libuv provides the asynchronous interface
+which CTaps uses to interact with the network. It additionally powers
+the main event loop which applications run by
+invoking \mono{ct_start_event_loop()}. AA
+It also provides the timer which CTaps uses to know when to query Picoquic,
+according to the sans-IO model described in \cref{sec:picoquic}.
 
 \subsection{Picoquic}
 CTaps has been developed on Linux kernel version 6.1.0, which
@@ -286,7 +282,7 @@ asynchronously.
 The figure also shows that crucially the Socket Manager keeps
 the socket open, so that it can be used by the remaining Connections.
 
-\definecolor{ConnectionGroupTextColor}{RGB}{139, 194, 110}
+\definecolor{ConnectionGroupTextColor}{RGB}{40, 61, 41}
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[font=\sffamily,
@@ -423,7 +419,7 @@ CTaps API. Example client and server applications written
 using CTaps can be seen in \cref{app:ex-ctaps-apps}.
 The complete API reference generated with Doxygen is provided as supplementary
 material accompanying this thesis\footnote{
-The latest doxygen output is also available online
+The latest Doxygen output is also available online
 at \url{https://ikhovind.github.io/CTaps/}.
 }.
 
@@ -935,7 +931,7 @@ or exceeding the behavior of TCP as the underlying protocol.
 \item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
 \item[3] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC. This means that a TAPS implementation filtering
     protocols in candidate gathering cannot know if this property is mandatory in a protocol or not.
-\item[4] Requires that the recvMsgMaxLen Connection Property \cite[Sec. 8.1.11.5]{rfc9622} is communicated to the peer.
+\item[4] Requires that the \mono{recvMsgMaxLen} Connection Property \cite[Sec. 8.1.11.5]{rfc9622} is communicated to the peer.
 \item[5] Only available in unison through TAPS, not individually.
 \item[6] CTaps can set Connection timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
 \item[7] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
@@ -985,7 +981,7 @@ but the remote will be unreachable.
 A possible mitigation for this would be through transport options
 as described in RFC~9868~\cite{rfc9868}.
 This RFC describes a backwards compatible way of extending UDP functionality
-by exploiting the fact that the UDP hedaer contains a length
+by exploiting the fact that the UDP header contains a length
 field independent of the IP header length field. This allows
 to create space in the UDP packet beyond the user data, which
 can then be used to specify transport options.
@@ -1002,7 +998,7 @@ This is naturally not a perfect solution since there is no
 way to differentiate between the peer not being reachable
 by UDP and the peer simply not supporting this UDP transport option.
 The use of UDP options is also the responsibility of the layer
-utilzing UDP, not the UDP layer itself. This means that if a server
+utilizing UDP, not the UDP layer itself. This means that if a server
 is reachable over UDP, then CTaps would be reliant on the server
 itself supporting this transport option in order to get a UDP
 response.
