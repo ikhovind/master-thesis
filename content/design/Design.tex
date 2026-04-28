@@ -339,7 +339,7 @@ the socket open, so that it can be used by the remaining Connections.
     ([yshift=3pt]Conn1.east);
 \end{tikzpicture}
 \caption[Flow of internal callbacks in CTaps.]{Example model of the asynchronous communication
-between the CTaps Socket Manager and the protocol implementation when an application invokes \mono{close()}}
+between the CTaps Socket Manager and the protocol implementation when an application invokes \mono{close()}.}
 \label{fig:async-close-flow}
 \end{figure}
 
@@ -400,7 +400,7 @@ typedef struct ct_protocol_impl_s {
     // ... Remaining protocol interface function pointers ...
 } ct_protocol_impl_t;
 \end{minted}
-\caption{Excerpt from the protocol implementation interface}
+\caption{Excerpt from the protocol implementation interface.}
 \label{lst:protocol-impl-struct}
 \end{listing}
 
@@ -506,7 +506,7 @@ void ct_remote_endpoint_free(
     // And finally free it when done
     ct_remote_endpoint_free(remote_endpoint);
 \end{minted} 
-\caption{Remote endpoint lifetime example}
+\caption{Remote Endpoint lifetime example.}
 \label{lst:using-remote-endpoint}
 \end{listing}
 
@@ -822,7 +822,7 @@ future version of CTaps.
 \begin{table}[htbp]
   \centering
   \begin{threeparttable}
-      \caption[Behavior \mono{multipath}/\mono{multipathPolicy} in TAPS]{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations}
+      \caption[Behavior \mono{multipath}/\mono{multipathPolicy} in TAPS]{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations.}
     \label{tab:multipath-combinations}
     \begin{tabular}{llp{7cm}}
       \toprule

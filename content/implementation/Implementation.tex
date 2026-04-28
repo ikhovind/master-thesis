@@ -51,7 +51,7 @@ void socket_manager_decrement_ref(SocketManager* socket_manager) {
   }
 }
   \end{minted}
-  \caption{Internal Socket Manager counter decrementation}
+  \caption{Internal Socket Manager counter decrementation.}
   \label{lst:socketManagerRefCount}
 \end{listing}
 
@@ -100,7 +100,7 @@ single global instance of each protocol among multiple Socket Managers.
   \begin{minted}{C}
 extern const ct_protocol_impl_t udp_protocol_interface;
   \end{minted}
-  \caption[UDP protocol declaration]{UDP protocol declaration in \texttt{udp.h} referencing the definition in \texttt{udp.c}. }
+  \caption[UDP protocol declaration]{UDP protocol declaration in \texttt{udp.h} referencing the definition in \texttt{udp.c}.}
   \label{lst:udp-protocol-decl}
 \end{listing}
 
@@ -634,7 +634,7 @@ struct ct_framer_impl_s {
                      ct_framer_done_decoding_callback callback);
 };
 \end{minted}
-\caption{Framer structure definition from ctaps.h}
+\caption{Framer structure definition from ctaps.h.}
 \label{lst:framer-struct-def}
 \end{listing}
 
@@ -947,7 +947,7 @@ relying on built-in libuv support.
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-\caption{Overview of Lines of Code (LoC) on a per-protocol basis}
+\caption{Overview of Lines of Code (LoC) on a per-protocol basis.}
 \label{tab:protocolLoc}
 \small
 \begin{tabular}{llr}
@@ -1021,7 +1021,7 @@ TEST(InitiationTests, respectsLocalEndpoint) {
 }
 
 \end{minted}
-\caption{Example test mocking udp functions, using FFF}
+\caption{Example test mocking udp functions using FFF.}
 \label{lst:example-fff-mocking}
 \end{listing}
 
