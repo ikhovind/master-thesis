@@ -36,7 +36,7 @@ own benefit.
 The development of CTaps has been undertaken with a goal of producing
 answers to the key research questions as stated in~\cref{chap:intro}.
 As part of the development an analysis has been performed of those
-research questions, in addition to performing benchmarks to compare
+research questions, in addition to performing experiments to compare
 the performance of CTaps with pure QUIC and TCP clients. These
 evaluations also serve to prove the accessibility of QUIC features
 through CTaps, and the availability of TAPS features themselves.
@@ -50,13 +50,13 @@ features and QUIC features which are not supported in TAPS,
 but may be available through a more complete TAPS implementation.
 
 \subsection{Key Findings}
-The key findings of CTaps consists of the performed benchmarks benchmarks
+The key findings of CTaps consists of the performed experiments
 as described in~\cref{chap:eval}, the analysis of the mapping of QUIC
 features onto the TAPS API in~\cref{tab:quic-taps-mapping} and the
 reflections around the architecture required for utilizing QUIC under
 a TAPS system as described in~\cref{sec:quicUnderTaps}.
 
-The performed benchmarks show CTaps can achieve equal performance
+The performed experiments show that CTaps can achieve equal performance
 to a native TCP and a Picoquic clients in the modeled scenarios.
 This shows that the transport layer abstraction does not necessarily
 introduce large performance overheads, when comparing to similar TCP and
@@ -64,8 +64,8 @@ Picoquic clients. It is however not possible to say anything about the
 performance of a TAPS system under load or a large number of established Connections,
 as this has not been tested.
 
-Another key finding is the complexity
-of the benchmarking clients as described in~\cref{sec:client-complexity}.
+Another key finding is the complexity of the experiment clients as
+described in~\cref{sec:client-complexity}.
 These show that while a TAPS system front-loads complexity for creating
 very simple clients, the final client still successfully hides a lot of
 complexity compared to the features actually presented to the client.
@@ -310,7 +310,7 @@ in the same features have not been extensively developed or tested. For
 a concrete example the \mono{soft_error()} callback is never invoked and
 there are several paths where the previously allocated memory is not freed.
 
-This has not been the benchmarking itself since these have been run over
+This has not been an issue with the experiments since these have been run over
 a simulated network on a single computer, but for a real-world usage
 the application needs to both be notified about and not risk memory errors
 when an error occurred.

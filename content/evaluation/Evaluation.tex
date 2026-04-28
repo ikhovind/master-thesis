@@ -109,12 +109,12 @@ to also treat \mono{EPERM} as implying that the remote is unreachable. Picoquic 
 and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
 unreachable~\cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
-for the Picoquic client when benchmarking. All other instances of Picoquic,
+for the Picoquic experiment client. All other instances of Picoquic,
 including the one used in CTaps, were fetched from the main Picoquic repository.
 
 In addition to the clients, two servers were implemented for 
-benchmarking.\footnote{
-The servers and clients used for benchmarking can be found in the \mono{benchmark/src/server/}
+experimenting.\footnote{
+The experiment servers and clients used can be found in the \mono{benchmark/src/server/}
 and \mono{benchmark/src/client/}
 folders in the main CTaps repository. }
 Each server accepted incoming connections and supported

@@ -396,7 +396,7 @@ slow start again for the second transfer. In CTaps a single client can use both
 TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
 of QUIC benefits when available.
 
-A benchmark showing the measured benefits of utilizing Connection cloning in
+A experiment displaying the measured benefits of utilizing Connection cloning in
 CTaps over QUIC vs. TCP can be seen in~\cref{sec:smallfiletransfer}.
 
 \begin{figure}[htbp]
@@ -543,7 +543,7 @@ is unlikely due to how ordering is implemented in candidate gathering.
 
 Lacking this feature was deemed acceptable since CTaps is
 a research project and a workaround exists, allowing applications
-to utilize path migration as seen in the benchmark in
+to utilize path migration as seen in the experiment in
 \cref{sec:path-migration}. Improvements to achieve
 a more robust connection migration without having to
 perform CTaps-specific workarounds are discussed in~\cref{sec:future-work}.
@@ -553,11 +553,8 @@ while still passing alternative paths to the Preconnection when first
 initiating a Connection.
 CTaps only probes paths explicitly passed to the Preconnection,
 and therefore alternative paths must be passed to the Preconnection,
-even if binding to an wildcard endpoint.
-
-An example of utilizing
-this can be seen in the excerpt from the migration benchmarking
-client featured in~\cref{lst:explicit-binding-to-ephem}.
+even if binding to an wildcard endpoint. An example utilizing
+this can be seen in~\cref{lst:explicit-binding-to-ephem}.
 
 \begin{listing}[htbp]
   \centering
@@ -581,7 +578,7 @@ ct_preconnection_t* preconnection = ct_preconnection_new(
 \end{minted}
 \caption[CTaps QUIC migration workaround]
 {
-Code snippet from benchmarking client showing workaround for QUIC connection migration,
+Code snippet from the CTaps experiment client showing the workaround for QUIC connection migration,
 explicitly binding to 0.0.0.0, before passing 127.0.0.2 as an alternative address to probe.
 }
 \label{lst:explicit-binding-to-ephem}
