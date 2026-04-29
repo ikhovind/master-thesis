@@ -3,7 +3,7 @@ This appendix presents three examples of CTaps applications from the CTaps examp
 project~\cite{ctaps-example-project}. \Cref{lst:ctaps-cmakelists} shows the full
 CMakeLists.txt used to build the examples. \Cref{lst:ctaps-ping-client,lst:ctaps-quic-ping-server,lst:ctaps-tcp-ping-server} show the client,
 QUIC server, and TCP server. The client shows how
-an application can benefit from multistreaming through Connection cloning,
+an application can benefit from multistreaming through cloning,
 while still remaining compatible with TCP.
 Additionally, the use of Security Parameters, Transport properties
 and protocol racing is demonstrated.
@@ -78,7 +78,7 @@ void ping_on_ready(ct_connection_t* connection) {
         printf("Original connection successfully connected to server\n");
         char* msg = "hello from original";
         message = ct_message_new_with_content(msg, strlen(msg) + 1);
-        // Connection cloning is compatible with both TCP
+        // cloning is compatible with both TCP
         // and QUIC, but will utilize multistreaming if
         // QUIC is the underlying protocol and create a new
         // TCP connection if TCP is the underlying protocol.
@@ -166,10 +166,10 @@ int main() {
 \end{minted}
 \captionof{listing}[CTaps example client]
 {
-A CTaps client utilizing connection cloning.
+A CTaps client utilizing cloning.
 This client will attempt to establish a QUIC connection first,
 but is compatible with TCP as well. If the QUIC connection succeeds
-then the Connection cloning will utilize multistreaming. If TCP
+then the cloning will utilize multistreaming. If TCP
 is selected then each clone will be a separate TCP connection.
 Taken from the CTaps example project~\cite{ctaps-example-project}.
 }

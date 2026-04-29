@@ -213,7 +213,7 @@ not made it into the official RFC~\cite{transportServicesMappingForQuic}.
 The most important design decision made in CTaps in regards
 to QUIC was to map a QUIC Connection
 to a Connection Group instead of to a Connection. Since
-Connection Groups are populated by Connection cloning, and RFC
+Connection Groups are populated by cloning, and RFC
 9622 says \enquote{if the underlying protocol supports multi-streaming, it is natural to use this functionality to
 implement \mono{Clone}}~\cite[Sec. 7.4]{rfc9622}, the Connection Group
 becomes the natural model for the QUIC Connection.
@@ -706,7 +706,7 @@ a connection before all data has been received, the only way of handling it grac
 close the entire QUIC connection. This naturally maps to the \mono{ConnectionGroup.close()}
 functionality from RFC~9622~\cite{rfc9622}.
 
-If the application takes care of performing TAPS connection cloning in a consistent way,
+If the application takes care of performing TAPS cloning in a consistent way,
 it can consistently use \mono{ConnectionGroup.close()} and achieve the same
 expected behavior irrespective of the underlying protocol in the TAPS system, this
 is however an example of underlying functionality leaking through to how the application 

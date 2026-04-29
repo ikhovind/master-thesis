@@ -350,8 +350,8 @@ all Connection termination is treated asynchronously by CTaps, but sometimes
 the callbacks may be invoked immediately, such as with UDP which does not
 require any asynchronous teardown.
 
-\section{Connection Cloning}
-CTaps support connection cloning through the \mono{ct_connection_clone()}
+\section{Cloning}
+CTaps support cloning through the \mono{ct_connection_clone()}
 function, which allows applications to create a new Connection to the same
 endpoint, either through normal connection establishment or through
 multistreaming if supported by the underlying protocol.
@@ -369,22 +369,22 @@ The Connection priority is used to prioritize data transfer between the Connecti
 in the same Connection Group, while the \mono{can_send} and \mono{can_receive}
 are used to keep track of whether the Connection is unidirectional.
 
-Connection cloning is naturally the most useful when the underlying protocol can make
+Cloning is naturally the most useful when the underlying protocol can make
 use of multistreaming, since this allows the clone to reuse the same underlying connection.
-Connection cloning
+cloning
 can however still be performed no matter what the underlying protocol is. This allows
 TAPS to be protocol-agnostic, attempting to make use of benefits
 like multistreaming when available, but being functional even if the underlying protocol
 does not support it.
 
 The implications of the application having to make an effort to write
-protocol-agnostic code when using Connection cloning in CTaps is discussed
+protocol-agnostic code when using cloning in CTaps is discussed
 in~\cref{sec:quicUnderTaps}.
 
-A theoretical example displaying the benefits of Connection cloning and multistreaming
+A theoretical example displaying the benefits of cloning and multistreaming
 in general can be seen in~\cref{fig:connection-clone-gains}. Here, two
 transfers are performed sequentially. After the first transfer completes successfully,
-the application makes use of connection cloning in CTaps and starts a second transfer.
+the application makes use of cloning in CTaps and starts a second transfer.
 
 If the underlying protocol is TCP then CTaps will initiate a new connection and transfer
 successfully, but if the underlying protocol is QUIC then it will simply open a new
@@ -396,7 +396,7 @@ slow start again for the second transfer. In CTaps a single client can use both
 TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
 of QUIC benefits when available.
 
-A experiment displaying the measured benefits of utilizing Connection cloning in
+A experiment displaying the measured benefits of utilizing cloning in
 CTaps over QUIC vs. TCP can be seen in~\cref{sec:smallfiletransfer}.
 
 \begin{figure}[htbp]
@@ -489,8 +489,8 @@ CTaps over QUIC vs. TCP can be seen in~\cref{sec:smallfiletransfer}.
 \end{scope}
 
 \end{tikzpicture}
-\caption[Difference of Connection Cloning with QUIC vs. TCP]
-{A diagram showing how the TAPS concept of Connection cloning maps onto
+\caption[Difference of Cloning with QUIC vs. TCP]
+{A diagram showing how the TAPS concept of cloning maps onto
 TCP vs QUIC, with QUIC having much higher throughput because of stream
 multiplexing.}
 \label{fig:connection-clone-gains}
