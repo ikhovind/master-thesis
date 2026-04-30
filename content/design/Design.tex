@@ -871,7 +871,7 @@ and how they may into CTaps and TAPS in general can be seen in
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-    \caption[QUIC feature mapping to CTaps API]{Mapping of QUIC features to the TAPS API as implemented in CTaps.}
+    \caption[QUIC feature mapping to TAPS API]{Mapping of QUIC features to the TAPS API.}
 \label{tab:quic-taps-mapping}
 \small
 \begin{tabularx}{\textwidth}{lX}
@@ -879,62 +879,58 @@ and how they may into CTaps and TAPS in general can be seen in
 \rowcolor{gray!25}
 \textbf{QUIC Feature} & \textbf{TAPS Mapping} \\
 \midrule
-\multicolumn{2}{l}{\textit{Supported in CTaps with expected behavior\tnote{1}}} \\
+\multicolumn{2}{l}{\textit{Available through TAPS API}} \\
 \midrule
-\multicolumn{1}{l||}{ALPN negotiation} & Security Parameter \\
 \multicolumn{1}{l||}{0-RTT establishment} & Message Property\\
-\multicolumn{1}{l||}{TLS certificates} & Security Parameter\\
-\multicolumn{1}{l||}{Connection Migration} & Multiple Local Endpoints\\
-\multicolumn{1}{l||}{Bidirectional streams} & \mono{Clone()}\\
-\multicolumn{1}{l||}{Stream Priority} & Connection Property\\
-\midrule
-\multicolumn{2}{l}{\textit{Supported in CTaps with deviation from expected behavior}} \\
-\midrule
-\multicolumn{1}{l||}{QUIC connection\tnote{2}} & Connection Group\\
-\multicolumn{1}{l||}{QUIC stream} & Connection\\
-\multicolumn{1}{l||}{Unidirectional stream close (FIN)} & Connection \mono{Close()}\\
-\multicolumn{1}{l||}{Connection migration\tnote{3}} & Selection Property\\
-\multicolumn{1}{l||}{Path change events} & Per-Connection callback\\
-\multicolumn{1}{l||}{\mono{initial_max_streams_bidi}} & Connection Property \\
-\midrule
-\multicolumn{2}{l}{\textit{Supported through TAPS, but not implemented in CTaps}} \\
-\midrule
-\multicolumn{1}{l||}{Multipath} & Selection Property\\
-\multicolumn{1}{l||}{QUIC Datagrams~\cite{rfc9221}} & Message Property \\
-\multicolumn{1}{l||}{PING Frames} & Connection Property \\
-\multicolumn{1}{l||}{Key Update~\cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
-\multicolumn{1}{l||}{ECN} & Message Property \\
+\multicolumn{1}{l||}{ALPN negotiation} & Security Parameter \\
+\multicolumn{1}{l||}{Bidirectional streams} & \mono{clone()}\\
+\multicolumn{1}{l||}{Connection Migration\tnote{1}} & Multiple Local Endpoints \& Selection Property\\
 \multicolumn{1}{l||}{\mono{disable_active_migration}} & Selection Property\\
-\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{4}} & Connection Property \\
-\multicolumn{1}{l||}{\mono{STOP_SENDING}\tnote{5}} & Connection \mono{Abort()}\\
-\multicolumn{1}{l||}{\mono{RESET_STREAM}\tnote{5}} & Connection \mono{Abort()}\\
+\multicolumn{1}{l||}{ECN} & Message Property \\
+\multicolumn{1}{l||}{\mono{initial_max_streams_bidi}} & Connection Property \\
+\multicolumn{1}{l||}{Key Update~\cite[Sec. 6]{rfc9001}} & Security Parameter Callback \\
+\multicolumn{1}{l||}{\mono{max_udp_payload_size}\tnote{2}} & Connection Property \\
+\multicolumn{1}{l||}{Multipath QUIC} & Multiple Endpoitns \& Selection Property\\
+\multicolumn{1}{l||}{PING Frames\tnote{3}} & Connection Property \\
+\multicolumn{1}{l||}{\mono{preferred_address}\tnote{4}} & Selection Properties\\
+\multicolumn{1}{l||}{QUIC connection\tnote{5}} & Connection Group\\
+\multicolumn{1}{l||}{QUIC datagrams~\cite{rfc9221}} & Message Property \\
+\multicolumn{1}{l||}{QUIC stream} & Connection\\
+\multicolumn{1}{l||}{Stream Priority} & Connection Property\\
+\multicolumn{1}{l||}{TLS certificates} & Security Parameter\\
+\multicolumn{1}{l||}{Unidirectional stream close (FIN)} & \mono{close()} / Message Property\\
 \midrule
-\multicolumn{2}{l}{\textit{Not supported through TAPS}} \\
+\multicolumn{2}{l}{\textit{Partially available through TAPS API}} \\
 \midrule
-\multicolumn{1}{l||}{Unidirectional stream init} & --- \\
+\multicolumn{1}{l||}{\mono{STOP_SENDING}\tnote{6}} & \mono{abort()}\\
+\multicolumn{1}{l||}{\mono{RESET_STREAM}\tnote{6}} & \mono{abort()}\\
+\multicolumn{1}{l||}{\mono{ack_delay_exponent}\tnote{7}} & Connection Property\\ 
+\multicolumn{1}{l||}{\mono{max_ack_delay}\tnote{7}} & Connection Property \\ 
+\multicolumn{1}{l||}{Unidirectional streams\tnote{8}} & Connection Property \\
+\midrule
+\multicolumn{2}{l}{\textit{Not available through TAPS API}} \\
+\midrule
 \multicolumn{1}{l||}{\mono{initial_max_data}} & ---\\
 \multicolumn{1}{l||}{\mono{initial_max_stream_data_*}} & ---\\
-\multicolumn{1}{l||}{Idle Timeout\tnote{6}} & ---\\
-\multicolumn{1}{l||}{\mono{ack_delay_exponent}} & ---\\
-\multicolumn{1}{l||}{\mono{max_ack_delay}} & ---\\
+\multicolumn{1}{l||}{Idle Timeout\tnote{9}} & ---\\
 \multicolumn{1}{l||}{Directional \mono{initial_max_streams_*}} & ---\\
-\multicolumn{1}{l||}{\mono{preferred_address}} & ---\\
-\multicolumn{1}{l||}{\mono{Stateless reset}    } & --- \\
-\multicolumn{1}{l||}{Connection ID handling\tnote{7}} & ---\\
+\multicolumn{1}{l||}{Stateless reset} & --- \\
+\multicolumn{1}{l||}{Connection ID handling\tnote{10}} & ---\\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}
 \footnotesize
-\item[1] Expected Behavior is defined to be a
-mapping which behaves consistently with the protocol-agnostic TAPS API. Generally this means matching 
-or exceeding the behavior of TCP as the underlying protocol.
-\item[2] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
-\item[3] advertisesAltAddr is a boolean in TAPS, which cannot reflect that advertisement is voluntary in QUIC. This means that a TAPS implementation filtering
-    protocols in candidate gathering cannot know if this property is mandatory in a protocol or not.
-\item[4] Requires that the \mono{recvMsgMaxLen} Connection Property \cite[Sec. 8.1.11.5]{rfc9622} is communicated to the peer.
-\item[5] Only available in unison through TAPS, not individually.
-\item[6] CTaps can set Connection timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
-\item[7] When to rotate, maximum limit etc. Would however be reasonable to assume that this is handled by the underlying QUIC implementation
+\item[1] Abstracted from the application by TAPS as long as it is given multiple Local Endpoints and \mono{multipath} is enabled.
+\item[2] Requires that \mono{recvMsgMaxLen} \cite[Sec. 8.1.11.5]{rfc9622} is communicated to the peer.
+\item[3] Through the \mono{keepAliveTimeout} Connection Property.
+\item[4] Inferred from a combination of \mono{advertisesAltAddr} and \mono{interface} Selection Properties.
+\item[5] A QUIC connection maps to a Connection Group rather than a single Connection, since TAPS has no concept of streams within a Connection.
+\item[6] Only available in unison through TAPS, not individually.
+\item[7] Coarse control is available by setting the \mono{connCapacityProfile} Connection Property.
+\item[8] TAPS can receive unidirectional streams and set the \mono{canSend} Connection Property automatically,
+    but there is no support for marking the underlying stream as unidirectional when cloning.
+\item[9] TAPS can set a timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
+\item[10] When to rotate, maximum limit etc. Would be reasonable to assume that this is handled by the underlying QUIC implementation.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}

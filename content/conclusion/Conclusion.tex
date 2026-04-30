@@ -322,7 +322,8 @@ from when possible. In addition memory checks should be added to these tests,
 ensuring that CTaps does not leak allocated memory when encountering such
 an error path.
 
-\subsection{Candidate Interlaving}
+\subsection{Faster Connection Establishment}
+TODO - write about issue more generatlly
 If an attempt was to be made to make CTaps into a real-world production
 ready system, then candidate interleaving would likely be one of the first
 features to be implemented.
@@ -342,6 +343,15 @@ connection attempts in CTaps can be made the same way as recommended in Happy Ey
 as soon as a resolved endpoint comes back, with a \qty{50}{\milli\second} resolution delay
 to give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
+
+In addition to the stagger delay, the connection establishment time of
+a CTaps client is also vulnerable to slow DNS resolutions.
+Currently, CTaps waits until all local and remote
+endpoints have been resolved before sorting the gathered candidates according
+to the application preferences and then working its way down the list.
+This could be optimized by integrating candidate gathering and candidate
+racing more tightly, utilizing a Resolution Delay similar to the one described
+in Happy Eyeballs~\cite{rfc8305}.
 
 \subsection{CTaps API}
 If CTaps were to be developed into a fully featured TAPS library, it would likely
