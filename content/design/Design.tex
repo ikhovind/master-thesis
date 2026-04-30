@@ -910,12 +910,12 @@ and how they may into CTaps and TAPS in general can be seen in
 \midrule
 \multicolumn{2}{l}{\textit{Not available through TAPS API}} \\
 \midrule
-\multicolumn{1}{l||}{\mono{initial_max_data}} & ---\\
-\multicolumn{1}{l||}{\mono{initial_max_stream_data_*}} & ---\\
-\multicolumn{1}{l||}{Idle Timeout\tnote{9}} & ---\\
+\multicolumn{1}{l||}{\mono{initial_max_data}\tnote{9}} & ---\\
+\multicolumn{1}{l||}{\mono{initial_max_stream_data_*}\tnote{9}} & ---\\
+\multicolumn{1}{l||}{Idle Timeout\tnote{10}} & ---\\
 \multicolumn{1}{l||}{Directional \mono{initial_max_streams_*}} & ---\\
 \multicolumn{1}{l||}{Stateless reset} & --- \\
-\multicolumn{1}{l||}{Connection ID handling\tnote{10}} & ---\\
+\multicolumn{1}{l||}{Connection ID handling\tnote{11}} & ---\\
 \bottomrule
 \end{tabularx}
 \begin{tablenotes}
@@ -929,8 +929,10 @@ and how they may into CTaps and TAPS in general can be seen in
 \item[7] Coarse control is available by setting the \mono{connCapacityProfile} Connection Property.
 \item[8] TAPS can receive unidirectional streams and set the \mono{canSend} Connection Property automatically,
     but there is no support for marking the underlying stream as unidirectional when cloning.
-\item[9] TAPS can set a timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
-\item[10] When to rotate, maximum limit etc. Would be reasonable to assume that this is handled by the underlying QUIC implementation.
+\item[9] Applications have access to flow control from TAPS by scheduling \mono{receive()} invocations, but
+    this cannot be used to inform the peer of how much data to send.
+\item[10] TAPS can set a timeout, but only for \enquote{trying to reliably deliver data to the Remote Endpoint}~\cite[Sec. 8.1.3]{rfc9622}.
+\item[11] When to rotate, maximum limit etc. Would be reasonable to assume that this is handled by the underlying QUIC implementation.
 \end{tablenotes}
 \end{threeparttable}
 \end{table}
