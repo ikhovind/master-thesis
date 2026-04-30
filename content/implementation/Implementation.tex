@@ -497,9 +497,8 @@ multiplexing.}
 \end{figure}
 
 \section{Connection Migration} \label{sec:connection-migration-impl}
-Connection migration is supported in CTaps by default, but multipath
+Connection migration is supported in CTaps, but multipath
 is by default disabled for clients in RFC~9622~\cite[Sec. 6.2.14]{rfc9622}.
-
 If multipath is set to active
 then CTaps will probe all Local Endpoints registered with the Connection through
 Picoquic when Picoquic notifies CTaps that a path has become unavailable.

@@ -7,8 +7,8 @@ with middlebox interference, greatly hinders innovation at the transport layer.
 The IETF Transport Services (TAPS) working group was established to develop a
 protocol-agnostic interface to the network, to decouple applications from the underlying
 transport protocols and ease innovation.
-The working group has produced three core RFCs: 9621, 9622 and 9623, which describe the architecture,
-API and an implementation guide respectively.
+The working group has produced three core RFCs: 9621, 9622 and 9623, which cover the architecture,
+API and implementation guidance of a TAPS System.
 While previous implementations of TAPS exist, no open-source implementations have been under
 active development since the RFCs' finalization in early 2025. Additionally, no open-source implementations
 of TAPS support QUIC, making it unclear exactly how QUIC, as the most successful recent protocol innovation
@@ -21,7 +21,7 @@ migration and session resumption. In addition, CTaps supports important internal
 features such as candidate gathering and candidate racing.
 
 A survey of 29 QUIC features found that 23 are
-either fully or partially available through the TAPS API, with only 6 minor gaps,
+either fully or partially available through the TAPS API, with only 6 gaps,
 such as unidirectional stream resets.
 We evaluate CTaps against native TCP, UDP and Picoquic QUIC clients across handshake
 latency, ping overhead, multistream transfer, candidate racing and connection migration.

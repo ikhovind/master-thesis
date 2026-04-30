@@ -378,7 +378,7 @@ support ALPN. It is possible to utilize multiple ALPN values for a
 single connection when performing ALPN, but not when performing
 session resumption, since this relies on using the same ALPN as
 the previous session. It is possible to generate candidates
-more efficienntly when session resumption is not expected,
+more efficiently when session resumption is not expected,
 but this was deemed to be out of scope for CTaps.
 
 Potential mitigations for the high cost of the stagger delay as
@@ -386,7 +386,7 @@ it exists currently are discussed in~\cref{sec:future-work}.
 
 \subsection{UDP RTT Experiment}
 While the experiment in \cref{sec:udp-rtt-ex} shows that the overhead of CTaps is measurable,
-it will still be negligleble for most networking applications in real-world
+it will still be negligible for most networking applications in real-world
 settings. It is also a fairly ideal case and does not show the overhead of CTaps
 in more complicated cases. This experiment therefore
 forms the absolute minimum added overhead of CTaps and does not show
@@ -412,7 +412,7 @@ The high cost of the stagger delay shows up not only in the handshake experiment
 but also in the candidate racing experiment. Here, the experiment itself becomes
 more contrived than needed because it needs to be. While it still serves to
 show the benefit gained on a suboptimal ordering from a DNS resolution, the difference in the two endpoints has to be
-excessively large, so that candidate racing in CTaps can overcome the high cost of the stager delay.
+excessively large, so that candidate racing in CTaps can overcome the high cost of the stagger delay.
 
 % Discuss the small file transfer
 \subsection{Small File Transfer Experiment}
@@ -434,7 +434,7 @@ more efficient use of the network.
 
 This experiment also shows that a single CTaps client can connect to both a
 TCP and a QUIC server and that application developers can write networking
-code independently of the underlying protocl.
+code independently of the underlying protocol.
 
 % Discuss connection migration
 \subsection{Connection Migration Experiment}\label{sec:connection-mig-benchmark-discssion}
@@ -466,7 +466,7 @@ CTaps has not been written with performance in mind, but it
 is still of interest to establish a baseline for the overhead
 presented by TAPS as an abstractions. The experiments show
 that for simple, I/O-bound applications, the overhead will
-not be noticable. In addition, the UDP RTT experiment
+not be noticeable. In addition, the UDP RTT experiment
 also shows that the CTaps features a longer tail in worst-case
 performance, but it is not possible to say if this will remain
 relatively constant, or scale up with load.
