@@ -15,14 +15,13 @@ middleboxes not supporting changes to the wire image of
 a protocol~\cite{rfc9170}.
 
 Another issue with utilizing new innovations on the
-transport layer is the network effect required in order to
+transport layer is the coordination required in order to
 start utilizing new protocols. Servers will not spend
 time adding support for a new transport layer protocol
 if no applications are using it, and no applications
 will utilize a new protocol if no servers support it.
 If a fallback to TCP is always needed, then all applications
-can avoid a great deal of complexity by simply utilizing
-TCP.
+can avoid a great deal of complexity by only utilizing TCP.
 
 Together, network ossification and the network
 effect required for new transport layer protocols combine
@@ -38,7 +37,7 @@ intent instead of the concrete action of the transport protocol,
 Transport Services allows the application to be served by any
 protocol which fulfills the requirements stated by the application.
 
-For a TAPS system the transport protocol fallback is built into the library
+For a TAPS System the transport protocol fallback is built into the library
 itself and presents no extra complexity to the application. Because
 TAPS is based on intentions as well, it allows the applications to state
 their ideal intentions when interacting with the network, but still have

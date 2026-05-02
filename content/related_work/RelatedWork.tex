@@ -11,9 +11,8 @@ Developed alongside TAPS, NEAT and TAPS naturally
 influenced each other. NEAT halted development in 2018, but work on
 TAPS continued until the final release of the TAPS RFCs in 2025.
 
-NEAT features an asynchronous, event-driven API. It uses an event loop
-powered by libuv in order interact asynchronously with the network.
-Underlying connections
+NEAT features an asynchronous, event-driven API, using an event loop
+powered by libuv. Underlying connections
 can be configured through what is referred to as \term{NEAT Properties}.
 NEAT Properties are key-value pairs and serve the same role as Transport Properties
 do in TAPS. NEAT uses the concept of a flow 
@@ -57,12 +56,12 @@ and is needed to support connection migration.
 NEATPy has not had active development since 2020.
 
 \section{Network.framework}
-Network.framework~\cite{networkFramework} is Apple's closed source
+Network.framework~\cite{networkFramework} is Apple's closed-source
 TAPS implementation. It features several important TAPS abstractions
-such as Connections, Listeners
-and a common interface to interact with transport protocols.
+such as Connections and Listeners.
 
-During initiation, Network.framework requires that
+Network.framework does however deviate from TAPS in that
+it requires that
 applications specify a \term{NWParameters} object matching
 a specific transport layer protocol. This causes the application
 to be bound to this protocol at compile time. An example client
@@ -141,7 +140,7 @@ TAPS implementations can be seen in~\cref{tab:comparison}.
 \multicolumn{1}{l||}{QUIC support}                   & \xmark                   & \xmark          & \cmark                     & \cmark         \\
 \multicolumn{1}{l||}{Multipath\tnote{4}}             & \xmark                   & \xmark          & \cmark\tnote{5}            & \cmark         \\
 \multicolumn{1}{l||}{Early data}                     & \xmark                   & \xmark          & \cmark\tnote{6}            & \cmark         \\
-\multicolumn{1}{l||}{Multistreaming}                 & \xmark                   & \xmark          & \cmark                     & \cmark         \\
+\multicolumn{1}{l||}{Multistreaming}                 & \cmark                   & \xmark          & \cmark                     & \cmark         \\
 \multicolumn{1}{l||}{Rendezvous}                     & \xmark                   & \xmark          & \cmark                     & \xmark         \\
 \multicolumn{1}{l||}{OS support\tnote{7}}            & B, L, M                  & L, M\tnote{8}   & M                          & L         \\
 \multicolumn{1}{l||}{Open source}                    & \cmark                   & \cmark          & \xmark                     & \cmark         \\

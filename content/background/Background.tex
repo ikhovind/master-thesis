@@ -76,9 +76,7 @@ optimized to support TCP and UDP and may sometimes
 drop packets if the protocol field in the IP header
 does not match TCP or UDP.
 
-The resulting difficulty in innovating on the transport layer
-is known as network ossification. In an attempt to combat
-this ossification, transport layer protocols are often built
+In an attempt to combat this aspect of network ossification, transport layer protocols are often built
 using UDP as a substrate, allowing them to use the same IP
 protocol number as UDP. Examples of this include QUIC \cite{rfc9000} and
 SCTP over UDP \cite{rfc6951}.
@@ -107,20 +105,20 @@ protocol and provides an unreliable, unordered transfer of datagrams
 to the application layer. It is often used for applications which
 prioritize low latency over reliability, such as real-time applications.
 
-UDP is designed to be a very lightweight protocol with as little
-overhead as possible. It uses a very simple 8-byte header, containing 
+UDP is designed to be a lightweight protocol, and it uses
+a simple 8-byte header. The header contains
 only the source port, destination port, length and checksum.
 
 \section{SCTP}
-SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960}.
-It features several innovations on TCP and it was the first protocol to support multiplexing multiple logical streams
-over a single network connection, but it has struggled with adoption for several reasons.
-Firstly, it uses a separate protocol number from TCP and UDP and as mentioned
-previously this makes it vulnerable to middlebox interference. However, this not the
-only reason, as SCTP over UDP has also failed to achieve
-widespread use~\cite{rfc6951}.
+SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960},
+and it features several innovations over TCP. Notably, it was the first protocol to support multiplexing multiple independent logical streams
+over a single network connection. It has however struggled with widespread adoption for several reasons.
+First of all, it uses a separate protocol number from TCP and UDP and as mentioned
+previously this makes it vulnerable to middlebox interference.
+SCTP over UDP~\cite{rfc6951} was developed in an attempt to mitigate these issues, but
+it too has struggled to achieve widespread use.
 
-A secondary reason for the lack of adoption is that the standard
+The second reason for why SCTP has struggled with adoption is that the standard
 socket API has been ossified itself \cite{sctpstruggles}.
 The ubiquity of TCP and UDP means that the socket API
 is tuned to these two transports
@@ -168,7 +166,7 @@ While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream.
 A stream is a unidirectional or bidirectional ordered
 continuous transfer of data, much like what an application sees when using
-TCP. Streams can be created and closed by either endpoint,
+TCP. Streams can be created by both peers,
 and multiple streams can exist over a single QUIC connection.
 QUIC mandates support for in-order delivery within a single
 stream, but not between streams. This avoids the issue
@@ -183,24 +181,6 @@ can be transmitted over a single connection and data from
 multiple stream frames can be transmitted in a single packet.
 If a packet is lost, only the streams with data contained
 in that packet will be affected.
-
-The format of a QUIC stream frame as described in RFC~9000 can
-be seen in~\cref{lst:stream-frame-format}.
-
-\begin{listing}[htbp]
-    \centering
-    \begin{BVerbatim}
-STREAM Frame {
-  Type (i) = 0x08..0x0f,
-  Stream ID (i),
-  [Offset (i)],
-  [Length (i)],
-  Stream Data (..),
-}
-\end{BVerbatim}
-\caption[Format of QUIC stream frame]{Format of a QUIC stream frame~\cite{rfc9000}.}
-    \label{lst:stream-frame-format}
-\end{listing}
 
 A given stream can exist in several different states.
 These states differ based on whether the stream is sending or receiving
@@ -243,11 +223,11 @@ seen in~\cref{fig:stream_states}.
 | Recvd |                   | Recvd |
 +-------+                   +-------+
     \end{BVerbatim}
-    \caption[QUIC stream state machine]{States of a QUIC stream sending data from RFC~9000~\cite{rfc9000}.}
+    \caption[QUIC stream state machine]{States of a QUIC stream sending data~\cite{rfc9000}.}
     \label{fig:stream_states}
 \end{figure}
 
-\subsubsection{Congestion Control}
+\subsection{Congestion Control}
 Like TCP, QUIC also implements congestion control, but there are
 some differences between the algorithms. A key concept
 to QUIC's congestion control is the \term{packet number space} which
@@ -287,6 +267,24 @@ Different types of frames are used to carry different types of information
 and data. Examples are \mono{STREAM} frames which are used to carry
 data over a stream or \mono{NEW_CONNECTION_ID} which are used
 to share new valid connection IDs with the peer.
+
+The format of a QUIC \mono{STREAM} frame as described in RFC~9000 can
+be seen in~\cref{lst:stream-frame-format}.
+
+\begin{listing}[htbp]
+    \centering
+    \begin{BVerbatim}
+STREAM Frame {
+  Type (i) = 0x08..0x0f,
+  Stream ID (i),
+  [Offset (i)],
+  [Length (i)],
+  Stream Data (..),
+}
+\end{BVerbatim}
+\caption[Format of QUIC stream frame]{Format of a QUIC stream frame~\cite{rfc9000}.}
+    \label{lst:stream-frame-format}
+\end{listing}
 
 \subsection{Connection ID}\label{sec:quic-conn-id}
 In order to uniquely identify a connection QUIC uses connection IDs
@@ -491,11 +489,11 @@ focusing on the services provided by each transport layer protocol.
 This is intended to allow faster adaptation of new protocols and to
 abstract away network-layer details from the application layer.
 
-The main RFCs produces by the TAPS WG are RFC~9621~\cite{rfc9621},
+The main RFCs produced by the TAPS WG are RFC~9621~\cite{rfc9621},
 RFC~9622~\cite{rfc9622} and RFC~9623~\cite{rfc9623}. Together, these
 describe a TAPS System, which is an implementation of of the TAPS
 API and the TAPS Implementation. The TAPS API is the API of a
-TAPS system which offers a generic way to interact with the network
+TAPS System which offers a generic way to interact with the network
 independent of the underlying protocol. The TAPS Implementation 
 is the internal workings of a TAPS System. This includes candidate
 gathering, candidate racing, as well as the interaction
@@ -531,7 +529,7 @@ seen in~\cref{fig:socket-programming-api-model} and
 |               Network-Layer Interface               |
 +-----------------------------------------------------+
     \end{BVerbatim}
-    \caption[Socket programming API model]{API model for socket programming from RFC~9622~\cite{rfc9622}.}
+    \caption[Socket programming API model]{API model for socket programming~\cite{rfc9622}.}
     \label{fig:socket-programming-api-model}
 \end{figure}
 
@@ -555,13 +553,13 @@ seen in~\cref{fig:socket-programming-api-model} and
 |               Network-Layer Interface               |
 +-----------------------------------------------------+
     \end{BVerbatim}
-    \caption[TAPS API model]{API model for TAPS from RFC~9621~\cite{rfc9621}.}
+    \caption[TAPS API model]{API model for TAPS~\cite{rfc9621}.}
     \label{fig:taps-api-model}
 \end{figure}
 
 \subsection{TAPS Architecture} \label{sec:tapsArch}
-RFC~9621 describes the required architecture for TAPS is described in 
-and a diagram of this architecture can be seen in~\cref{fig:tapsArch}~\cite{rfc9621}.
+RFC~9621 describes the required architecture for a TAPS System,
+and a diagram can be seen in~\cref{fig:tapsArch}.
 RFC~9621 also describes overarching requirements of a TAPS System and the
 key concepts for both the TAPS Implementation and the TAPS API. Examples
 of these include the basic objects used to interact with TAPS such as
@@ -613,7 +611,7 @@ the basis of how a TAPS Implementation initiates a Connection.
 RFC~9622 describes the TAPS API. This is an abstract API designed to be
 able to interact with the network while enabling dynamic selection of
 transport protocols and network paths~\cite{rfc9622}.
-The TAPS API is object oriented and is primarily interacted
+The TAPS API is object-oriented and is primarily interacted
 with through the \term{Preconnection}, \term{Connection},
 \term{Message}, \term{Listener}, \term{Local Endpoint}, \term{Remote Endpoint},
 \term{Transport Properties} and \term{Security Parameters} objects.
@@ -637,7 +635,7 @@ level groups of actions that an application can perform:
 \end{itemize}
 
 In addition, the lifeline of a Connection is divided into three distinct
-phases, preestablishment, the established state, and
+phases: preestablishment, the established state, and
 termination of a Connection~\cite{rfc9621}.
 Each of these phases are associated
 with one or more of the groups of actions that an application can perform,
@@ -659,7 +657,7 @@ Exactly how the underlying transport protocol is chosen is described in detail
 in \cref{sec:candidate-gathering} and \cref{candidateRacing}.
 
 Invoking \mono{listen()} is used to passively open a Connection. Invoking \mono{listen()}
-creates a Listener object and wait incoming Connections.
+creates a Listener object and wait for incoming Connections.
 When a client connects to this Listener, a \term{Received}
 event occurs. This event contains a Connection object for the 
 established Connection.
@@ -685,7 +683,8 @@ of a Message, with the underlying protocol concept of either a data stream
 or a datagram. In its simplest form, a Framer is responsible for encoding
 or decoding outgoing and incoming data, as well as interacting with setup and
 teardown of a Connection if necessary~\cite[Sec.~9.1.2]{rfc9622}. Because Framers may need to send
-data upon the creation of a Connection, they must be added to a Preconnection.
+data upon the creation of a Connection, they must be added to a Preconnection
+during the preestablishment phase.
 The application can define custom framers and pass them to a Preconnection
 by implementing an interface provided by the TAPS System.
 
@@ -700,13 +699,13 @@ ways of converting TCP's byte-stream into usable messages has been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
 delimiter-separated formats, where the beginning and end of a piece of
-data is separated by delimiters.~\cite[Sec.~6.1]{rfc9623}
+data is separated by delimiters~\cite[Sec.~6.1]{rfc9623}.
 Examples of the two categories are HTTP/1.1 for a delimiter-separated format
 and DHCP for TLV~\cite{rfc2131}.
 
 Framers become useful in TAPS because they can be used to ensure Messages
 are received in a consistent format no matter what underlying transport
-protocol is selected. Framers can be used both when sending and receiving
+protocol is selected. Framers can be used both when sending and receiving,
 and can both split and join Messages.
 
 Conceptually, a framer resides on a separate layer between a Connection and the
@@ -738,11 +737,11 @@ underlying Transport Protocol Stack as seen in~\cref{fig:tpsStack}.
 |         Transport Protocol Stack         |
 +------------------------------------------+
   \end{BVerbatim}
-  \caption[Protocol stack with framer]{Diagram of a protocol stack featuring a Framer, from RFC~9622~\cite{rfc9622}.}\label{fig:tpsStack}
+  \caption[Protocol stack with framer]{Diagram of a protocol stack featuring a Framer~\cite{rfc9622}.}\label{fig:tpsStack}
 \end{figure}
 
 \subsection{Transport Properties}
-Transport Properties are properties to influence the underlying transport protocol.
+Transport Properties are properties used to influence the underlying transport protocol.
 They can be divided into two categories, \term{Selection Properties}
 which influence which underlying transport protocol is selected and
 \term{Connection Properties} which influence the behavior of the underlying
@@ -754,7 +753,7 @@ Selection properties are the subset of Transport Properties which are
 primarily used to filter and sort candidate protocols
 when performing candidate gathering as described
 in~\cref{sec:candidate-gathering}. Certain Selection Properties
-can also be used to influence the selected Endpoints.
+can also be used to influence the Local and Remote Endpoints used.
 
 Typical Selection Properties are specified as
 a \term{Preference}, with the possible values being \term{Require},
@@ -805,7 +804,7 @@ directly exposed such as candidate gathering or candidate racing.
 
 \subsection{Candidate Gathering}\label{sec:candidate-gathering}
 When the application invokes \mono{initiate()} on a Preconnection,
-a TAPS system will gather a list of candidates for establishing a
+a TAPS System will gather a list of candidates for establishing a
 Connection. This process is known as candidate gathering. The candidates are based on
 the specified Local and Remote Endpoints of the Preconnection,
 as well as the given Selection Properties which are available to use. 
@@ -835,8 +834,8 @@ After branching has been completed, incomplete paths and leaf nodes
 which are not compatible with the specified Selection Properties can
 be pruned and sorted. After pruning, each leaf node represents a single possible
 Connection attempt, containing a combination of local socket address, 
-protocol options and remote socket address. Each leaf node is referred to
-as a candidate and are sorted according to the
+protocol options and remote socket address. The leaf nodes are
+finally sorted according to the
 preferences of the application before candidate racing is initiated.
 
 \subsection{Candidate Racing}\label{candidateRacing}
@@ -845,8 +844,8 @@ to establish Connections over multiple candidates, in order
 to find out which one is best suited to the network conditions
 and the requirements of the application.
 
-There are three primary ways of performing candidate
-racing as listed in RFC~9623:
+RFC~9623 describes three primary ways of performing candidate
+racing:
 
 \begin{enumerate}
     \item Simultaneous
@@ -914,7 +913,7 @@ any interaction with the network like a normal CPU-bound task,
 waiting for I/O bound operations to complete before progressing.
 This is a simple, but very inefficient model and the CPU will
 be spending much of its time waiting for I/O. Modern networking
-applications therefore interact with the network in an asynchronous way. This
+applications therefore interact with the network in an asynchronous way, this
 is reflected in the design of TAPS, which is asynchronous and
 event-driven.
 
@@ -922,10 +921,10 @@ There are two primary ways of achieving asynchrony when talking to
 the network. The first is multithreading,
 where the application creates a thread per connection and threads yield
 the processor while waiting for blocking I/O. The second is an event
-loop. An event loop is a single-threaded
+loop. In its simplest form, an event loop is a single-threaded
 program that executes tasks in order from a queue.
 Functions that initiate asynchronous work return immediately and the
-application is later notified of the result, usually through a callback.
+application is later notified of the result. 
 Tasks are added to the queue either by the application itself or in
 reaction to some asynchronous result being ready, such as incoming
 data.
@@ -933,7 +932,7 @@ data.
 An illustration of an event loop with a simple queue can be seen in
 \cref{fig:event-loop-queue}. Here, epoll is used to monitor non-blocking
 sockets and the associated receive-callbacks are added to the queue.
-This allows the single-threaded event loop to handle
+This allows a single-threaded event loop to handle
 several different connections at once.
 
 \begin{figure}[htpb]
@@ -996,36 +995,39 @@ several different connections at once.
  
 \end{tikzpicture}
 \caption[Event loop with FIFO queue]{
-An event loop driven by epoll. When a monitored socket becomes ready,
-epoll signals the event loop, which enqueues the corresponding receive
-callback. The event loop executes callbacks from the queue in order,
+An simple FIFO event loop driven by epoll. Epoll signals the event loop when
+a monitored socket becomes ready and the corresponding receive callback is
+added to the queue.
+The event loop executes received callbacks in order,
 allowing a single thread to service multiple connections.
 } 
 \label{fig:event-loop-queue}
 \end{figure}
 
 
-The threaded model allows code to be written sequentially within each thread,
-closer to the mental model of a normal CPU-bound program, but it requires synchronization
+The largest advantage of a threaded model is that it allows code to be written sequentially
+within each thread.
+This is closer to the mental model of a normal CPU-bound program, but it requires synchronization
 of shared data structures between threads. An event-loop model avoids the
 synchronization issue by running in a single thread, but spreads control
-flow across callbacks.
+flow across callbacks. Sequential flow in an event-loop driven program
+can be achieved through the use of \term{coroutines}. Coroutines are common
+in higher level languages, but in C they must either be implemented manually
+or supported through external libraries.
 
-The two models also differ in how they scale. Multithreading makes use of
-multiple CPU cores easily, but adds a non-negligible overhead if
+The multithreaded and the event loop models also differ in how they scale. Multithreading makes use of
+multiple CPU cores easily, but adds a non-negligible overhead when
 creating a large number of threads.
 Event loops avoid the overhead of multiple threads and scale well, but they are more difficult to use with
-multiple cores. They are also more difficult to
-integrate into external applications.
-The two models are not entirely mutually exclusive
+multiple cores. The two models are not entirely mutually exclusive
 as event loop libraries can use threads internally to achieve an asynchronous flow
 for synchronous operations, but from the view of an application
 interacting with the network, they are fairly distinct.
 
 Although real implementations naturally feature more advanced features than
-illustrated in \cref{fig:event-loop-queue}, the overall model of the asynchronous
-event loop model is very common, and is used for example in Node.js~\cite{nodejsEventLoop}
-and Python's asyncio~\cite{pythonAsyncio}.
+illustrated in \cref{fig:event-loop-queue}, the event loop model is very common,
+and is used in Node.js~\cite{nodejsEventLoop} and Python's asyncio~\cite{pythonAsyncio},
+among others.
 
 \section{Libuv}
 Libuv~\cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
@@ -1053,41 +1055,37 @@ Picoquic~\cite{christianhuitemaPicoquic} is a C library which aims to be a
 minimalist implementation of the QUIC standard. It is a cross-platform
 library compatible with Windows, Linux, macOS and BSD.
 Though it features an optional event loop,
-Picoquic is a sans-I/O library \cite{cannon2016sansio}
+Picoquic is a sans-I/O \cite{cannon2016sansio} library
 and does not perform I/O itself, instead relying on the
 application to interact with the network on its behalf.
 This decouples protocol logic from any
-particular I/O model, allowing the same library to be integrated with existing
+particular I/O model, allowing it to be integrated with existing
 I/O solutions such as libuv.
 
-Application are required to
+Applications are required to
 call into Picoquic at given intervals. These intervals
-are specified by Picoquic and must be queried for after key
+are specified by Picoquic and are updated after key
 events. A timer
 can then be set to wake at the specified interval
 and perform any work necessary by Picoquic.
 
 When this timer fires, the application has to query
 Picoquic for any new packets to send to the peer.
-Since Picoquic does not handle any I/O internally,
-it will inform the application of where it expects
-the packet to be sent from and to. This allows
-Picoquic to manage connection migration by sending
-from a new local, without managing its own sockets.
+Picoquic will inform the application of about the
+expected source and destination socket addresses,
+which allows it to support connection migration and
+multipath in QUIC.
 
 Since the application is responsible for interacting
 with the network it is also responsible for passing any
-received QUIC packets to Picoquic. In order to start
-receiving or sending QUIC data, the application first
-sets up the overarching QUIC state. When QUIC data is
-received from the network it can be passed to this
-state, and Picoquic will perform any handling related
-to QUIC itself, such as generating packets to respond
+received QUIC packets to Picoquic. When QUIC data is
+received from the network it can be passed to Picoquic,
+and Picoquic will perform any handling related
+to QUIC itself, such as generating outgoing packets to respond
 to an incoming handshake.
 
-To handle the mandatory TLS for QUIC
-Picoquic integrates with Picotls~\cite{picotls}.
-Picoquic handles all necessary TLS setup, requiring that the application
+Picoquic handles all necessary TLS setup through Picotls~\cite{picotls},
+only requiring that the application
 provides the necessary parameters, such as
 ALPN values and the various key files.
 
