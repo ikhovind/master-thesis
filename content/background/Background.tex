@@ -1,6 +1,6 @@
 \chapter{Background}\label{chap:background}
 This chapter will lay out background information which forms the
-basis for both the current design and the limitations of CTaps.
+basis for both the design and the limitations of CTaps.
 It will describe the low level networking concepts,
 transport layer protocols and the current barriers
 for innovation on the transport layer.
@@ -19,7 +19,7 @@ then it can utilize multiple interfaces for a single network connection as long 
 by the underlying transport protocol.
 
 The combination of source IP, source port, destination IP and destination port
-is referred to as a \term{network path} following the terminology used in RFC~9000~\cite{rfc9000}.
+is referred to as a \term{network path} following the terminology used by QUIC in RFC~9000~\cite{rfc9000}.
 Since each network interface is associated with distinct IP addresses,
 each interface that can reach the same destination will represent a distinct network path.
 Utilizing multiple network interfaces for a single connection can improve
@@ -32,11 +32,11 @@ When it comes to network programming,
 the network socket in its most basic definition is an abstraction
 for a network connection through which an application can send
 and receive data~\cite[p. 8]{donahooTCPIPSockets2009}. 
-First mentioned in 1970 in relation to ARPANET, the
+First mentioned in 1970 in relation to ARPANET \cite{rfc33}, the
 simplicity of sockets and their ubiquity in all UNIX distributions
 since version 4.2 of the Berkeley Software Distribution have
 led to them becoming the de facto standard for network
-programming~\cites{rfc33}[p.~502]{tanenbaumComputerNetworks2011}.
+programming~\cite[p.~502]{tanenbaumComputerNetworks2011}.
 
 Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
@@ -93,9 +93,8 @@ internet today. It is a connection-oriented protocol and provides
 a reliable, in-order transfer of a stream of bytes to the application layer.
 It has also become common to use TCP for message-based applications,
 using a framing protocol on top of TCP to divide the TCP byte stream into
-discrete messages. A description of TCP was first published as an RFC~in 1974~\cite{rfc675}
-and it has since grown to become
-ubiquitous across the internet.
+discrete messages. A description of TCP was first published as an RFC~in 1974~\cite{rfc675},
+and it has since grown to become ubiquitous across the internet.
 
 In TCP, connections are uniquely identified by a four-tuple consisting
 of the source IP address, the source port, the destination IP address
@@ -112,24 +111,43 @@ UDP is designed to be a very lightweight protocol with as little
 overhead as possible. It uses a very simple 8-byte header, containing 
 only the source port, destination port, length and checksum.
 
+\section{SCTP}
+SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960}.
+It features several innovations on TCP and it was the first protocol to support multiplexing multiple logical streams
+over a single network connection, but it has struggled with adoption for several reasons.
+Firstly, it uses a separate protocol number from TCP and UDP and as mentioned
+previously this makes it vulnerable to middlebox interference. However, this not the
+only reason, as SCTP over UDP has also failed to achieve
+widespread use~\cite{rfc6951}.
+
+A secondary reason for the lack of adoption is that the standard
+socket API has been ossified itself \cite{sctpstruggles}.
+The ubiquity of TCP and UDP means that the socket API
+is tuned to these two transports
+and does not present the advantages of a new protocol
+such as SCTP to applications. This means that the socket
+API had to be extended in order to support SCTP.
+
+QUIC addresses both of these barriers by using UDP as 
+a substrate and implementing the protocol entirely in userspace,
+while still preserving multistreaming and multihoming.
+
 \section{TLS}
 Transport layer security (TLS) is a cryptographic protocol which provides secure communication
 over a computer network. It is commonly used on top of TCP and is
 most visible as the basis for HTTPS, the secure version of HTTP.
 
 TLS features its own handshake protocol when establishing a connection,
-in order to exchange the cryptographic parameters needed for the connection.
+in order to exchange the cryptographic parameters needed.
 This means that connections using TLS have to spend an additional round trip time (RTT)
 during connection establishment, compared to a non-secure TCP connection.
-
-TLS 1.3 also supports 0-RTT handshakes
+To mitigate this, TLS 1.3 also supports 0-RTT handshakes
 which allow a client to send data during the initial handshake when resuming
-a previous connection to a server~\cite{rfc8446}. This can be a source
-of replay attacks if the message being sent is not idempotent.
+a previous connection to a server~\cite{rfc8446}.
 
-As of 2026 TLS adoption has been very widespread,
-with \qty{95}{\percent} of all connections in Chrome on Windows using an encrypted
-connection~\cite{google2026transparency}.
+TLS is a mandatory part of QUIC, which inherits both the security
+and the 0-rtt handshakes described above.
+
 
 \section{QUIC}\label{sec:quic}
 QUIC is a protocol which was originally developed by Google and then formalized
@@ -141,8 +159,7 @@ QUIC~\cite{joras2020quic}.
 
 QUIC is a reliable, connection-oriented protocol and provides several
 features which either are not available or do not have a wide adoption
-in TCP. Among these are 0-RTT connection establishment, multistreaming
-and support for multiple network paths. TLS is a mandatory part of QUIC 
+in TCP. As mentioned previously, TLS is a mandatory part of QUIC 
 and most of the QUIC header is also encrypted, unlike TLS over TCP.
 Encrypting the header hides as much as the wire image as possible
 from middleboxes, combating future network ossification~\cite{rfc9170}.
@@ -891,31 +908,18 @@ its \mono{serverHello} message. If the server does not support any
 protocols that the client supports, then it responds with an
 error notifying the client of this.
 
-\section{SCTP}
-The first transport layer protocol to support multistreaming was SCTP~\cite{rfc9260} which
-was first introduced in 2000~\cite{rfc2960}. SCTP has struggled
-with adoption for several reasons.
-Firstly, since it uses a separate protocol number from TCP and UDP
-it is vulnerable to middlebox interference. This is clearly not the
-only reason, as SCTP over UDP has also failed to achieve
-widespread use~\cite{rfc6951}.
-
-Another reason for the lack of adoption is that the standard
-socket API has been ossified itself \cite{sctpstruggles}.
-The ubiquity of TCP and UDP means that the socket API
-is tuned to these two transports
-and does not present the advantages of a new protocol
-such as SCTP to applications. This means that the socket
-API had to be extended in order to support SCTP.
-
 \section{Asynchronous I/O and event loops} \label{sec:async-background}
 The naive way to write a networking application is to treat
 any interaction with the network like a normal CPU-bound task,
 waiting for I/O bound operations to complete before progressing.
 This is a simple, but very inefficient model and the CPU will
-be spending much of its time waiting for I/O.
+be spending much of its time waiting for I/O. Modern networking
+applications therefore interact with the network in an asynchronous way. This
+is reflected in the design of TAPS, which is asynchronous and
+event-driven.
 
-There are two primary ways of mitigating this. The first is multithreading,
+There are two primary ways of achieving asynchrony when talking to
+the network. The first is multithreading,
 where the application creates a thread per connection and threads yield
 the processor while waiting for blocking I/O. The second is an event
 loop. An event loop is a single-threaded
@@ -928,8 +932,8 @@ data.
 
 An illustration of an event loop with a simple queue can be seen in
 \cref{fig:event-loop-queue}. Here, epoll is used to monitor non-blocking
-sockets and the associated receive calls are added to the queue.
-This allows the single-threaded event loop to be handle
+sockets and the associated receive-callbacks are added to the queue.
+This allows the single-threaded event loop to handle
 several different connections at once.
 
 \begin{figure}[htpb]
@@ -1034,20 +1038,6 @@ in order to execute the event loop. This
 will take over the invoking thread and by default run until all registered handles
 have been closed.
 
-Since libuv is cross-platform, the \mono{uv_udp_t} and \mono{uv_tcp_t} handles
-are abstractions above OS-specific sockets. On Linux, the underlying event
-queue object is epoll. Epoll is a structure which allows an application
-to be notified by the Linux kernel when data is available on a socket.
-This can be used to interact with the network, but also to monitor any other
-file descriptors which are compatible with epoll.
-
-While the libuv \mono{uv_udp_t}
-and \mono{uv_tcp_t} handles mandate the type of the underlying file descriptor,
-the generic \mono{uv_poll_t} can be used to monitor a generic event queue object.
-This allows an application to use libuv for any file descriptor compatible
-with an OS-specific event queue object. Finally, the \mono{uv_timer_t} handle
-can be used to perform work at given intervals.
-
 Handles are initiated and registered to a given event loop through
 \mono{uv_*_init()}. Requests can then be added as discrete
 pieces of work to the given handle. For example \mono{uv_write()} is
@@ -1063,50 +1053,41 @@ Picoquic~\cite{christianhuitemaPicoquic} is a C library which aims to be a
 minimalist implementation of the QUIC standard. It is a cross-platform
 library compatible with Windows, Linux, macOS and BSD.
 Though it features an optional event loop,
-Picoquic is at its core a sans-I/O library \cite{cannon2016sansio}
-and does not perform I/O itself.
-The application drives all network reads and writes and feeds bytes into the library,
-which returns bytes to send in response. This decouples protocol logic from any
+Picoquic is a sans-I/O library \cite{cannon2016sansio}
+and does not perform I/O itself, instead relying on the
+application to interact with the network on its behalf.
+This decouples protocol logic from any
 particular I/O model, allowing the same library to be integrated with existing
-I/O solutions.
+I/O solutions such as libuv.
 
-The core Picoquic API is accessed through a polling API
-which integrates with existing event loops.
-For this mode the application is required to
+Application are required to
 call into Picoquic at given intervals. These intervals
-are specified by Picoquic and must be fetched through
-\mono{picoquic_get_next_wake_delay()}. A timer
+are specified by Picoquic and must be queried for after key
+events. A timer
 can then be set to wake at the specified interval
 and perform any work necessary by Picoquic.
 
 When this timer fires, the application has to query
 Picoquic for any new packets to send to the peer.
-This is done through
-\mono{picoquic_prepare_next_packet()}
-which outputs one QUIC packet at a time along with
-the expected source address, destination address
-and outgoing interface index. The application
-is then responsible for actually transferring
-the data over a UDP socket.
+Since Picoquic does not handle any I/O internally,
+it will inform the application of where it expects
+the packet to be sent from and to. This allows
+Picoquic to manage connection migration by sending
+from a new local, without managing its own sockets.
 
 Since the application is responsible for interacting
 with the network it is also responsible for passing any
 received QUIC packets to Picoquic. In order to start
-receiving or sending QUIC data the application must
-first create a \mono{picoquic_quic_t} object through
-\mono{picoquic_create()}. This is an object which is
-responsible for handling overarching QUIC state such as
-TLS parameters as well as receiving incoming QUIC data.
-This means that it is also responsible for passing
-the incoming data to the correct QUIC connection, or
-creating a new connection and passing it to the application.
-Passing incoming QUIC packets to Picoquic is done through
-\mono{picoquic_incoming_packet()}.
+receiving or sending QUIC data, the application first
+sets up the overarching QUIC state. When QUIC data is
+received from the network it can be passed to this
+state, and Picoquic will perform any handling related
+to QUIC itself, such as generating packets to respond
+to an incoming handshake.
 
 To handle the mandatory TLS for QUIC
 Picoquic integrates with Picotls~\cite{picotls}.
-Picoquic can therefore handle all necessary
-TLS setup, only requiring that the application
+Picoquic handles all necessary TLS setup, requiring that the application
 provides the necessary parameters, such as
 ALPN values and the various key files.
 

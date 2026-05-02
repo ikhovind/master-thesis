@@ -1,27 +1,20 @@
 \chapter{Introduction}\label{chap:intro}
 
 \section{Motivation}\label{sec:motivation}
-Network Ossification is the process of a network becoming
+Network ossification is the process of a network growing
 resistant to change.
 This has become an issue at the transport layer, where
-network middleboxes present a challenge to any new IP
+network middleboxes present a challenge to any IP
 packets containing a protocol number which does not match
-either either the Transmission Control Protocol (TCP)
-or the User Datagram Protocol (UDP). In addition to limiting innovation in
+either Transmission Control Protocol (TCP)
+or User Datagram Protocol (UDP). In addition to limiting innovation in
 the form of new protocols, network ossification also limits
 the possible innovations for existing protocols such as TCP.
 This can be caused by implementations featuring bugs in rarely used features, or by network
 middleboxes not supporting changes to the wire image of
 a protocol~\cite{rfc9170}.
 
-Mitigations against this network ossification does exist,
-with two examples being using UDP as a substrate 
-for new transport layer protocol and encrypting packet headers
-to minimize the amount of protocol data which middleboxes
-can interact with on.
-
-In addition issues with middleboxes and bugs in protocol
-implementations, another issue with utilizing new innovations on the
+Another issue with utilizing new innovations on the
 transport layer is the network effect required in order to
 start utilizing new protocols. Servers will not spend
 time adding support for a new transport layer protocol
@@ -52,21 +45,23 @@ their ideal intentions when interacting with the network, but still have
 it be compatible no matter which underlying protocol is used. This means
 that an application utilizing multistreaming and connection migration
 when QUIC is available does not have to change or update its interaction
-with TAPS in cases where QUIC is not available and the underlying protocol
+with TAPS in cases where QUIC is not available, and the underlying protocol
 falls back to TCP.
 
 \section{Problem Statement}\label{sec:prob-statement}
-While open source implementations of TAPS exist, such as NEAT~\cite{neatCode}
-and PyTAPS~\cite{frankePythonasynciotaps2025}, none support QUIC, and none have
-had active development since the TAPS RFCs were published in
-2025~\cite{rfc9621, rfc9622, rfc9623}.
-RFC~9623~\cite{rfc9623} also provides no guidance on mapping QUIC to the TAPS API,
-though an open draft exists~\cite{transportServicesMappingForQuic}. Together, these knowledge
-gaps form the basis of the research questions addressed in this thesis.
+The TAPS working group concluded in 2025 after RFC~9621--9623~\mbox{\cite{rfc9621, rfc9622, rfc9623}}
+were published. While several open-source TAPS implementations have been developed, none have been
+actively maintained and none support QUIC. In addition, RFC~9623~\cite{rfc9623} does not provide any
+guidance on how to map QUIC to the TAPS API.
+
+This means that the only known implementation of TAPS, which supports both QUIC and
+is actively maintained, is Apple's closed-source Network.framework~\cite{networkFramework}.
+This leaves two open questions: how to implement the current TAPS standard in practice,
+and how QUIC features are expressed under the TAPS API.
+These form the basis for the research questions addressed in this thesis.
 
 \section{Research Questions}
-To address the knowledge gaps presented in \cref{sec:prob-statement}, two
-research questions were formulated which this thesis will attempt to answer.
+These gaps give rise to two research questions:
 
 \newcommand{\rqone}{What implicit architectural constraints does the TAPS specification impose on an implementation?}
 \newcommand{\rqtwo}{To what extent does the TAPS API expose the distinctive features of QUIC?}
@@ -77,27 +72,19 @@ research questions were formulated which this thesis will attempt to answer.
 \end{enumerate}
 
 \section{Contributions}
-The contributions made by this thesis to the TAPS ecosystem is CTaps.
-CTaps is an open source C implementation of transport services with support
-for QUIC, TCP and UDP. CTaps is an exploratory work primarily
-focused on how QUIC maps through the TAPS api and which
+The contributions of this thesis are CTaps, the insight that implementing
+it has brought and a survey on how QUIC features can be mapped
+to the TAPS API.
+CTaps is an open-source C implementation of Transport Services with support
+for QUIC, TCP and UDP. It is an exploratory work primarily
+focused on how QUIC maps through the TAPS API and which
 architectural concerns are encountered when implementing TAPS.
 
-CTaps has support for several key QUIC features such as multistreaming 
-and connection migration and candidate racing.
-Applications utilizing these features through CTaps can be written independently
-of the underlying protocol, allowing a single client to be
-compatible with multiple protocols and still make 
-use of new transport layer features when available.
-
-In addition, CTaps also supports key TAPS
-features such as candidate racing. This allows applications to attempt the most
-desirable protocol first, but it gracefully fall back
-if a connection cannot be established. Applications
-can identify features and selection properties it wants to make
-use of and make connection attempts based on that, instead of
-having to manually maintain a fallback hierarchy for the connections
-it wants to try.
+CTaps supports key QUIC features such as multistreaming, connection migration and session resumption.
+Applications can utilize these features while remaining compatible with other
+transport layer protocols. CTaps also supports key TAPS features, such as candidate
+gathering and candidate racing. This allows CTaps to race protocols and endpoints when
+establishing connections.
 
 The development of CTaps has led to several insights
 on exactly how QUIC features map to TAPS and what
@@ -105,22 +92,18 @@ considerations should be taken when implementing a TAPS
 system.
 
 \subsection{Scope}
-TAPS is a large standard and the scope of CTaps is
-naturally limited. While most of the TAPS API is present
-in CTaps, it lacks support for rendezvous, adding endpoints
-to an active Connection and several Transport Properties are
+All major elements of the TAPS API are available in CTaps,
+except for rendezvous and adding endpoints
+to an active Connection. In addition, several Transport Properties are
 implemented as no-ops.
 
-CTaps has also focused on making as many features as possible
-available through its API. This means that the potential error
-paths for these features have not been as extensively tested and
-may feature bugs which would arise in a real-world environment.
+Because CTaps is a research artifact, development has prioritized feature coverage over robustness
+and error handling has not been as thoroughly tested as the core functionality.
 
 \subsection{Source Code}
 CTaps is open source and is available under the MIT license
-on GitHub~\cite{cTaps}. Associated Doxygen documentation is available both
-as a static web page~\cite{ctapsDocs} hosted through GitHub pages
-and as an attachment to this thesis.
+on GitHub~\cite{cTaps}. Associated Doxygen documentation is available
+as a static web page~\cite{ctapsDocs} hosted through GitHub pages.
 
 \section{Thesis Structure}
 \textbf{\Cref{chap:background}} lays out the necessary background knowledge
