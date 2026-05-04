@@ -1,6 +1,4 @@
 \chapter{Implementation}\label{chap:impl}
-This chapter will cover how the design decisions described
-in~\cref{chap:design} are implemented in CTaps.
 This chapter will focus on how the internal architecture and
 internal TAPS functionality were realized, in addition
 to describing how CTaps is built and tested.
@@ -11,49 +9,24 @@ to describing how CTaps is built and tested.
 This section will describe the key implementations
 for achieving the internal architecture of
 CTaps as described in~\cref{sec:ctaps-arch-design}.
-This includes the Socket Manager as an intermediary
-between the Connections and the underlying protocol implementations, the protocol interface
-which provides a common API for the Socket Manager to interact with, and
-the internal communication and error handling in CTaps.
+This includes the Socket Manager, the protocol interface
+and the internal communication and error handling in CTaps.
 
 \subsection{Socket Manager} \label{sec:socketManager}
 The need for a Socket Manager was described in~\cref{sec:socket-manager-design},
 with the most important responsibilities being managing the lifetimes
-of sockets as well as acting as an intermediary between Connections
+of sockets, demultiplexing incoming UDP datagrams as well as acting as an intermediary between Connections
 and the various protocol implementations.
 
 Since a single socket can be shared between many Connections,
 the Socket Manager keeps track of the number of open Connections
-in order to ensure that the underlying socket is only closed when
+utilizing it. This ensures that the underlying socket is only closed when
 the last Connection using it is closed. The underlying protocol
 implementation notifies the Socket Manager that a Connection has
 been closed asynchronously, at which point the Socket Manager
 considers whether the socket should be closed or not, as seen
 in the callback in
 \cref{lst:socket-manager-close-callback}.
-
-Separately from keeping track of the number of open Connections,
-the Socket Manager is also reference counted in order to ensure
-that the internal state remains valid as long as at least one associated
-object remains valid, as can be seen in~\cref{lst:socketManagerRefCount}.
-
-\begin{listing}[htbp]
-  \begin{minted}{C}
-void socket_manager_decrement_ref(SocketManager* socket_manager) {
-  socket_manager->ref_count--;
-  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
-  if (socket_manager->ref_count == 0) {
-    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
-    if (rc < 0) {
-      log_error("Error stopping socket manager listen: %d", rc);
-    }
-    free(socket_manager);
-  }
-}
-  \end{minted}
-  \caption{Internal Socket Manager counter decrementation.}
-  \label{lst:socketManagerRefCount}
-\end{listing}
 
 \begin{listing}[htbp]
   \begin{minted}{C}
@@ -82,6 +55,30 @@ void ct_socket_manager_listener_closed_cb(ct_socket_manager_t* socket_manager) {
   \label{lst:socket-manager-close-callback}
 \end{listing}
 
+Separately from keeping track of the number of open Connections,
+the Socket Manager is also reference counted in order to ensure
+that the internal state remains valid as long as at least one associated
+object remains valid, as can be seen in~\cref{lst:socketManagerRefCount}.
+
+\begin{listing}[htbp]
+  \begin{minted}{C}
+void socket_manager_decrement_ref(SocketManager* socket_manager) {
+  socket_manager->ref_count--;
+  log_debug("Decremented socket manager reference count, updated count: %d", socket_manager->ref_count);
+  if (socket_manager->ref_count == 0) {
+    int rc = socket_manager->protocol_impl.stop_listen(socket_manager);
+    if (rc < 0) {
+      log_error("Error stopping socket manager listen: %d", rc);
+    }
+    free(socket_manager);
+  }
+}
+  \end{minted}
+  \caption{Internal Socket Manager counter decrementation.}
+  \label{lst:socketManagerRefCount}
+\end{listing}
+
+
 \subsection{Protocol Interface}
 As mentioned in~\cref{sec:ctaps-arch-design} the protocol interface
 in CTaps provides a common API for the Socket Manager to communicate with the
@@ -89,49 +86,46 @@ underlying protocol. This interface itself is implemented as a struct
 which defines the required properties and function properties which a
 protocol implementation must implement.
 
-The concrete protocols themselves are then defined as global instances
-of this struct and are stored in a global array of currently supported protocols.
-An example declaration can be seen in~\cref{lst:udp-protocol-decl}, where
-the global UDP protocol implementation is declared in \mono{udp.h}. Since
-the protocol implementations themselves have no state, it is safe to use a
+The concrete protocols themselves are then defined as global singletons 
+of this struct and are stored in an array of currently supported protocols.
+Since the protocol implementations themselves have no state, it is safe to use a
 single global instance of each protocol among multiple Socket Managers.
+
+\section{Connection Life}
+When an application initiates a Connection in CTaps it flows through
+a series of distinct phases. During racing Connections are marked
+as \term{establishing}. The winning Connection is marked as \term{established}
+and is passed to the application. When a Connection is closed it will
+flow through a \term{closing} state before finally reaching \term{closed}.
+An overview of these possible Connection states can be seen in \cref{lst:conn-lifecycle-states}.
 
 \begin{listing}[htbp]
   \begin{minted}{C}
-extern const ct_protocol_impl_t udp_protocol_interface;
+typedef enum {
+    CT_CONN_STATE_INVALID = -1,     ///< Invalid state (used for error handling)
+    CT_CONN_STATE_ESTABLISHING,     ///< Connection is being established
+    CT_CONN_STATE_ESTABLISHED,      ///< Connection is ready for data transfer
+    CT_CONN_STATE_CLOSING,          ///< Connection is closing gracefully
+    CT_CONN_STATE_CLOSED            ///< Connection is fully closed
+} ct_connection_state_enum_t;
   \end{minted}
-  \caption[UDP protocol declaration]{UDP protocol declaration in \texttt{udp.h} referencing the definition in \texttt{udp.c}.}
-  \label{lst:udp-protocol-decl}
+  \caption{Connection Lifecycle States}
+  \label{lst:conn-lifecycle-states}
 \end{listing}
 
-\subsection{Error Handling} \label{sec:internal-error-handling}
-Internal error handling in CTaps matches the external
-handling, except that CTaps does not verify that parameters
-are legal in internal functions except where strictly necessary
-and that internally, CTaps uses the same function for success paths
-and failure paths, instead passing a NULL pointer as a result when operations fail.
-
-Similar to libuv, if a CTaps function returns a synchronous error then any error callback
-will never be invoked.
-
-\section{Connection Lifetime}
-When an application initiates a Connection in CTaps it flows through
-a series of distinct phases, from first gathering candidates for the
-Connection and racing these candidates to finally transferring data
-and being torn down. This section will describe how each phase is implemented
-internally within CTaps.
 
 \subsection{Candidate Gathering} \label{sec:candidateGathering}
-Before a Connection can be established, a list of possible Local and Remote Endpoints
-needs to be generated based on the data passed to the associated Preconnection.
-In CTaps this candidate gathering follows the procedure described in RFC~9623
+Before a Connection can be established, a list of possible Local Endpoints,
+possible protocols and possible Remote Endpoints
+need to be generated. These are based on the data passed to the associated Preconnection.
+In CTaps, this candidate gathering follows the procedure described in \cref{sec:candidate-gathering}
 very closely.
 
-Using N-ary tree as described in RFC~9623~\cite{rfc9623},
-CTaps first builds the entire tree and resolves
-all possible local interfaces, all protocols, specified ALPNs and all possible resolutions of
-remote hostnames respectively. Each level in the tree corresponds to a specific
-one of these options and the tree branches whenever there are multiple options for a specific level.
+Using an N-ary tree as described in RFC~9623,
+CTaps first builds the entire tree, resolves
+all possible local interfaces, all protocols and all remote addresses.
+Each level in the tree corresponds to one of these specific
+options. The tree branches whenever there are multiple options for a given level.
 The final leaves of the tree, which are a combination of a specific Local Endpoint, a specific protocol
 stack and a specific Remote Endpoint, are referred to as a candidate.
 
@@ -140,11 +134,12 @@ are not compatible with the required or prohibited selection properties. After p
 the tree is sorted according to the stated selection properties, as described in RFC~9623 
 \cite{rfc9623}. Finally, the leaves of the tree
 are extracted into an array of candidates which is then used for candidate racing.
+A diagram of a tree used in candidate gathering can be seen
+in \cref{fig:candidate-tree}.
 
 \subsection{Candidate Racing} \label{sec:candidateRacing}
 After a list of candidates has been gathered, CTaps
-will race them according to the specification from RFC~9623
-\cite{rfc9623}. 
+will race them according to the specification from RFC~9623. 
 
 The goal of candidate racing is to successfully negotiate a protocol stack, local
 and remote endpoints based on the user's specification. Candidate racing in a TAPS
@@ -161,173 +156,6 @@ Since CTaps has no internal cache and therefore no support for RTT estimation, t
 between each candidate is set to a fixed \qty{250}{\milli\second} which is the recommended value
 in Happy Eyeballs V2~\cite{rfc8305}. In a real-world
 use case this is a major limitation, which is discussed further in~\cref{sec:discussion}.
-
-An example flow of candidate racing can be seen in~\cref{fig:racingSeqDiagram}.
-Here, DNS resolution resolves two endpoints with delays of
-RTT of \qty{300}{\milli\second} and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
-but the faster RTT leads to the second endpoint winning the race and being
-presented to the application.
-In the example the DNS resolution is set to take \qty{100}{\milli\second}
-which is a arbitrary value with no influence on the following candidate racing.
-
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  >=Stealth,
-  msglbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
-  head/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.6cm,
-               font=\small, fill=white}
-]
-
-% ── x positions ─────────────────────────────────────────────────────────────
-\def\xO{0}     % Application
-\def\xA{2.5}     % CTaps
-\def\xB{4.5}   % DNS
-\def\xC{6.5}
-\def\xD{8.5}
-\def\xE{10.5}  % Server
-
-% ── y positions (y = -t/100 * 1.2) ─────────────────────────────────────────
-
-%  t=0:    y=-0.4 (Query)
-%  t=50:   y=-1.0
-%  t=100:  y=-1.6 (DNS resolve)
-%  t=200:  y=-2.0
-%  t=300:  y=-2.8
-%  t=350:  y=-3.4
-%  t=400:  y=-4.0
-%  t=500:  y=-5.2
-\tikzmath{
-  \yfiftyms = -0.5;
-  \ytenms = \yfiftyms / 5;
-  \ylifelinestart   = 0.1;
-  \yzero   = -0.4 ;
-  \yfifty = \yzero + \yfiftyms; 
-  \yhundred = \yzero + \yfiftyms * 2; 
-  \yhundredandfifty = \yzero + \yfiftyms * 3; 
-  \ytwohundred = \yzero + \yfiftyms * 4; 
-  \ytwohundredandfifty = \yzero + \yfiftyms * 5; 
-  \ytreehundred = \yzero + \yfiftyms * 6; 
-  \ytreehundredandfifty = \yzero + \yfiftyms * 7; 
-  \yfourhundred = \yzero + \yfiftyms * 8; 
-  \yfourhundredandfifty = \yzero + \yfiftyms * 9; 
-  \yfivehundred = \yzero + \yfiftyms * 10; 
-  \yfivehundredandfifty = \yzero + \yfiftyms * 11; 
-  \ysixhundred = \yzero + \yfiftyms * 12; 
-  \ydnsresolution = \yfifty - \ytenms;
-  \yslowdelay = \yfiftyms * 3;
-  \yfastdelay = \yfiftyms;
-  \ylifelineend = \yfivehundredandfifty; 
-  \yslowstart = \yzero + \yfiftyms;
-  \yfaststart = \yslowstart + \yfiftyms * 5;
-  \yslowend = \yfaststart + \yfastdelay * 4 + \ytenms * 2;
-  \yone = \yslowstart + \yslowdelay * 3;
-  \ytwo = \yslowstart + \yslowdelay * 4;
-  \ythree = \yslowend;
-  \xone = \xE;
-  \xtwo = \xC;
-  \slope = (\ytwo - \yone)/(\xtwo - \xone);
-  \b = \yone;
-  \xslowend = \xone + (\ythree - \b) / \slope;
-} 
-
-
-
-% ── Participant headers ──────────────────────────────────────────────────────
-\node[head]                   at (\xO, 0.4) {Application};
-\node[head]                   at (\xA, 0.4) {CTaps};
-\node[head]                   at (\xB, 0.4) {DNS};
-\node[head]                   at (\xC, 0.4) {Cand. 1};
-\node[head, font=\small]      at (\xD, 0.4) {Cand. 2};
-\node[head]                   at (\xE, 0.4) {Server};
-% \node[font=\scriptsize, gray] at (\xA, -0.05) {(per-candidate)};
-% \node[font=\scriptsize, gray] at (\xB, -0.05) {(per-candidate)};
-
-% ── Lifelines ───────────────────────────────────────────────────────────────
-\draw[dashed, gray!50] (\xO, \ylifelinestart) --  (\xO, \ylifelineend);
-\draw[dashed, gray!50] (\xA, \ylifelinestart) --  (\xA, \ylifelineend);
-\draw[dashed, gray!50] (\xB, \ylifelinestart) --  (\xB, \ylifelineend);
-\draw[dashed, gray!50] (\xE, \ylifelinestart) --  (\xE, \ylifelineend);
-
-\draw[dashed, gray!50] (\xC, \yslowstart) -- (\xC, \yslowend);
-\draw[dashed, gray!50] (\xD, \yfaststart) -- (\xD, \ylifelineend);
-
-%
-% \draw[gray!20] (-0.2, -0.8) -- (12.2, -0.8);
-
-% ── Time grid and labels ─────────────────────────────────────────────────────
-\foreach \yval/\t in {
-  \yzero/0,
-  \yfifty/50,
-  \yhundred/100,
-  % \yhundredandfifty/150,
-  \ytwohundred/200,
-  % \ytwohundredandfifty/250,
-  \ytreehundred/300,
-  % \ytreehundredandfifty/350,
-  \yfourhundred/400,
-  % \yfourhundredandfifty/450,
-  \yfivehundred/500
-} {
-  \node[font=\footnotesize, gray, left] at (-0.4, \yval) {\t\,ms};
-  \draw[gray!20] (-0.2, \yval) -- (12.2, \yval);
-}
-
-% ── t≈0: Start Connection attempt ─────────────────────────────────────────────────────────
-\draw[->] (\xO, \yzero) -- node[msglbl, above] {Connect to URL} (\xA, \yzero);
-
-% ── t≈0: DNS queries ─────────────────────────────────────────────────────────
-\draw[->] (\xA, \yzero) -- node[msglbl, above] {Query URL} (\xB, \yzero);
-
-% ── DNS resolves A ────────────────────────────────────────────────────
-\draw[->] (\xB, \ydnsresolution) -- node[msglbl, above] {Resolve {C1, C2}} (\xA, \ydnsresolution);
-
-\draw[fill=black] (\xA,\yslowstart) circle (1.5pt);
-\draw[->] (\xA, \yslowstart) -- node[msglbl, below] {Start attempt 1} (\xC, \yslowstart);
-
-% ── QUIC handshake for candidate A ───────────────────────────────────────────
-% Initial:        SM-A (t=100) → Server (t=175)
-\draw[->] (\xC,\yslowstart)  -- node[msglbl, above, sloped] {}         (\xE,{\yslowstart + \yslowdelay});
-% Handshake:      Server(t=175) → SM-A (t=250)
-\draw[->] (\xE,{\yslowstart + \yslowdelay})  -- node[msglbl, above, sloped] {}       (\xC,{\yslowstart + \yslowdelay * 2});
-\draw[->] (\xC,{\yslowstart + \yslowdelay * 2})  -- node[msglbl, above, sloped] {}       (\xE,{\yslowstart + \yslowdelay * 3});
-% Finished:       SM-A (t=250) → Server (t=325)
-\draw[-, red!90] (\xE,{\yslowstart + \yslowdelay * 3})
-  -- node[msglbl, above, sloped] {}
-     node[pos=1.0, cross out, draw, inner sep=2pt] {}
-     (\xslowend,\yslowend);
-
-% ── t=350: racing timer fires, create SM-B ───────────────────────────────────
-\draw[fill=black] (\xA,\yfaststart) circle (1.5pt);
-%\node[font=\scriptsize, right=3pt] at (\xA,-2.4) {250\,ms timer};
-\draw[->] (\xA,\yfaststart) -- node[msglbl, above] {Start attempt 2} (\xD,\yfaststart);
-
-% ── QUIC handshake for candidate A ───────────────────────────────────────────
-\draw[->] (\xD,\yfaststart)  -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay});
-\draw[->] (\xE,{\yfaststart + \yfastdelay})  -- node[msglbl, above, sloped] {}       (\xD,{\yfaststart + \yfastdelay * 2});
-\draw[->] (\xD,{\yfaststart + \yfastdelay * 2}) -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay * 3});
-\draw[->] (\xE,{\yfaststart + \yfastdelay * 3}) -- node[msglbl, above, sloped] {} (\xD,{\yfaststart + \yfastdelay * 4});
-\draw[->] (\xD,{\yfaststart + \yfastdelay * 4}) -- node[msglbl, above, sloped] {}   (\xA,{\yfaststart + \yfastdelay * 4});
-
-% ── t=400: SM-A wins ─────────────────────────────────────────────────────────
-\node[draw, fill=green!15, font=\scriptsize, rounded corners, inner sep=2pt]
-      at (\xD,{\ylifelineend + \ytenms * 2}) {Connected \cmark};
-
-\node[draw, fill=red!15, font=\scriptsize, rounded corners, inner sep=2pt]
-      at (\xC,{\ylifelineend + \ytenms * 2}) {Closed \xmark};
-
-% ── t=400: abort SM-B ────────────────────────────────────────────────────────
-\draw[->, red!70, thick] (\xA,\yslowend ) -- node[msglbl, below] {close()} (\xC,\yslowend);
-
-\draw[->] (\xA, {\yslowend + \ytenms}) -- node[msglbl, above] {\mono{ready()} CB} (\xO, {\yslowend + \ytenms});
-
-\end{tikzpicture}
-\caption[Example candidate racing with slow and fast endpoint]
-{Example of candidate racing functionality when the order of a DNS resolution causes a slow endpoint to be attempted first,
-but the fast endpoint still wins. Also illustrates the high cost of the stagger delay as it currently exists in CTaps.}
-\label{fig:racingSeqDiagram}
-\end{figure}
 
 \subsection{Data Transfer}
 In CTaps, applications can request to receive data on a Connection
@@ -381,11 +209,6 @@ The implications of the application having to make an effort to write
 protocol-agnostic code when using cloning in CTaps is discussed
 in~\cref{sec:quicUnderTaps}.
 
-A theoretical example displaying the benefits of cloning and multistreaming
-in general can be seen in~\cref{fig:connection-clone-gains}. Here, two
-transfers are performed sequentially. After the first transfer completes successfully,
-the application makes use of cloning in CTaps and starts a second transfer.
-
 If the underlying protocol is TCP then CTaps will initiate a new connection and transfer
 successfully, but if the underlying protocol is QUIC then it will simply open a new
 stream and therefore benefit from stream multiplexing.
@@ -395,106 +218,6 @@ has significantly higher throughput over QUIC than TCP, since TCP has to go thro
 slow start again for the second transfer. In CTaps a single client can use both
 TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
 of QUIC benefits when available.
-
-A experiment displaying the measured benefits of utilizing cloning in
-CTaps over QUIC vs. TCP can be seen in~\cref{sec:smallfiletransfer}.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[font=\small, >=stealth]
-
-%% ============ LEFT PANEL: TCP ============
-\begin{scope}
-
-  % Lost-capacity shading
-  \fill[blue!12]
-    (3.1, 3.0) -- (5.1, 3.0)
-    .. controls (4.6, 3.0) and (3.6, 0.15) .. (3.1, 0.15) -- cycle;
-
-  % Axes
-  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
-  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
-
-  % W_max reference
-  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
-  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
-
-  % Transfer 1: quick ramp then flat at W_max
-  \draw[very thick, blue!70!black]
-    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
-    -- (3.0, 3.0);
-
-  % Transfer boundary
-  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
-  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {Clone Connection};
-
-  % Transfer 2: TCP slow starts again
-  \draw[very thick, blue!70!black]
-    (3.1, 0.15) .. controls (3.6, 0.15) and (4.6, 3.0) .. (5.1, 3.0);
-
-  % Lost capacity annotation
-  \node[font=\scriptsize, black] at (3.85, 2.75) {Lost};
-  \node[font=\scriptsize, black] at (3.85, 2.35) {capacity};
-
-  % X-axis region labels
-  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
-  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
-
-  % Panel title
-  \node[font=\small\bfseries] at (3.0, 4.7) {TCP};
-
-\end{scope}
-
-%% ============ RIGHT PANEL: QUIC ============
-\begin{scope}[xshift=6.7cm]
-
-  % Axes
-  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
-  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
-
-  % W_max reference
-  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
-  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
-
-  % Transfer 1: quick ramp then flat at W_max
-  \draw[very thick, green!50!black]
-    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
-    -- (3.0, 3.0);
-
-  % Transfer boundary
-  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
-  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {Clone Connection};
-
-  % Transfer 2: QUIC resumes at W_max
-  \draw[very thick, green!50!black]
-    (3.1, 3.0) -- (5.1, 3.0);
-
-  % CWND reuse annotation
-  \node[font=\scriptsize, green!40!black] at (4.1, 3.6) {Stream};
-  \node[font=\scriptsize, green!40!black] at (4.1, 3.2) {multiplexing};
-
-  \node[below, font=\scriptsize, green!40!black] at (1.8, 2) {First};
-  \node[below, font=\scriptsize, green!40!black] at (1.8, 1.6) {Stream};
-
-  \node[below, font=\scriptsize, green!40!black] at (4.2, 2) {Second};
-  \node[below, font=\scriptsize, green!40!black] at (4.2, 1.6) {stream};
-
-  % X-axis region labels
-  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
-  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
-
-  % Panel title
-  \node[font=\small\bfseries] at (3.0, 4.7) {QUIC};
-
-\end{scope}
-
-\end{tikzpicture}
-\caption[Difference of Cloning with QUIC vs. TCP]
-{A diagram showing how the TAPS concept of cloning maps onto
-TCP vs QUIC, with QUIC having much higher throughput because of stream
-multiplexing.}
-\label{fig:connection-clone-gains}
-\end{figure}
 
 \section{Connection Migration} \label{sec:connection-migration-impl}
 Connection migration is supported in CTaps, but multipath

@@ -307,6 +307,261 @@ protocols~\cite{rfc9000} which allows QUIC to survive
 changes in the underlying four-tuple and therefore enables
 connection migration.
 
+\subsection{Multistreaming}\label{sec:background-multistreaming}
+As mentioned previously, SCTP was the first transport layer
+protocol to feature multistreaming, but it is also a major feature
+of QUIC.
+Multistreaming has two major advantages in that it avoids
+head of line blocking and that it allows for more efficient CWND
+re-use.
+
+Opening a new stream in QUIC utilizes the same path and the same
+underlying QUIC connection. Since congestion control is per-path,
+this means that the stream does not have to go through slow start,
+instead allowing the new stream to re-use the CWND achieved from previous 
+transfers. If TCP was utilized instead, then the only way to organize
+transfers into separate logical streams then the only way of
+achieving this is by opening a new TCP connection. This connection
+would then have to go through slow start again, losing capacity
+compared to QUIC. A figure displaying this scenario
+can be seen in~\cref{fig:connection-clone-gains}.
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small, >=stealth]
+
+%% ============ LEFT PANEL: TCP ============
+\begin{scope}
+
+  % Lost-capacity shading
+  \fill[blue!10]
+    (3.1, 3.0) -- (5.1, 3.0)
+    .. controls (4.6, 3.0) and (3.6, 0.15) .. (3.1, 0.15) -- cycle;
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, blue!70!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
+
+  % Transfer 2: TCP slow starts again
+  \draw[very thick, blue!70!black]
+    (3.1, 0.15) .. controls (3.6, 0.15) and (4.6, 3.0) .. (5.1, 3.0);
+
+  % Lost capacity annotation
+  \node[font=\scriptsize, black] at (3.85, 2.75) {Lost};
+  \node[font=\scriptsize, black] at (3.85, 2.35) {capacity};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {TCP};
+
+\end{scope}
+
+%% ============ RIGHT PANEL: QUIC ============
+\begin{scope}[xshift=6.7cm]
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, green!50!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
+
+  % Transfer 2: QUIC resumes at W_max
+  \draw[very thick, green!50!black]
+    (3.1, 3.0) -- (5.1, 3.0);
+
+  % CWND reuse annotation
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.6) {Stream};
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.2) {multiplexing};
+
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 2) {First};
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 1.6) {Stream};
+
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 2) {Second};
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 1.6) {stream};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {QUIC};
+
+\end{scope}
+
+\end{tikzpicture}
+\caption[Difference of Cloning with QUIC vs. TCP]
+{
+An example of CWND re-use with QUIC. If TCP is organized into logical
+streams then each subsequent stream will be a separate TCP connection
+and each will have to go through slow start. QUIC allows multiple
+streams to be multiplexed over a single connection and they can
+therefore re-use the achieved CWND.
+}
+\label{fig:connection-clone-gains}
+\end{figure}
+
+In TCP this issue is usually mitigated by re-using the same
+TCP connection for several transfers. An example utilizing
+this is HTTP/1.1 which introduced the concept of persistent
+TCP connections for when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
+This allows the CWND to be reused, but also introduces the issue
+of head-of-line blocking (HOL). In networking, head-of-line
+blocking is a performance bottleneck where a queue of packets
+is held up by an issue with earlier packet. Commonly caused
+either by reordering or packet loss.
+
+Multistreaming avoids the issue of head-of-line blocking
+by only enforcing ordering within streams. Applications
+can then utilize separate streams for separate objects
+allowing each object delivered out-of-order relative to each other.
+
+A figure displaying head-of-line blocking
+can be seen in \cref{fig:background-multi-streaming}. Here,
+reordering causes delay in delivery for TCP, but QUIC
+avoids it due to using separate streams.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  >=latex,
+  node distance=1.2cm and 1.6cm,
+  pkt/.style={circle,draw,minimum size=6mm,inner sep=0pt},
+  lost/.style={pkt,fill=red!50},
+  ok/.style={pkt,fill=orange!40},
+  waiting/.style={pkt,fill=yellow!40},
+  conn/.style={
+  draw,
+  shape=cylinder,
+  cylinder uses custom fill,
+  cylinder body fill=blue!10,
+  cylinder end fill=blue!20,
+  minimum height=6cm,  % thickness
+  minimum width=2cm    % length
+},
+  endpoint/.style={
+    draw,rounded corners=8pt,
+    minimum width=1.8cm,
+    minimum height=2.1cm,
+    align=center,
+    fill=gray!10,
+  }
+]
+
+%======================
+% TOP: TCP / HTTP/2
+%======================
+\begin{scope}
+\node[endpoint] (tcpclient) at (-5,2.5) {Client};
+\node[endpoint] (tcpserver) at (5,2.5) {Server};
+
+
+% TCP connection "pipe"
+\node[conn] (tcpconn) at (0,2.5) {};
+
+\draw[->,thick,gray!70]
+  ($(tcpconn.east)+(-1.5,1.2cm)$) -- ($(tcpconn.west)+(1.5cm,1.2cm)$);
+
+\draw[dashed] (tcpclient.east)++(0,0.5) -- (tcpconn.west);
+\draw[dashed] (tcpclient.east)++(0,00) -- (tcpconn.west);
+\draw[dashed] (tcpclient.east)++(0,-0.5) -- (tcpconn.west);
+
+\draw[dashed] (tcpserver.west)++(0,0.5) -- (tcpconn.east);
+\draw[dashed] (tcpserver.west)++(0,0) -- (tcpconn.east);
+\draw[dashed] (tcpserver.west)++(0,-0.5) -- (tcpconn.east);
+\draw[dashed] (tcpconn.west) -- (tcpconn.east);
+
+
+
+% packets in order (1..8) inside pip
+% place first packet at the left edge of tcpconn, slightly inside
+\node[lost]    (p1) at ($(tcpconn.west)+(0.6cm,0)$)  {\scriptsize 5};
+\node[waiting] (p2) at ($(p1)+(0.9cm,0)$)            {\scriptsize 1};
+\node[ok]      (p3) at ($(p2)+(0.9cm,0)$)            {\scriptsize 3};
+\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
+\node[waiting] (p5) at ($(p4)+(0.9cm,0)$)            {\scriptsize 2};
+\node[lost]    (p6) at ($(p5)+(0.9cm,0)$)            {\scriptsize 6};
+
+\node[font=\small\bfseries] at (0.0, 4.0) {TCP};
+\end{scope}
+
+%======================
+% BOTTOM: QUIC
+%======================
+
+\begin{scope}[yshift=-3.4cm]
+\node[endpoint] (quicclient) at (-5,2.5) {Client};
+\node[endpoint] (quicserver) at (5,2.5) {Server};
+
+% TCP connection "pipe"
+\node[conn, cylinder body fill=green!10, cylinder end fill=green!20] (quicconn) at (0,2.5) {};
+
+\draw[dashed]($(quicclient.east)+(0,-0.5)$) -- ($(quicconn.west)+(0,-0.5)$);
+\draw[dashed]($(quicclient.east)+(0,0)$) -- ($(quicconn.west)+(0,0)$);
+\draw[dashed]($(quicclient.east)+(0,+0.5)$) -- ($(quicconn.west)+(0,+0.5)$);
+
+% \draw[dashed] (quicconn.west)+(0,-0.5)   -- (quicconn.east)+(0,-0.5);
+% \draw[dashed] (quicconn.west)            -- (quicconn.east);
+\draw[dashed]($(quicconn.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
+\draw[dashed]($(quicconn.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
+\draw[dashed]($(quicconn.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
+
+\draw[dashed]($(quicserver.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
+\draw[dashed]($(quicserver.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
+\draw[dashed]($(quicserver.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
+
+\draw[->,thick,gray!70]
+  ($(quicconn.east)+(-1.5,1.2cm)$) -- ($(quicconn.west)+(1.5cm,1.2cm)$);
+
+
+\node[lost]    (p1) at ($(quicconn.west)+(0.6cm,-0.5)$)  {\scriptsize 5};
+\node[waiting] (p2) at ($(p1)+(0.9cm,1.0)$)            {\scriptsize 1};
+\node[ok]      (p3) at ($(p2)+(0.9cm,-0.5)$)            {\scriptsize 3};
+\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
+\node[waiting] (p5) at ($(p4)+(0.9cm,0.5)$)            {\scriptsize 2};
+\node[lost]    (p6) at ($(p5)+(0.9cm,-1.0)$)            {\scriptsize 6};
+
+\node[font=\small\bfseries] at (0.0, 4.0) {QUIC};
+\end{scope}
+
+\end{tikzpicture}
+\caption[QUIC multistreaming visualization]
+{
+Since TCP enforces ordered delivery between all
+objects, it cannot hand the data in packet 5 to the application until packets 1--4 have
+arrived. QUIC does not enforce ordering between streams and therefore avoids head-of-line blocking.
+}
+\label{fig:background-multi-streaming}
+\end{figure}
+
 \subsection{Connection Migration}\label{sec:connection-migration}
 QUIC connections can survive changes to the underlying four-tuple
 because they are identified by connection IDs. This enables connection
@@ -830,13 +1085,67 @@ structure when performing candidate gathering, but it does recommend to branch i
 same order as the RFC, in order to branch by the most important concepts
 first~\cite[Sec.~4.1.2]{rfc9623}.
 
-After branching has been completed, incomplete paths and leaf nodes
-which are not compatible with the specified Selection Properties can
-be pruned and sorted. After pruning, each leaf node represents a single possible
+After branching, incomplete paths and leaf nodes
+not compatible with the specified Selection Properties are
+pruned. After pruning, each leaf node represents a single possible
 Connection attempt, containing a combination of local socket address, 
-protocol options and remote socket address. The leaf nodes are
-finally sorted according to the
-preferences of the application before candidate racing is initiated.
+protocol options and remote socket address. These results are
+sorted and candidate racing can be initiated.
+A diagram of the tree used in candidate gathering can be seen in
+\cref{fig:candidate-tree}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  grow=right,
+  level 1/.style={sibling distance=48mm, level distance=22mm},
+  level 2/.style={sibling distance=24mm, level distance=28mm},
+  level 3/.style={sibling distance=12mm, level distance=34mm},
+  every node/.style={font=\small},
+  edge from parent/.style={draw, -latex},
+  pruned/.style={gray, dashed},
+  candidate/.style={draw, rounded corners, fill=green!15, inner sep=3pt},
+  pruned node/.style={gray},
+]
+
+\node {Root}
+  child { node {eth0}
+    child { node {QUIC}
+      child { node[candidate] {\texttt{1.2.3.4}} }
+      child { node[candidate] {\texttt{5.6.7.8}} }
+    }
+    child { node[pruned node] {\sout{TCP}}
+      child { node[pruned node] {\texttt{1.2.3.4}} edge from parent[pruned] }
+      child { node[pruned node] {\texttt{5.6.7.8}} edge from parent[pruned] }
+    }
+  }
+  child { node {wlan0}
+    child { node {QUIC}
+      child { node[candidate] {\texttt{1.2.3.4}} }
+      child { node[candidate] {\texttt{5.6.7.8}} }
+    }
+    child { node[pruned node] {\sout{TCP}}
+      child { node[pruned node] {\texttt{1.2.3.4}} edge from parent[pruned] }
+      child { node[pruned node] {\texttt{5.6.7.8}} edge from parent[pruned] }
+    }
+  };
+
+% Level labels above tree — tweak y-offset to clear the topmost node
+% \node[anchor=south] at (0,    4.6) {\textit{Precon.}};
+\node[anchor=south] at (2.2,  4.6) {\textit{Resolved Local}};
+\node[anchor=south] at (5.0,  4.6) {\textit{Protocol}};
+\node[anchor=south] at (8.4,  4.6) {\textit{Resolved Remote}};
+
+\end{tikzpicture}
+\caption{
+An example of a candidate gathering tree for two local interfaces, two protocols and two
+remote addresses. Grey dashed branches are pruned based on the Selection Properties
+set by the application.
+}
+\label{fig:candidate-tree}
+\end{figure}
+
+
 
 \subsection{Candidate Racing}\label{candidateRacing}
 Candidate racing is the process of dynamically attempting
@@ -891,6 +1200,173 @@ of one branch over another.
 Connection establishment has been completed when a single candidate
 has successfully established a Connection, or
 when all candidates have failed. 
+
+An example flow of candidate racing can be seen in~\cref{fig:racingSeqDiagram}.
+Here, DNS resolution resolves two endpoints with delays of
+RTT of \qty{300}{\milli\second} and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
+but the faster RTT leads to the second endpoint winning the race and being
+presented to the application.
+In the example the DNS resolution is set to take \qty{100}{\milli\second}
+which is an arbitrary value with no influence on the following candidate racing.
+The stagger delay is set to be \qty{250}{\milli\second}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  >=Stealth,
+  msglbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  head/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.6cm,
+               font=\small, fill=white}
+]
+
+% ── x positions ─────────────────────────────────────────────────────────────
+\def\xO{0}     % Application
+\def\xA{2.5}     % CTaps
+\def\xB{4.5}   % DNS
+\def\xC{6.5}
+\def\xD{8.5}
+\def\xE{10.5}  % Server
+
+% ── y positions (y = -t/100 * 1.2) ─────────────────────────────────────────
+
+%  t=0:    y=-0.4 (Query)
+%  t=50:   y=-1.0
+%  t=100:  y=-1.6 (DNS resolve)
+%  t=200:  y=-2.0
+%  t=300:  y=-2.8
+%  t=350:  y=-3.4
+%  t=400:  y=-4.0
+%  t=500:  y=-5.2
+\tikzmath{
+  \yfiftyms = -0.5;
+  \ytenms = \yfiftyms / 5;
+  \ylifelinestart   = 0.1;
+  \yzero   = -0.4 ;
+  \yfifty = \yzero + \yfiftyms; 
+  \yhundred = \yzero + \yfiftyms * 2; 
+  \yhundredandfifty = \yzero + \yfiftyms * 3; 
+  \ytwohundred = \yzero + \yfiftyms * 4; 
+  \ytwohundredandfifty = \yzero + \yfiftyms * 5; 
+  \ytreehundred = \yzero + \yfiftyms * 6; 
+  \ytreehundredandfifty = \yzero + \yfiftyms * 7; 
+  \yfourhundred = \yzero + \yfiftyms * 8; 
+  \yfourhundredandfifty = \yzero + \yfiftyms * 9; 
+  \yfivehundred = \yzero + \yfiftyms * 10; 
+  \yfivehundredandfifty = \yzero + \yfiftyms * 11; 
+  \ysixhundred = \yzero + \yfiftyms * 12; 
+  \ydnsresolution = \yfifty - \ytenms;
+  \yslowdelay = \yfiftyms * 3;
+  \yfastdelay = \yfiftyms;
+  \ylifelineend = \yfivehundredandfifty; 
+  \yslowstart = \yzero + \yfiftyms;
+  \yfaststart = \yslowstart + \yfiftyms * 5;
+  \yslowend = \yfaststart + \yfastdelay * 4 + \ytenms * 2;
+  \yone = \yslowstart + \yslowdelay * 3;
+  \ytwo = \yslowstart + \yslowdelay * 4;
+  \ythree = \yslowend;
+  \xone = \xE;
+  \xtwo = \xC;
+  \slope = (\ytwo - \yone)/(\xtwo - \xone);
+  \b = \yone;
+  \xslowend = \xone + (\ythree - \b) / \slope;
+} 
+
+
+
+% ── Participant headers ──────────────────────────────────────────────────────
+\node[head]                   at (\xO, 0.4) {Application};
+\node[head]                   at (\xA, 0.4) {CTaps};
+\node[head]                   at (\xB, 0.4) {DNS};
+\node[head]                   at (\xC, 0.4) {Cand. 1};
+\node[head, font=\small]      at (\xD, 0.4) {Cand. 2};
+\node[head]                   at (\xE, 0.4) {Server};
+% \node[font=\scriptsize, gray] at (\xA, -0.05) {(per-candidate)};
+% \node[font=\scriptsize, gray] at (\xB, -0.05) {(per-candidate)};
+
+% ── Lifelines ───────────────────────────────────────────────────────────────
+\draw[dashed, gray!50] (\xO, \ylifelinestart) --  (\xO, \ylifelineend);
+\draw[dashed, gray!50] (\xA, \ylifelinestart) --  (\xA, \ylifelineend);
+\draw[dashed, gray!50] (\xB, \ylifelinestart) --  (\xB, \ylifelineend);
+\draw[dashed, gray!50] (\xE, \ylifelinestart) --  (\xE, \ylifelineend);
+
+\draw[dashed, gray!50] (\xC, \yslowstart) -- (\xC, \yslowend);
+\draw[dashed, gray!50] (\xD, \yfaststart) -- (\xD, \ylifelineend);
+
+%
+% \draw[gray!20] (-0.2, -0.8) -- (12.2, -0.8);
+
+% ── Time grid and labels ─────────────────────────────────────────────────────
+\foreach \yval/\t in {
+  \yzero/0,
+  \yfifty/50,
+  \yhundred/100,
+  % \yhundredandfifty/150,
+  \ytwohundred/200,
+  % \ytwohundredandfifty/250,
+  \ytreehundred/300,
+  % \ytreehundredandfifty/350,
+  \yfourhundred/400,
+  % \yfourhundredandfifty/450,
+  \yfivehundred/500
+} {
+  \node[font=\footnotesize, gray, left] at (-0.4, \yval) {\t\,ms};
+  \draw[gray!20] (-0.2, \yval) -- (12.2, \yval);
+}
+
+% ── t≈0: Start Connection attempt ─────────────────────────────────────────────────────────
+\draw[->] (\xO, \yzero) -- node[msglbl, above] {Connect to URL} (\xA, \yzero);
+
+% ── t≈0: DNS queries ─────────────────────────────────────────────────────────
+\draw[->] (\xA, \yzero) -- node[msglbl, above] {Query URL} (\xB, \yzero);
+
+% ── DNS resolves A ────────────────────────────────────────────────────
+\draw[->] (\xB, \ydnsresolution) -- node[msglbl, above] {Resolve {C1, C2}} (\xA, \ydnsresolution);
+
+\draw[fill=black] (\xA,\yslowstart) circle (1.5pt);
+\draw[->] (\xA, \yslowstart) -- node[msglbl, below] {Start attempt 1} (\xC, \yslowstart);
+
+% ── QUIC handshake for candidate A ───────────────────────────────────────────
+% Initial:        SM-A (t=100) → Server (t=175)
+\draw[->] (\xC,\yslowstart)  -- node[msglbl, above, sloped] {}         (\xE,{\yslowstart + \yslowdelay});
+% Handshake:      Server(t=175) → SM-A (t=250)
+\draw[->] (\xE,{\yslowstart + \yslowdelay})  -- node[msglbl, above, sloped] {}       (\xC,{\yslowstart + \yslowdelay * 2});
+\draw[->] (\xC,{\yslowstart + \yslowdelay * 2})  -- node[msglbl, above, sloped] {}       (\xE,{\yslowstart + \yslowdelay * 3});
+% Finished:       SM-A (t=250) → Server (t=325)
+\draw[-, red!90] (\xE,{\yslowstart + \yslowdelay * 3})
+  -- node[msglbl, above, sloped] {}
+     node[pos=1.0, cross out, draw, inner sep=2pt] {}
+     (\xslowend,\yslowend);
+
+% ── t=350: racing timer fires, create SM-B ───────────────────────────────────
+\draw[fill=black] (\xA,\yfaststart) circle (1.5pt);
+%\node[font=\scriptsize, right=3pt] at (\xA,-2.4) {250\,ms timer};
+\draw[->] (\xA,\yfaststart) -- node[msglbl, above] {Start attempt 2} (\xD,\yfaststart);
+
+% ── QUIC handshake for candidate A ───────────────────────────────────────────
+\draw[->] (\xD,\yfaststart)  -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay});
+\draw[->] (\xE,{\yfaststart + \yfastdelay})  -- node[msglbl, above, sloped] {}       (\xD,{\yfaststart + \yfastdelay * 2});
+\draw[->] (\xD,{\yfaststart + \yfastdelay * 2}) -- node[msglbl, above, sloped] {}         (\xE,{\yfaststart + \yfastdelay * 3});
+\draw[->] (\xE,{\yfaststart + \yfastdelay * 3}) -- node[msglbl, above, sloped] {} (\xD,{\yfaststart + \yfastdelay * 4});
+\draw[->] (\xD,{\yfaststart + \yfastdelay * 4}) -- node[msglbl, above, sloped] {}   (\xA,{\yfaststart + \yfastdelay * 4});
+
+% ── t=400: SM-A wins ─────────────────────────────────────────────────────────
+\node[draw, fill=green!15, font=\scriptsize, rounded corners, inner sep=2pt]
+      at (\xD,{\ylifelineend + \ytenms * 2}) {Connected \cmark};
+
+\node[draw, fill=red!15, font=\scriptsize, rounded corners, inner sep=2pt]
+      at (\xC,{\ylifelineend + \ytenms * 2}) {Closed \xmark};
+
+% ── t=400: abort SM-B ────────────────────────────────────────────────────────
+\draw[->, red!70, thick] (\xA,\yslowend ) -- node[msglbl, below] {close()} (\xC,\yslowend);
+
+\draw[->] (\xA, {\yslowend + \ytenms}) -- node[msglbl, above] {\mono{ready()} CB} (\xO, {\yslowend + \ytenms});
+
+\end{tikzpicture}
+\caption[Example candidate racing with slow and fast endpoint]
+{Example of candidate racing functionality when the order of a DNS resolution causes a slow endpoint to be attempted first,
+but the fast endpoint still wins.}
+\label{fig:racingSeqDiagram}
+\end{figure}
 
 \section{ALPN}
 ALPN is a feature in TLS \cite{rfc7301} where the application layer
