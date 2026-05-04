@@ -9,11 +9,12 @@ protocol-agnostic interface to the network, to decouple applications from the un
 transport protocols and ease innovation.
 The working group has produced three core RFCs: 9621, 9622 and 9623, which cover the architecture,
 API and implementation guidance of a TAPS System.
-While previous implementations of TAPS exist, no open-source implementations
+No open-source implementations
 of TAPS support QUIC, making it unclear exactly how QUIC, as the most successful recent protocol innovation
 at the transport layer, maps onto the TAPS API.
 
-This thesis presents CTaps, a C implementation of TAPS using libuv and Picoquic.
+This thesis presents CTaps, a C implementation of TAPS using the libuv event loop library and the Picoquic
+QUIC implementation.
 CTaps supports QUIC, TCP and
 UDP, along with several important QUIC features, such as multistreaming, connection
 migration and session resumption. In addition, CTaps supports important internal TAPS

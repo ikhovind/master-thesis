@@ -11,13 +11,12 @@ or User Datagram Protocol (UDP). In addition to limiting innovation in
 the form of new protocols, network ossification also limits
 the possible innovations for existing protocols such as TCP.
 This can be caused by implementations featuring bugs in rarely used features, or by network
-middleboxes not supporting changes to the wire image of
-a protocol~\cite{rfc9170}.
+middleboxes not supporting changes to the wire image~\cite{rfc8546} of a protocol.
 
 Another issue with utilizing new innovations on the
 transport layer is the coordination required in order to
-start utilizing new protocols. Servers will not spend
-time adding support for a new transport layer protocol
+start utilizing new protocols. Developer of server applications
+will not spend time adding support for a new transport layer protocol
 if no applications are using it, and no applications
 will utilize a new protocol if no servers support it.
 If a fallback to TCP is always needed, then all applications
@@ -31,9 +30,9 @@ Transport Services (TAPS) is a series of IETF RFCs which aim
 to tackle this issue of network ossification. TAPS presents
 a common API which abstracts away protocol specific features, instead
 allowing the application to specify which services it needs from the
-underlying application such as reliable data transfer or in-order delivery.
+underlying protocol, such as reliable data transfer or in-order delivery.
 By creating a common interface which is based on the application's
-intent instead of the concrete action of the transport protocol,
+intent instead of the concrete action of a transport protocol,
 Transport Services allows the application to be served by any
 protocol which fulfills the requirements stated by the application.
 
@@ -49,8 +48,8 @@ falls back to TCP.
 
 \section{Problem Statement}\label{sec:prob-statement}
 The TAPS working group concluded in 2025 after RFC~9621--9623~\mbox{\cite{rfc9621, rfc9622, rfc9623}}
-were published. While several open-source TAPS implementations have been developed, none have been
-actively maintained and none support QUIC. In addition, RFC~9623~\cite{rfc9623} does not provide any
+were published. While several open-source TAPS implementations have been developed previously,
+none have had actively maintained and none support QUIC. In addition, RFC~9623~\cite{rfc9623} does not provide any
 guidance on how to map QUIC to the TAPS API.
 
 This means that the only known implementation of TAPS, which supports both QUIC and
@@ -62,7 +61,7 @@ These form the basis for the research questions addressed in this thesis.
 \section{Research Questions}
 These gaps give rise to two research questions:
 
-\newcommand{\rqone}{What implicit architectural constraints does the TAPS specification impose on an implementation?}
+\newcommand{\rqone}{What implicit architectural constraints does the TAPS specification impose on an implementation of a TAPS System?}
 \newcommand{\rqtwo}{To what extent does the TAPS API expose the distinctive features of QUIC?}
 
 \begin{enumerate}
@@ -76,7 +75,7 @@ it has brought and a survey on how QUIC features can be mapped
 to the TAPS API.
 CTaps is an open-source C implementation of Transport Services with support
 for QUIC, TCP and UDP. It is an exploratory work primarily
-focused on how QUIC maps through the TAPS API and which
+focused on how QUIC maps to the TAPS API and which
 architectural concerns are encountered when implementing TAPS.
 
 CTaps supports key QUIC features such as multistreaming, connection migration and session resumption.
@@ -93,10 +92,10 @@ system.
 \subsection{Scope}
 All major elements of the TAPS API are available in CTaps,
 except for rendezvous and adding endpoints
-to an active Connection. In addition, several Transport Properties are
-implemented as no-ops.
+to an active Connection. All Transport Properties are
+available to the application, but several are implemented as no-ops.
 
-Because CTaps is a research artifact, development has prioritized feature coverage over robustness
+Because CTaps is a research artifact, development has prioritijzed feature coverage over robustness
 and error handling has not been as thoroughly tested as the core functionality.
 
 \subsection{Source Code}
@@ -116,15 +115,13 @@ explains their features, backgrounds and current state of development.
 Finally it compares them to the current state of CTaps and reflects on
 why CTaps was still needed with the current state of the ecosystem.
 
-\textbf{\Cref{chap:design}} explains central decisions made when designing 
-CTaps. It explains exactly why CTaps has the public interface that it does
-and explains choice of dependencies. Additionally it discusses how well QUIC
+\textbf{\Cref{chap:design}} discusses the design of TAPS Systems
+in general and CTaps in specific. Additionally, it discusses how well QUIC
 features map through the TAPS API, weaknesses in the design of CTaps as well
 as finally discussing security in a TAPS system.
 
-
-\textbf{\Cref{chap:impl}} explains how the features of CTaps
-actually were implemented internally in CTaps.
+\textbf{\Cref{chap:impl}} explains how the features
+were implemented internally.
 
 \textbf{\Cref{chap:eval}} contains a series of experiments performed to highlight
 the various parts of CTaps. It compares CTaps with TCP and Picoquic clients, discussing

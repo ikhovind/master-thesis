@@ -637,8 +637,11 @@ key research questions for this thesis. Since TAPS is an interface to
 a generic transport layer, TAPS concepts, terminology and intended functionality
 naturally do not map one-to-one onto concepts, terminology and functionality
 of QUIC. This section will describe how QUIC can be mapped to TAPS and the
-related issues in prose. An overview of which QUIC features are available
-in TAPS can be seen in \cref{tab:quic-taps-mapping}.
+related issues. An overview of which QUIC features are available
+in TAPS can be seen in \cref{tab:quic-taps-mapping}. The surveyed features
+in this table encompass all 17 core QUIC transport parameters defined in
+RFC~9000~\cite[Sec.~18.2]{rfc9000}, supplemented by higher-level protocol features such as streams,
+connection migration, and the QUIC datagram and multipath extensions.
 
 \subsection{QUIC Connections} \label{sec:quic-arch-mapping}
 While the TAPS RFCs were designed with QUIC in mind,
