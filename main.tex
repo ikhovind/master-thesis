@@ -71,7 +71,8 @@
 \usepackage{calculator}
 \usepackage{babel, csquotes, graphicx, textcomp, uiomasterfp, varioref}
 \usepackage[colorinlistoftodos, textwidth=\marginparwidth]{todonotes}
-\usepackage{microtype}
+\usepackage[activate={true,nocompatibility},final,kerning=true, tracking=true]{microtype}
+\microtypecontext{spacing=nonfrench}
 \usepackage{cleveref}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -112,11 +113,6 @@
 \newcommand{\term}{\emph}
 
 \begin{document}
-% Disallow top and bottom figures etc.
-% \setcounter{topnumber}{0}
-% \setcounter{bottomnumber}{0}
-
-
 
 \uiomasterfp[
   supervisor={Michael Welzl},
@@ -136,11 +132,12 @@
 \import{./}{Abstract}
 
 
-
+\microtypesetup{protrusion=false}
 \tableofcontents{}
 \listoffigures{}
 \mylistoflistings{}
 \listoftables{}
+\microtypesetup{protrusion=true}
 
 
 \import{./}{Preface}

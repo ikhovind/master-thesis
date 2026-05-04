@@ -411,7 +411,71 @@ Taken from the CTaps example project~\cite{ctaps-example-project}.
 
 
 
-\chapter{Internal CTaps Code}\label{app:internal-code-examples}
+\chapter{Extended CTaps Code Listings}\label{app:internal-code-examples}
+This appendix presents examples from the CTaps source code that are 
+too lengthy to include inline in the main text. The listings cover the generic 
+protocol interface (\cref{lst:impl-struct}), its QUIC instantiation 
+(\cref{lst:quic-impl-struct}), the libuv timer callback used to drive 
+Picoquic (\cref{lst:timer-callback-function}), and the UDP send function 
+used to dispatch QUIC packets with source address control 
+(\cref{lst:pktinfo-send-packet}).
+
+\begin{listing}[htbp]
+\begin{minted}{C}
+typedef struct ct_protocol_impl_s {
+    const char* name;                               ///< Protocol name (e.g., "TCP", "UDP", "QUIC")
+    ct_protocol_enum_t protocol_enum;               ///< Protocol enumeration value
+    bool supports_alpn;                             ///< True if protocol supports ALPN negotiation
+    ct_selection_properties_t selection_properties; ///< Properties supported by this protocol
+
+    /** @brief Initialize a new connection using this protocol. */
+    int (*init)(ct_connection_t* connection);
+
+    /** @brief Initialize a new connection using this protocol and attempt 0-rtt. */
+    int (*init_with_send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+
+    /** @brief Send a message over the protocol.  */
+    int (*send)(ct_connection_t*, ct_message_t*, ct_message_context_t*);
+
+    /** @brief Start listening for incoming connections. */
+    int (*listen)(struct ct_socket_manager_s* socket_manager);
+
+    /** @brief Stop listening for incoming connections. */
+    void (*close_listener)(struct ct_socket_manager_s*);
+
+    /** @brief Close a connection. */
+    int (*close_connection)(ct_connection_t*);
+
+    /** @brief Close the underlying socket for a socket manager. */
+    void (*close_socket)(struct ct_socket_manager_s*);
+
+    /** @brief Forcefully abort a connection without graceful shutdown. */
+    void (*abort)(ct_connection_t* connection);
+
+    /** @brief Clone a connection's protocol specific state. */
+    int (*clone_connection)(const ct_connection_t* source_connection,
+                            ct_connection_t* target_connection);
+
+    /** @brief Free protocol-specific state in a connection. */
+    void (*free_connection_state)(ct_connection_t* connection);
+
+    /** @brief Free socket-specific state in a connection. */
+    void (*free_socket_state)(struct ct_socket_manager_s* socket_manager);
+
+    void (*close_connection_group)(ct_connection_group_t* connection_group);
+
+    int (*set_connection_priority)(ct_connection_t* connection, uint8_t priority);
+
+    /** @brief Free protocol-specific shared state in a connection group, useful for multiplexing */
+    void (*free_connection_group_state)(ct_connection_group_t* connection_group);
+
+} ct_protocol_impl_t;
+\end{minted}
+\caption[Generic protocol interface]{Generic protocol interface used internally in CTaps. The QUIC implementation
+of this interface can be seen in \cref{lst:quic-impl-struct}.}
+\label{lst:impl-struct}
+\end{listing}
+
 \begin{listing}[htbp]
     \begin{minted}{c}
 const ct_protocol_impl_t quic_protocol_interface =

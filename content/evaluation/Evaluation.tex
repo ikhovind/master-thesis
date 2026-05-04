@@ -402,7 +402,7 @@ done in order to establish the actual behavior under load.
 
 CTaps has not been written with performance in mind. The duplicate
 memory allocations for every passed parameter are likely a large
-part of the seen delay, and could be removed if performance was
+part of the seen delay and could be replaced with reference counting if performance was
 essential. This would lead to a slightly more complicated ownership
 model, but it would remove system calls for allocation and memory copying
 for every message passed from the application.

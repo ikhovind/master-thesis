@@ -79,7 +79,7 @@ be emulated over non-connection oriented protocols.
 
 \subsection{Research Question Two}
 While not all QUIC features are directly controllable through the TAPS API,
-TAPS is an abstraction, and can infer the desired usage based on the stated
+TAPS is an abstraction, and can infer most desired settings based on the stated
 intentions of the application.
 
 Several key features of QUIC are directly supported through the TAPS
@@ -89,10 +89,13 @@ through using multiple local endpoints and setting the \mono{multipath}
 Selection Property and the \mono{multipathPolicy} Connection Property.
 While this does not expose functionality to explicitly trigger a migration,
 it allows for fine-grained control of the expected behavior, as seen in
-\cref{tab:multipath-combinations}. Multistreaming is available through
-the \mono{clone()} functionality, with
-the associated architectural requirement that a QUIC connection is
-represented as a Connection Group as discussed in \cref{sec:rq1-answer}.
+\cref{tab:multipath-combinations}.
+
+A similar pattern applies to flow control, where QUIC exposes \mono{initial_max_data}
+and other associated transport parameters. These are not available through TAPS directly, but TAPS allows for flow 
+control by enqueueing receive callbacks instead. The underlying TAPS System
+can then pass a sane default parameter to the peer initially,
+increasing the window as the application enqueues \mono{receive()}-callbacks.
 
 Certain QUIC features are supported, but only through coarse options in the TAPS API.
 For example, the QUIC settings related to ACKs, \mono{ack_delay_exponent} and \mono{max_ack_delay},
@@ -103,27 +106,38 @@ Another example of being more coarse is that TAPS only allows for sending of
 aborting Connections, and TAPS has no concept of a unidirectional abort.
 
 Finally, the features which are genuine gaps are the ones which cannot be accessed directly
-and cannot be inferred from the intention-based API. Flow control is an important
-example here, where QUIC exposes \mono{initial_max_data}, among other transport
-parameters. These are not available through TAPS, since TAPS allows for flow 
-control by enqueueing receive callbacks, instead of passing a parameter to
-the underlying transport protocol. These are two fundamentally incompatible
-implementations. Both present a solution to the same problem, but an application
-is unable to tell the peer about its receive window through TAPS.
-Certain gaps are QUIC specific, such as Connection~ID
-handling and stateless reset. 
-QUIC also has richer support for unidirectional streams than is
-present in TAPS. TAPS has support for unidirectional Connections through the
+and cannot be inferred from the intention-based API.
+Certain gaps could be assumed to be handled by the underlying
+TAPS System, such as Connection~ID
+handling and stateless reset, while other gaps are QUIC features
+which would be reasonable for an application to control, but that are not
+available through the TAPS API.
+Examples of the QUIC features which could be reasonable to want to control
+are unidirectional streams and idle timeout.
+
+For unidirectional streams, TAPS only supports unidirectional Connections through the
 \mono{direction} Selection Property, but this must be set before a Preconnection
 is initiated and cannot be used to influence
 the directionality of Connections which are a result of \mono{clone()}.
+In other words, a Connection Group of N Connections will either be unidirectional
+or bidirectional, but the API does not allow an application to make an
+individual choice for a Connection within the group.
 
-Of the 29 QUIC features surveyed in \cref{tab:quic-taps-mapping},
-18 are available, 5 are partially available, and 6 
-unreachable. Given that 23 of 29 features are fully or partially available,
+For QUIC's idle timeout, the TAPS API exposes \mono{connTimeout}, but
+the two are not semantically equivalent. In TAPS, \mono{connTimeout}
+is the timeout when trying to reliably deliver data to a Remote Endpoint,
+while in QUIC, idle timeout is purely an inactivity timer, resetting
+on sending or receiving data and closing the connection when it expires.
+
+Of the 28 QUIC features surveyed in \cref{tab:quic-taps-mapping},
+19 are available, 5 are partially available, and 4 
+unreachable. Given that 24 of 28 features are fully or partially available,
 TAPS exposes the large majority of the queried QUIC features.
-Genuine gaps are mostly limited to low-level
-mechanics and fundamental abstraction mismatches.
+Genuine gaps are of two kinds: conceptual mismatches,
+where TAPS provides related but insufficiently precise functionality
+(directional stream limits when cloning, idle timeout), and intentional abstractions,
+where TAPS deliberately omits application-facing control over
+implementation-level concerns (stateless reset, connection ID handling).
 
 \section{Scope and Limitations}
 CTaps is an exploratory work, intended to show how an implementation of a TAPS

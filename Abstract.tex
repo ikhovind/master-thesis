@@ -9,8 +9,7 @@ protocol-agnostic interface to the network, to decouple applications from the un
 transport protocols and ease innovation.
 The working group has produced three core RFCs: 9621, 9622 and 9623, which cover the architecture,
 API and implementation guidance of a TAPS System.
-While previous implementations of TAPS exist, no open-source implementations have been under
-active development since the RFCs' finalization in early 2025. Additionally, no open-source implementations
+While previous implementations of TAPS exist, no open-source implementations
 of TAPS support QUIC, making it unclear exactly how QUIC, as the most successful recent protocol innovation
 at the transport layer, maps onto the TAPS API.
 
@@ -20,10 +19,9 @@ UDP, along with several important QUIC features, such as multistreaming, connect
 migration and session resumption. In addition, CTaps supports important internal TAPS
 features such as candidate gathering and candidate racing.
 
-A survey of 29 QUIC features found that 23 are
-either fully or partially available through the TAPS API, with only 6 gaps,
-such as unidirectional stream resets.
-We evaluate CTaps against native TCP, UDP and Picoquic QUIC clients across handshake
+A survey of 28 QUIC features found that 24 are
+either fully or partially available through the TAPS API, with only 5 gaps.
+We evaluate CTaps against native TCP, UDP and Picoquic QUIC clients in term sof handshake
 latency, ping overhead, multistream transfer, candidate racing and connection migration.
 We argue that CTaps effectively serves as a reference for future implementations of TAPS,
 especially when supporting QUIC.
