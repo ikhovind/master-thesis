@@ -722,7 +722,7 @@ The QUIC multipath extension draft does not specify how
 alternative paths are discovered, and actual setup and
 teardown of paths is handled by the application.
 
-\subsection{Session Resumption}
+\subsection{Session Resumption}\label{sec:back-session-resumption}
 Like TLS, QUIC supports session resumption and 0-rtt
 initial data. This requires that the server and the client
 have already exchanged cryptographic keys, that the
@@ -1382,7 +1382,7 @@ but the fast endpoint still wins.}
 \label{fig:racingSeqDiagram}
 \end{figure}
 
-\section{ALPN}
+\section{ALPN}\label{sec:back-alpn}
 ALPN is a feature in TLS \cite{rfc7301} where the application layer
 protocol is negotiated between on
 the transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints

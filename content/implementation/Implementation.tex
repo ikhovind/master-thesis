@@ -179,8 +179,8 @@ the callbacks may be invoked immediately, such as with UDP which does not
 require any asynchronous teardown.
 
 \section{Cloning}
-CTaps support cloning through the \mono{ct_connection_clone()}
-function, which allows applications to create a new Connection to the same
+CTaps supports cloning through the \mono{ct_connection_clone()}
+function. This allows applications to create a new Connection to the same
 endpoint, either through normal connection establishment or through
 multistreaming if supported by the underlying protocol.
 
@@ -199,8 +199,7 @@ are used to keep track of whether the Connection is unidirectional.
 
 Cloning is naturally the most useful when the underlying protocol can make
 use of multistreaming, since this allows the clone to reuse the same underlying connection.
-cloning
-can however still be performed no matter what the underlying protocol is. This allows
+Cloning can be performed no matter what the underlying protocol is. This allows
 TAPS to be protocol-agnostic, attempting to make use of benefits
 like multistreaming when available, but being functional even if the underlying protocol
 does not support it.
@@ -211,71 +210,49 @@ in~\cref{sec:quicUnderTaps}.
 
 If the underlying protocol is TCP then CTaps will initiate a new connection and transfer
 successfully, but if the underlying protocol is QUIC then it will simply open a new
-stream and therefore benefit from stream multiplexing.
-
-The second transfer
-has significantly higher throughput over QUIC than TCP, since TCP has to go through
-slow start again for the second transfer. In CTaps a single client can use both
-TCP and QUIC this way, supporting connecting to a TCP endpoint, but making use
-of QUIC benefits when available.
+stream and therefore benefit from stream multiplexing. The benefit of QUIC in this
+situation can be seen in \cref{fig:connection-clone-gains} in \cref{chap:background},
+where the multistreamed protocol enables CWND reuse, but TCP has to go through
+slow start.
 
 \section{Connection Migration} \label{sec:connection-migration-impl}
-Connection migration is supported in CTaps, but multipath
-is by default disabled for clients in RFC~9622~\cite[Sec. 6.2.14]{rfc9622}.
-If multipath is set to active
-then CTaps will probe all Local Endpoints registered with the Connection through
-Picoquic when Picoquic notifies CTaps that a path has become unavailable.
+Connection migration is supported in CTaps,
+but is disabled by default as
+specified in RFC 9622~\cite[Sec. 6.2.14]{rfc9622}.
+If multipath is set to active then CTaps will probe all
+Local Endpoints registered with the Connection
+when Picoquic notifies CTaps that a path has become unavailable.
 
 Since Picoquic does not control the underlying sockets itself it relies
 on CTaps notifying it when the socket error implies that a path is unreachable.
-CTaps does this on any error code from \mono{sendmsg()}.
+For simplicity's sake, CTaps performs this notification on any error code from \mono{sendmsg()}.
 
-While the current support for Connection Migration in CTaps
-is useful for showcasing Connection Migration as a concept,
+While the current support for connection migration in CTaps
+is useful for showcasing connection migration as a concept,
 it is also fairly limited by the internal CTaps architecture.
-Currently a Socket Manager can only be associated with a
+A Socket Manager can currently only be associated with a
 single socket, this socket is opened on initiation of
-the first Connection using it and it cannot be updated
+the first Connection using it, and the socket cannot be updated
 for the lifetime of the Socket Manager. There is also
 no support for a Connection switching to a different Socket Manager.
 
-For TCP and UDP
-this is not a large issue for normal usage, as they are tightly bound to their original
-socket. QUIC is however limited by being able to use only a single local.
-In CTaps this is seen through
-the requirements for connection migration to function as expected.
+This is not an issue for TCP or UDP, but it is limiting for QUIC,
+and a workaround is required in for CTaps to be able to perform connection
+migration properly. Because the Linux kernel only delivers incoming packets
+which match the exact bound IP of the specific socket, CTaps must
+bind to a wildcard address in order to be able to use multiple local
+addresses. CTaps binds to the first Local Endpoint passed to a Preconnection,
+and therefore requires that an application passes a wildcard address as
+the first Local Endpoint, to successfully utilize connection migration.
 
-With how candidate gathering is implemented in CTaps,
-the first Local Endpoint passed to a Preconnection is likely
-the one that will be attempted first in candidate racing, and
-therefore also likely the one that the final socket will be bound to for a 
-successful connection.
-
-Since the Linux kernel only delivers incoming packets with a
-dest address which matches the exact bound IP of the specific socket,
-CTaps will likely not be able to make use of multiple local
-IP addresses if an application states the first local IP address
-explicitly, even if the application passes multiple Local Endpoints
-to a Preconnection.
-
-If an application states
-an wildcard address as the second Local Endpoint to a Preconnection,
-then CTaps could in theory make use if this instead, but this
-is unlikely due to how ordering is implemented in candidate gathering.
-
-Lacking this feature was deemed acceptable since CTaps is
-a research project and a workaround exists, allowing applications
-to utilize path migration as seen in the experiment in
-\cref{sec:path-migration}. Improvements to achieve
+Lacking support for multiple local endpoints was deemed acceptable since CTaps is
+a research project and a workaround exists. Improvements to achieve
 a more robust connection migration without having to
-perform CTaps-specific workarounds are discussed in~\cref{sec:future-work}.
+perform this workaround are discussed in~\cref{sec:future-work}.
 
-The described workaround is to explicitly bind to an wildcard endpoint,
-while still passing alternative paths to the Preconnection when first
-initiating a Connection.
 CTaps only probes paths explicitly passed to the Preconnection,
 and therefore alternative paths must be passed to the Preconnection,
-even if binding to an wildcard endpoint. An example utilizing
+even if binding to a wildcard endpoint. An example utilizing
 this can be seen in~\cref{lst:explicit-binding-to-ephem}.
 
 \begin{listing}[htbp]
@@ -306,23 +283,11 @@ explicitly binding to 0.0.0.0, before passing 127.0.0.2 as an alternative addres
 \label{lst:explicit-binding-to-ephem}
 \end{listing}
 
-A TAPS System can in support migration to both a new local and a new remote endpoint
-since the application is able to add both multiple Local and multiple Remote Endpoints
-to a Connection.
-Whether a system actually makes use of the multiple endpoints is however left up to the
-underlying transport protocol~\cite[Sec. 7.5]{rfc9622}. For QUIC CTaps therefore only 
-supports initiating migrating to new Local Endpoints and only supports
-migration initiated by a client. Migration initiated by the remote
-is supported as long as the \mono{multipath} Selection Property is not
-disabled.
-
 \section{Framers}\label{sec:framer-impl}
-Framers in CTaps consists of a structure with two function
-pointers, which are expected to be implemented by downstream applications.
-
-Since the Connection takes a deep copy of passed Messages, the
-Message data itself is owned by the protocol stack. The 
-Framer can therefore modify the message in place and does not have to allocate new
+Framers in CTaps consists of an interface with two function
+pointers, which are expected to be implemented by applications.
+The Messages passed to the implemented functions is owned by the protocol stack and
+the Framer can therefore modify the message in place and does not have to allocate new
 memory unless it is extending the length of the message.
 
 There are currently two major limitations with how framers are implemented
@@ -398,82 +363,57 @@ static ct_framer_impl_t length_prepend_framer = {
 \end{listing}
 
 \section{Protocol Implementations}
-\subsection{Supported protocols}
 Currently, CTaps natively supports three transportation layer protocols:
 UDP, TCP and QUIC. TCP and UDP were added because of their ubiquity and
 relative ease of implementation due to native support in libuv. QUIC was
 added since having easier access to QUIC was one of the primary motivations
 behind the thesis as a whole.
 
-\subsubsection{UDP} \label{sec:udpImpl}
-UDP is the simplest of the three currently supported protocols in CTaps
-and it has native
-support in libuv through the libuv \mono{uv_udp_t} handle~\cite{libuvLibuvUDPHandle}.
-The relative protocol complexity is discussed further in
-in~\cref{sec:protocolComplexity}.
+\subsection{UDP} \label{sec:udpImpl}
+UDP is the simplest of the three currently supported protocols in CTaps.
+It is supported in libuv through the \mono{uv_udp_t} handle~\cite{libuvLibuvUDPHandle}.
+Relative protocol complexity is discussed further in~\cref{sec:protocolComplexity}.
 
-UDP does not fit perfectly into the model assumed by
-TAPS, which is that of a Connection-based system. There are therefore
-several pieces of logic in the CTaps UDP implementation which adapt
-the underlying UDP to fit into a TAPS model.
+Since UDP is not connection-based, CTaps maintains
+a hash table internally, mapping incoming UDP messages
+to CTaps Connections. This is one of the roles of the
+Socket Manager as described in \cref{sec:socketManager}.
 
-When opening a client, CTaps
-simply creates a new UDP handle through libuv, starts receiving data over that handle, and
+When opening a client, CTaps creates a new UDP handle through libuv
+and starts receiving data over that handle, and
 invokes the \mono{ready()}-callback for the associated Connection.
 This does not actually transfer any data to the remote endpoint
-and CTaps can therefore not actually guarantee that the remote endpoint
-is reachable via UDP.
+and CTaps cannot guarantee that the remote endpoint is reachable via UDP.
+Opening UDP clients is synchronous, but the established Connections are still passed
+to the application via callback.
 
-In addition, when CTaps listens over UDP it has to emulate
-the concept of a Connection. CTaps uses the Socket Manager
-to demultiplex incoming UDP messages, mapping Remote Endpoints
-to Connections.
+\subsection{TCP}
+TCP is one of the three protocols currently supported by CTaps,
+and is supported in libuv through the \mono{uv_tcp_t} handle~\cite{libuvLibuvTCPHandle}.
 
-The list of selection properties set for UDP by CTaps is discussed
-in~\cref{sec:protocol-impl-sel-props}.
-
-\subsubsection{TCP}
-TCP is one of the three protocols currently supported by CTaps, and has native
-support in libuv through the
-\mono{uv_tcp_t} handle~\cite{libuvLibuvTCPHandle}.
-
-Overall, TCP fits relatively well into the model
-provided by the TAPS API.
-TCP is however stream-based, while TAPS assumes a message-based model.
+TCP fits well into the model provided by the TAPS API,
+with the only major deviation being that TCP is stream-based,
+while TAPS assumes a message-based model.
 For CTaps this means that every time libuv notifies CTaps of having
-received new data over a TCP socket then the received data is wrapped into a
-single message and passed to the application.
+received new data over a TCP socket, then the received data is wrapped into a
+single message and passed to the application. 
 
 While the application can use a framer to wrap or unwrap received messages, this currently
-functions as a proof of concept in CTaps, and does not currently have an internal buffer
-to support combining multiple TCP packets into a single Message.
+functions as a proof of concept in CTaps. Framers have not been tested
+utilizing internal buffers to join or split multiple messages, so the
+support for this is unclear. This piece of future work is discussed further
+in \cref{sec:future-framer}.
 
 Since TCP is also connection-based, listening and creating new sockets
-for incoming connections is handled by the TCP stack itself and there is
-therefore far less CTaps-specific logic for listening on TCP than there is
-on listening over UDP. For example, libuv
-has the built-in function \mono{uv_listen}, which invokes a callback whenever
-a new connection is received. Since the whole protocol is connection-oriented,
-it also means that the logic of only closing the receiving socket when
-the last connection closes is built-in, and does not have to be implemented
-by CTaps.
+for incoming connections is handled by the TCP stack itself. CTaps
+can therefore avoid custom logic, which is needed to make
+UDP fit into a connection-based model, for example. Since the whole
+protocol is connection-oriented, it also means that the lifetimes
+of sockets are far easier to manage. A single Connection is always
+bound to a single socket which are never shared. This means that
+the socket can be closed alongside the socket.
 
-CTaps still uses a Socket Manager to keep track of the open TCP
-handle, but this only tracks single listener and can be
-closed immediately when the listener is closed. The new TCP handles which
-have been spawned from this Listener will have received their own separate
-Socket Managers, since they are connected to separate sockets.
-
-The list of selection properties set for TCP by CTaps is discussed
-in~\cref{sec:protocol-impl-sel-props}.
-
-\subsubsection{QUIC} \label{sec:quicImpl}
-With the standardization of QUIC being fairly recent,
-none of the current implementations of TAPS
-feature QUIC as one of the underlying protocols.
-This makes CTaps particularly unique, as it is the first major piece of
-work attempting to map a QUIC to an implementation of the TAPS API.
-
+\subsection{QUIC} \label{sec:quicImpl}
 Within CTaps, QUIC is by far the most complex supported protocol,
 which can be seen through the required number of lines of code in 
 \cref{sec:protocolComplexity}. During the development of CTaps,
@@ -483,13 +423,13 @@ do not map cleanly into the TAPS API. These features are discussed further in
 
 From an application's point of view there are several TAPS configurations which a client has to set in order to use
 QUIC through CTaps. This is a symptom of QUIC being the only supported
-protocol which uses TLS, and is not a weakness of the TAPS API itself.
+protocol which uses TLS, and is not specific to QUIC itself.
 
-When interacting with Picoquic, CTaps is responsible for writing and reading
+As mentioned previously, Picoquic is a sans-io library. This means that CTaps is responsible for writing and reading
 data to and from the network, while Picoquic formats outgoing QUIC packets and interprets incoming data.
 CTaps will regularly query Picoquic for when it needs to be woken up next
-and will use a libuv timer to wake up at the appropriate time.
-Within these wakeups, CTaps will also query Picoquic for any new packets which it needs to send over the network.
+and a libuv timer is used to wake up at the appropriate time.
+Within these wakeups, CTaps will query Picoquic for any new packets which it needs to send over the network.
 If Picoquic has data to send, it will provide both the source and the destination IP address to use,
 in addition to the actual packet data.
 
@@ -503,14 +443,14 @@ select the from address itself.
 
 This becomes an issue for CTaps when utilizing the connection migration
 workaround described in~\cref{sec:connection-migration-impl}, as 
-the socket currently has to be bound to an wildcard address for migration
+the socket currently has to be bound to a wildcard address for migration
 to work. If the from address does not match the address expected
 by Picoquic then it cannot successfully reason about which paths are
-available and which are not. This causes Picoquic to be unable to perform connection migration
+available and which are not, which makes Picoquic to be unable to perform connection migration
 as expected.
 
-CTaps therefore
-creates its own UDP socket through the \mono{socket()} system call instead of using a \mono{uv_udp_t} handle.
+In order to set the source IP address for outgoing QUIC packets,
+CTaps creates its own UDP socket through the \mono{socket()} system call instead of using a \mono{uv_udp_t} handle.
 The resulting file descriptor is
 monitored using a generic
 \mono{uv_poll_t} libuv handle. This does not create much extra
@@ -518,38 +458,6 @@ complexity, apart from having to manually build the message header
 as seen in~\cref{lst:pktinfo-send-packet} in~\cref{app:internal-code-examples}.
 A model of the data flow between CTaps, Picoquic and the network can be
 seen in~\cref{fig:ctaps-quic-loop}.
-
-When initiating a CTaps Connection over QUIC, CTaps needs to open a socket on
-the a Local Endpoint and inform Picoquic about wanting to open a QUIC connection.
-If CTaps wants to listen for incoming QUIC connections, then it can simply
-create a QUIC context and to start feeding Picoquic any arriving packets.
-
-When the QUIC connection
-is ready, Picoquic informs CTaps about this through a callback. CTaps will then
-use a context pointer associated with this callback to find the associated
-Connection Group and invoke the correct \mono{ready()} callback.
-
-When closing a QUIC connection, CTaps will invoke
-\mono{picoquic_close()} which will initiate a graceful teardown.
-Picoquic will then inform CTaps about the connection being closed through a
-callback, when the teardown has completed.
-
-As mentioned previously, ALPN is mandatory for QUIC and is supplied to Picoquic
-by CTaps through a configurable Security Parameter. ALPN is a negotiation
-between a QUIC server and client, therefore, both a Listener using QUIC and
-a client using QUIC has to take this parameter into account. In order to support
-session resumption for QUIC, which only supports a single ALPN value, CTaps
-treats the ALPN value as a protocol option and generates separate candidates for
-each ALPN value when performing candidate gathering, if the underlying protocol
-supports it.
-
-In situations with many possible ALPN values, this
-will lead to a larger delay in connection establishment than strictly
-necessary. The consequences of this stagger delay as it is currently
-implemented in CTaps is discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
-
-The full implementation of the protocol implementation struct for QUIC can be seen in
-\cref{lst:quic-impl-struct} in~\cref{app:internal-code-examples}.
 
 \definecolor{taskgreen}{HTML}{A5D6A7}
 \begin{figure}[htbp]
@@ -590,8 +498,45 @@ The full implementation of the protocol implementation struct for QUIC can be se
 \label{fig:ctaps-quic-loop}
 \end{figure}
 
+When initiating a CTaps Connection over QUIC, CTaps needs to open a socket on
+a Local Endpoint and inform Picoquic about wanting to open a QUIC connection.
+Picoquic will then start generating handshake packets, which CTaps sends over
+the network.
 
+If CTaps wants to listen for incoming QUIC connections, then it can simply
+create a QUIC context and to start feeding Picoquic any arriving packets.
+If the incoming QUIC connection successfully performs a handshake then 
+Picoquic informs CTaps about this through a callback. CTaps will then
+use a context pointer associated with this callback to find the associated
+Connection Group and invoke the \mono{ready()} callback registered by the
+application.
 
+When closing a QUIC connection, CTaps will invoke
+\mono{picoquic_close()} which will initiate a graceful teardown.
+Picoquic will then generate packets to perform teardown over the network,
+before finally informing CTaps about the connection being closed through a
+callback, when the teardown has completed.
+
+As mentioned in \cref{sec:back-alpn}, ALPN is mandatory for QUIC
+and the application must have configured it in the Security Paramaters to
+the Preconnection in order to establish a QUIC connection.
+
+ALPN is a negotiation between a QUIC server and client, therefore, both Listeners and
+clients using QUIC require it. As mentioned in \cref{sec:back-session-resumption},
+only a single ALPN value is valid when performing session resumption. CTaps
+therefore treats ALPN values as a protocol option when performing candidate
+gathering, creating separate branches for each ALPN value passed by the application,
+but only for protocols which support ALPN.
+
+In situations with many possible ALPN values, this
+will lead to a larger delay in connection establishment than strictly
+necessary. The consequences of this stagger delay as it is currently
+implemented in CTaps is discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
+
+The full implementation of the protocol implementation struct for QUIC can be seen in
+\cref{lst:quic-impl-struct} in~\cref{app:internal-code-examples}.
+
+% TODO - kom hit
 \subsection{Selection Properties} \label{sec:protocol-impl-sel-props}
 In TAPS the capabilities of each underlying protocol is exposed through
 the use of Selection Properties. In CTaps this is used when gathering candidates,
