@@ -10,7 +10,7 @@ through the TAPS API.
 CTaps currently features all major aspects of the TAPS API
 described in RFC~9622 except for rendezvous.
 Internally it implements the most important parts
-of a TAPS system and supports 
+of a TAPS System and supports 
 candidate gathering, candidate racing, TCP, UDP and QUIC.
 
 The following individual API functions are not implemented:
@@ -35,7 +35,7 @@ except for session cache options and pre shared keys.
 In addition, CTaps does not support trust callbacks. Only parameters
 needed for TLS 1.3 and session resumption have any effect.
 
-For the internal features of a TAPS system as described in RFC~9623,
+For the internal features of a TAPS System as described in RFC~9623,
 the most unique parts of the TAPS API has been prioritized during development.
 This is naturally candidate gathering and candidate racing, which allows a single
 client to be able to connect to multiple different endpoints using different
@@ -941,11 +941,10 @@ of treating a Connection as established as soon as the underlying UDP socket has
 been opened was therefore chosen for CTaps.
 
 \section{Security}
-While the security of a TAPS system is primarily reliant on the security of the underlying protocols,
+While the security of a TAPS System is primarily reliant on the security of the underlying protocols,
 any implementation of TAPS needs to take security into account in its design.
-The security of underlying protocols is handled through Security Parameters.
-These are designed to be extensible without introducing breaking API changes.
-Applications can set client and server certificates, ALPN values, or other
+The security of underlying protocols is handled through Security Parameters,
+which applications can use to set client and server certificates, ALPN values, or other
 cryptographic parameters necessary to establish Connections.
 
 The largest security risk for an application using a TAPS System is that
@@ -961,35 +960,36 @@ can initialize disabled or opportunistic Security Parameters
 to remain compatible with endpoints that do not support transport
 security protocols~\cite[Sec.~6.3]{rfc9622}.
 
-With Disabled Security Parameters a TAPS system will not attempt
+With disabled Security Parameters, a TAPS System will not attempt
 to establish any transport security, while opportunistic Security Parameters
-allow for the coexistence of secure and insecure transport layer protocols
-during racing. Although not specified by RFC~9622,
-it is natural to assume that in cases where both insecure and secure transport
-protocols are viable, any TAPS System would choose to prioritize the
-secure protocol if performing candidate racing. For this case, the TAPS implementation
-should also take the increased number of RTTs for the secure protocol into account
-when calculating the stagger delay for candidate racing, in order to not give
-the unencrypted protocols undue advantages.
+allow for the coexistence of secure and insecure transport layer protocols.
+When racing secure and insecure protocols, TAPS implementations
+should take the increased number of RTTs required to establish a secure protocol
+into account. This could take the form of longer stagger delays for insecure
+protocols.
 
-Since TAPS provides a common API to several different protocols, there may
-be situations where TAPS places a limitation on the security of an application,
-but this is more likely to be related to the specific TAPS implementation than
-to TAPS in general. For example, CTaps does not currently support keeping key
+Since TAPS is a generic API,
+there may be situations where the specific implementation of a TAPS System
+places a limitation on the security of an application.
+For example, CTaps does not currently support keeping key
 files in memory and can only refer to them through filenames. This could be
 seen as a CTaps-specific security gap, depending on an application's requirements.
 The TAPS API itself however only specifies that server and client certificates should be settable through the use of
 certificate bundles, but does not mandate the form which these bundles should take.
 
-Although TAPS aims to be as secure as possible by default, there are
-trade-offs to be made between the default configuration of a TAPS system 
-when it comes to feature-richness and security. 
-An example is the potential of isolating sessions
-through Security Parameters. By default, this is set to false, allowing a TAPS implementation
-to use an internal cache to optimize established connections. Using this cache
-could lead to a leak of connection linkability, as observers over the wire could
-observe different connections exhibiting the same behavior, and thereby induce that
-they are made by the same client.
+While TAPS aims to provide reasonable security defaults,
+its default configuration trades some security guarantees 
+for usability and performance. One example is session isolation.
+The \mono{isolateSession} Security Parameter is false by default,
+which allows a TAPS implementation
+to use internally cached data, such as session tickets and cookies.
+Using this cache could lead to increased connection linkability. 
+An observer could see
+different connections exhibiting the same behavior
+and infer that they belong to the same client. This is an acceptable risk
+for most applications, but security-sensitive applications
+must explicitly configure parameters rather than rely on the
+defaults.
 
 Fingerprinting may also be an issue inherent in TAPS itself.
 Using a networking library which standardizes the interaction
