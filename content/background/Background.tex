@@ -111,8 +111,13 @@ only the source port, destination port, length and checksum.
 
 \section{SCTP}
 SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960},
-and it features several innovations over TCP. Notably, it was the first protocol to support multiplexing multiple independent logical streams
-over a single network connection. It has however struggled with widespread adoption for several reasons.
+and it features several innovations over TCP.
+Notably, it was the first protocol to support multiplexing multiple independent logical streams
+over a single network connection, which is known as multistreaming. Multistreaming
+is described in detail in \cref{sec:background-multistreaming}.
+
+Despite its innovations, SCTP has struggled with widespread adoption
+for several reasons.
 First of all, it uses a separate protocol number from TCP and UDP and as mentioned
 previously this makes it vulnerable to middlebox interference.
 SCTP over UDP~\cite{rfc6951} was developed in an attempt to mitigate these issues, but
@@ -129,6 +134,262 @@ API had to be extended in order to support SCTP.
 QUIC addresses both of these barriers by using UDP as 
 a substrate and implementing the protocol entirely in userspace,
 while still preserving multistreaming and multihoming.
+
+\section{Multistreaming}\label{sec:background-multistreaming}
+The simplest way of organizing network transfers is to open
+a new TCP connection for each object which needs to be transferred.
+This creates independent streams each responsible for transferring
+a single object and was the basis of early HTTP-standards.
+
+Utilizing TCP this way has the major issue of that each new
+connection has to go through slow start. This means that
+when transferring small objects, the full bandwidth of the
+connection cannot be utilized.
+In TCP, this issue is usually mitigated by re-using the same
+TCP connection for several transfers. An example
+here is HTTP/1.1,
+which introduced the concept of persistent
+TCP connections for when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
+
+Using a single TCP connection this way allows for a more
+efficient use of bandwidth, but also introduces the issue of
+head-of-line blocking. Head-of-line blocking is a performance bottleneck where a queue of packets
+is held up by an issue with earlier packet. Commonly caused
+either by reordering or packet loss.
+
+Multistreaming is an innovation which solves both of these issues
+with TCP. It allows a single connection to be re-used when organizing
+transfers into logical streams, allowing for a more efficient
+use of bandwidth. A figure displaying this can be seen in
+\cref{fig:connection-clone-gains}. In addition, it avoids
+head-of-line blocking by only enforcing ordering within streams.
+When a stream is used to transfer a single object it can guarantee
+the in-order delivery of that single object, but allows it to
+be delivered out-of-order when compared to other objects.
+
+A figure displaying head-of-line blocking
+can be seen in \cref{fig:background-multi-streaming}. Here,
+reordering causes delay in delivery for TCP, but for the multistreaming
+protocol it is avoided by using separate streams.
+
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[font=\small, >=stealth]
+
+%% ============ LEFT PANEL: TCP ============
+\begin{scope}
+
+  % Lost-capacity shading
+  \fill[blue!10]
+    (3.1, 3.0) -- (5.1, 3.0)
+    .. controls (4.6, 3.0) and (3.6, 0.15) .. (3.1, 0.15) -- cycle;
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, blue!70!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
+
+  % Transfer 2: TCP slow starts again
+  \draw[very thick, blue!70!black]
+    (3.1, 0.15) .. controls (3.6, 0.15) and (4.6, 3.0) .. (5.1, 3.0);
+
+  % Lost capacity annotation
+  \node[font=\scriptsize, black] at (3.85, 2.75) {Lost};
+  \node[font=\scriptsize, black] at (3.85, 2.35) {capacity};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {TCP};
+
+\end{scope}
+
+%% ============ RIGHT PANEL: QUIC ============
+\begin{scope}[xshift=6.7cm]
+
+  % Axes
+  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
+  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
+
+  % W_max reference
+  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
+  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
+
+  % Transfer 1: quick ramp then flat at W_max
+  \draw[very thick, green!50!black]
+    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
+    -- (3.0, 3.0);
+
+  % Transfer boundary
+  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
+  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
+
+  % Transfer 2: QUIC resumes at W_max
+  \draw[very thick, green!50!black]
+    (3.1, 3.0) -- (5.1, 3.0);
+
+  % CWND reuse annotation
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.6) {Stream};
+  \node[font=\scriptsize, green!40!black] at (4.1, 3.2) {multiplexing};
+
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 2) {First};
+  \node[below, font=\scriptsize, green!40!black] at (1.8, 1.6) {Stream};
+
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 2) {Second};
+  \node[below, font=\scriptsize, green!40!black] at (4.2, 1.6) {stream};
+
+  % X-axis region labels
+  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
+  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
+
+  % Panel title
+  \node[font=\small\bfseries] at (3.0, 4.7) {Multistreaming};
+
+\end{scope}
+
+\end{tikzpicture}
+\caption[CWND re-use for multistreaming]
+{
+An example of CWND re-use with multistreaming. If TCP is organized into logical
+streams then each subsequent stream will be a separate TCP connection
+and each will have to go through slow start. Multistreaming allows multiple
+streams to be multiplexed over a single connection and they can
+therefore re-use the achieved CWND.
+}
+\label{fig:connection-clone-gains}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  >=latex,
+  node distance=1.2cm and 1.6cm,
+  pkt/.style={circle,draw,minimum size=6mm,inner sep=0pt},
+  lost/.style={pkt,fill=red!50},
+  ok/.style={pkt,fill=orange!40},
+  waiting/.style={pkt,fill=yellow!40},
+  conn/.style={
+  draw,
+  shape=cylinder,
+  cylinder uses custom fill,
+  cylinder body fill=blue!10,
+  cylinder end fill=blue!20,
+  minimum height=6cm,  % thickness
+  minimum width=2cm    % length
+},
+  endpoint/.style={
+    draw,rounded corners=8pt,
+    minimum width=1.8cm,
+    minimum height=2.1cm,
+    align=center,
+    fill=gray!10,
+  }
+]
+
+%======================
+% TOP: TCP / HTTP/2
+%======================
+\begin{scope}
+\node[endpoint] (tcpclient) at (-5,2.5) {Client};
+\node[endpoint] (tcpserver) at (5,2.5) {Server};
+
+
+% TCP connection "pipe"
+\node[conn] (tcpconn) at (0,2.5) {};
+
+\draw[->,thick,gray!70]
+  ($(tcpconn.east)+(-1.5,1.2cm)$) -- ($(tcpconn.west)+(1.5cm,1.2cm)$);
+
+\draw[dashed] (tcpclient.east)++(0,0.5) -- (tcpconn.west);
+\draw[dashed] (tcpclient.east)++(0,00) -- (tcpconn.west);
+\draw[dashed] (tcpclient.east)++(0,-0.5) -- (tcpconn.west);
+
+\draw[dashed] (tcpserver.west)++(0,0.5) -- (tcpconn.east);
+\draw[dashed] (tcpserver.west)++(0,0) -- (tcpconn.east);
+\draw[dashed] (tcpserver.west)++(0,-0.5) -- (tcpconn.east);
+\draw[dashed] (tcpconn.west) -- (tcpconn.east);
+
+
+
+% packets in order (1..8) inside pip
+% place first packet at the left edge of tcpconn, slightly inside
+\node[lost]    (p1) at ($(tcpconn.west)+(0.6cm,0)$)  {\scriptsize 5};
+\node[waiting] (p2) at ($(p1)+(0.9cm,0)$)            {\scriptsize 1};
+\node[ok]      (p3) at ($(p2)+(0.9cm,0)$)            {\scriptsize 3};
+\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
+\node[waiting] (p5) at ($(p4)+(0.9cm,0)$)            {\scriptsize 2};
+\node[lost]    (p6) at ($(p5)+(0.9cm,0)$)            {\scriptsize 6};
+
+\node[font=\small\bfseries] at (0.0, 4.0) {TCP};
+\end{scope}
+
+%======================
+% BOTTOM: QUIC
+%======================
+
+\begin{scope}[yshift=-3.4cm]
+\node[endpoint] (quicclient) at (-5,2.5) {Client};
+\node[endpoint] (quicserver) at (5,2.5) {Server};
+
+% TCP connection "pipe"
+\node[conn, cylinder body fill=green!10, cylinder end fill=green!20] (quicconn) at (0,2.5) {};
+
+\draw[dashed]($(quicclient.east)+(0,-0.5)$) -- ($(quicconn.west)+(0,-0.5)$);
+\draw[dashed]($(quicclient.east)+(0,0)$) -- ($(quicconn.west)+(0,0)$);
+\draw[dashed]($(quicclient.east)+(0,+0.5)$) -- ($(quicconn.west)+(0,+0.5)$);
+
+% \draw[dashed] (quicconn.west)+(0,-0.5)   -- (quicconn.east)+(0,-0.5);
+% \draw[dashed] (quicconn.west)            -- (quicconn.east);
+\draw[dashed]($(quicconn.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
+\draw[dashed]($(quicconn.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
+\draw[dashed]($(quicconn.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
+
+\draw[dashed]($(quicserver.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
+\draw[dashed]($(quicserver.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
+\draw[dashed]($(quicserver.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
+
+\draw[->,thick,gray!70]
+  ($(quicconn.east)+(-1.5,1.2cm)$) -- ($(quicconn.west)+(1.5cm,1.2cm)$);
+
+
+\node[lost]    (p1) at ($(quicconn.west)+(0.6cm,-0.5)$)  {\scriptsize 5};
+\node[waiting] (p2) at ($(p1)+(0.9cm,1.0)$)            {\scriptsize 1};
+\node[ok]      (p3) at ($(p2)+(0.9cm,-0.5)$)            {\scriptsize 3};
+\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
+\node[waiting] (p5) at ($(p4)+(0.9cm,0.5)$)            {\scriptsize 2};
+\node[lost]    (p6) at ($(p5)+(0.9cm,-1.0)$)            {\scriptsize 6};
+
+\node[font=\small\bfseries] at (0.0, 4.0) {Multistreaming Protocol};
+\end{scope}
+
+\end{tikzpicture}
+\caption[Avoiding head-of-line blocking with multistreaming]
+{
+An example of the issue of head-of-line blocking with TCP. Since TCP enforces ordered delivery between all
+objects, it cannot hand the data in packet 5 to the application until packets 1--4 have
+arrived. For multistreaming, order is not enforced between streams and this issue
+is avoided.
+}
+\label{fig:background-multi-streaming}
+\end{figure}
+
 
 \section{TLS}
 Transport layer security (TLS) is a cryptographic protocol which provides secure communication
@@ -307,260 +568,13 @@ protocols~\cite{rfc9000} which allows QUIC to survive
 changes in the underlying four-tuple and therefore enables
 connection migration.
 
-\subsection{Multistreaming}\label{sec:background-multistreaming}
-As mentioned previously, SCTP was the first transport layer
+\subsection{Multistreaming in QUIC}
+As mentioned, SCTP was the first transport layer
 protocol to feature multistreaming, but it is also a major feature
-of QUIC.
-Multistreaming has two major advantages in that it avoids
-head of line blocking and that it allows for more efficient CWND
-re-use.
-
-Opening a new stream in QUIC utilizes the same path and the same
-underlying QUIC connection. Since congestion control is per-path,
-this means that the stream does not have to go through slow start,
-instead allowing the new stream to re-use the CWND achieved from previous 
-transfers. If TCP was utilized instead, then the only way to organize
-transfers into separate logical streams then the only way of
-achieving this is by opening a new TCP connection. This connection
-would then have to go through slow start again, losing capacity
-compared to QUIC. A figure displaying this scenario
-can be seen in~\cref{fig:connection-clone-gains}.
-
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[font=\small, >=stealth]
-
-%% ============ LEFT PANEL: TCP ============
-\begin{scope}
-
-  % Lost-capacity shading
-  \fill[blue!10]
-    (3.1, 3.0) -- (5.1, 3.0)
-    .. controls (4.6, 3.0) and (3.6, 0.15) .. (3.1, 0.15) -- cycle;
-
-  % Axes
-  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
-  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
-
-  % W_max reference
-  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
-  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
-
-  % Transfer 1: quick ramp then flat at W_max
-  \draw[very thick, blue!70!black]
-    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
-    -- (3.0, 3.0);
-
-  % Transfer boundary
-  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
-  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
-
-  % Transfer 2: TCP slow starts again
-  \draw[very thick, blue!70!black]
-    (3.1, 0.15) .. controls (3.6, 0.15) and (4.6, 3.0) .. (5.1, 3.0);
-
-  % Lost capacity annotation
-  \node[font=\scriptsize, black] at (3.85, 2.75) {Lost};
-  \node[font=\scriptsize, black] at (3.85, 2.35) {capacity};
-
-  % X-axis region labels
-  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
-  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
-
-  % Panel title
-  \node[font=\small\bfseries] at (3.0, 4.7) {TCP};
-
-\end{scope}
-
-%% ============ RIGHT PANEL: QUIC ============
-\begin{scope}[xshift=6.7cm]
-
-  % Axes
-  \draw[->, thick] (0, 0) -- (5.6, 0) node[right] {Time};
-  \draw[->, thick] (0, 0) -- (0, 4.2) node[above] {CWND};
-
-  % W_max reference
-  \draw[dashed, gray!60] (0, 3.0) -- (5.3, 3.0);
-  \node[right, gray!60, font=\scriptsize] at (5.5, 3.0) {$W_{\max}$};
-
-  % Transfer 1: quick ramp then flat at W_max
-  \draw[very thick, green!50!black]
-    (0, 0.15) .. controls (0.5, 0.15) and (1.5, 3.0) .. (2.0, 3.0)
-    -- (3.0, 3.0);
-
-  % Transfer boundary
-  \draw[dashed, gray] (3.1, -0.3) -- (3.1, 3.9);
-  \node[above, font=\scriptsize, gray] at (3.1, 3.9) {New Transfer};
-
-  % Transfer 2: QUIC resumes at W_max
-  \draw[very thick, green!50!black]
-    (3.1, 3.0) -- (5.1, 3.0);
-
-  % CWND reuse annotation
-  \node[font=\scriptsize, green!40!black] at (4.1, 3.6) {Stream};
-  \node[font=\scriptsize, green!40!black] at (4.1, 3.2) {multiplexing};
-
-  \node[below, font=\scriptsize, green!40!black] at (1.8, 2) {First};
-  \node[below, font=\scriptsize, green!40!black] at (1.8, 1.6) {Stream};
-
-  \node[below, font=\scriptsize, green!40!black] at (4.2, 2) {Second};
-  \node[below, font=\scriptsize, green!40!black] at (4.2, 1.6) {stream};
-
-  % X-axis region labels
-  \node[below, font=\scriptsize] at (1.5, 0) {First Transfer};
-  \node[below, font=\scriptsize] at (4.2, 0) {Second Transfer};
-
-  % Panel title
-  \node[font=\small\bfseries] at (3.0, 4.7) {QUIC};
-
-\end{scope}
-
-\end{tikzpicture}
-\caption[Difference of Cloning with QUIC vs. TCP]
-{
-An example of CWND re-use with QUIC. If TCP is organized into logical
-streams then each subsequent stream will be a separate TCP connection
-and each will have to go through slow start. QUIC allows multiple
-streams to be multiplexed over a single connection and they can
-therefore re-use the achieved CWND.
-}
-\label{fig:connection-clone-gains}
-\end{figure}
-
-In TCP this issue is usually mitigated by re-using the same
-TCP connection for several transfers. An example utilizing
-this is HTTP/1.1 which introduced the concept of persistent
-TCP connections for when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
-This allows the CWND to be reused, but also introduces the issue
-of head-of-line blocking (HOL). In networking, head-of-line
-blocking is a performance bottleneck where a queue of packets
-is held up by an issue with earlier packet. Commonly caused
-either by reordering or packet loss.
-
-Multistreaming avoids the issue of head-of-line blocking
-by only enforcing ordering within streams. Applications
-can then utilize separate streams for separate objects
-allowing each object delivered out-of-order relative to each other.
-
-A figure displaying head-of-line blocking
-can be seen in \cref{fig:background-multi-streaming}. Here,
-reordering causes delay in delivery for TCP, but QUIC
-avoids it due to using separate streams.
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-  font=\small,
-  >=latex,
-  node distance=1.2cm and 1.6cm,
-  pkt/.style={circle,draw,minimum size=6mm,inner sep=0pt},
-  lost/.style={pkt,fill=red!50},
-  ok/.style={pkt,fill=orange!40},
-  waiting/.style={pkt,fill=yellow!40},
-  conn/.style={
-  draw,
-  shape=cylinder,
-  cylinder uses custom fill,
-  cylinder body fill=blue!10,
-  cylinder end fill=blue!20,
-  minimum height=6cm,  % thickness
-  minimum width=2cm    % length
-},
-  endpoint/.style={
-    draw,rounded corners=8pt,
-    minimum width=1.8cm,
-    minimum height=2.1cm,
-    align=center,
-    fill=gray!10,
-  }
-]
-
-%======================
-% TOP: TCP / HTTP/2
-%======================
-\begin{scope}
-\node[endpoint] (tcpclient) at (-5,2.5) {Client};
-\node[endpoint] (tcpserver) at (5,2.5) {Server};
-
-
-% TCP connection "pipe"
-\node[conn] (tcpconn) at (0,2.5) {};
-
-\draw[->,thick,gray!70]
-  ($(tcpconn.east)+(-1.5,1.2cm)$) -- ($(tcpconn.west)+(1.5cm,1.2cm)$);
-
-\draw[dashed] (tcpclient.east)++(0,0.5) -- (tcpconn.west);
-\draw[dashed] (tcpclient.east)++(0,00) -- (tcpconn.west);
-\draw[dashed] (tcpclient.east)++(0,-0.5) -- (tcpconn.west);
-
-\draw[dashed] (tcpserver.west)++(0,0.5) -- (tcpconn.east);
-\draw[dashed] (tcpserver.west)++(0,0) -- (tcpconn.east);
-\draw[dashed] (tcpserver.west)++(0,-0.5) -- (tcpconn.east);
-\draw[dashed] (tcpconn.west) -- (tcpconn.east);
-
-
-
-% packets in order (1..8) inside pip
-% place first packet at the left edge of tcpconn, slightly inside
-\node[lost]    (p1) at ($(tcpconn.west)+(0.6cm,0)$)  {\scriptsize 5};
-\node[waiting] (p2) at ($(p1)+(0.9cm,0)$)            {\scriptsize 1};
-\node[ok]      (p3) at ($(p2)+(0.9cm,0)$)            {\scriptsize 3};
-\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
-\node[waiting] (p5) at ($(p4)+(0.9cm,0)$)            {\scriptsize 2};
-\node[lost]    (p6) at ($(p5)+(0.9cm,0)$)            {\scriptsize 6};
-
-\node[font=\small\bfseries] at (0.0, 4.0) {TCP};
-\end{scope}
-
-%======================
-% BOTTOM: QUIC
-%======================
-
-\begin{scope}[yshift=-3.4cm]
-\node[endpoint] (quicclient) at (-5,2.5) {Client};
-\node[endpoint] (quicserver) at (5,2.5) {Server};
-
-% TCP connection "pipe"
-\node[conn, cylinder body fill=green!10, cylinder end fill=green!20] (quicconn) at (0,2.5) {};
-
-\draw[dashed]($(quicclient.east)+(0,-0.5)$) -- ($(quicconn.west)+(0,-0.5)$);
-\draw[dashed]($(quicclient.east)+(0,0)$) -- ($(quicconn.west)+(0,0)$);
-\draw[dashed]($(quicclient.east)+(0,+0.5)$) -- ($(quicconn.west)+(0,+0.5)$);
-
-% \draw[dashed] (quicconn.west)+(0,-0.5)   -- (quicconn.east)+(0,-0.5);
-% \draw[dashed] (quicconn.west)            -- (quicconn.east);
-\draw[dashed]($(quicconn.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
-\draw[dashed]($(quicconn.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
-\draw[dashed]($(quicconn.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
-
-\draw[dashed]($(quicserver.west)+(0,-0.5)$) -- ($(quicconn.east)+(0,-0.5)$);
-\draw[dashed]($(quicserver.west)+(0,0)$) -- ($(quicconn.east)+(0,0)$);
-\draw[dashed]($(quicserver.west)+(0,+0.5)$) -- ($(quicconn.east)+(0,+0.5)$);
-
-\draw[->,thick,gray!70]
-  ($(quicconn.east)+(-1.5,1.2cm)$) -- ($(quicconn.west)+(1.5cm,1.2cm)$);
-
-
-\node[lost]    (p1) at ($(quicconn.west)+(0.6cm,-0.5)$)  {\scriptsize 5};
-\node[waiting] (p2) at ($(p1)+(0.9cm,1.0)$)            {\scriptsize 1};
-\node[ok]      (p3) at ($(p2)+(0.9cm,-0.5)$)            {\scriptsize 3};
-\node[ok]      (p4) at ($(p3)+(0.9cm,0)$)            {\scriptsize 4};
-\node[waiting] (p5) at ($(p4)+(0.9cm,0.5)$)            {\scriptsize 2};
-\node[lost]    (p6) at ($(p5)+(0.9cm,-1.0)$)            {\scriptsize 6};
-
-\node[font=\small\bfseries] at (0.0, 4.0) {QUIC};
-\end{scope}
-
-\end{tikzpicture}
-\caption[QUIC multistreaming visualization]
-{
-Since TCP enforces ordered delivery between all
-objects, it cannot hand the data in packet 5 to the application until packets 1--4 have
-arrived. QUIC does not enforce ordering between streams and therefore avoids head-of-line blocking.
-}
-\label{fig:background-multi-streaming}
-\end{figure}
+of QUIC. This means that QUIC connections can benefit from
+CWND re-use and avoid head-of-line blocking as described
+in \cref{sec:background-multistreaming}. This is one of the key
+reasons why QUIC is the transport protocol used in HTTP/3~\cite{rfc9114}.
 
 \subsection{Connection Migration}\label{sec:connection-migration}
 QUIC connections can survive changes to the underlying four-tuple

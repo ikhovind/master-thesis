@@ -60,14 +60,13 @@ Network.framework~\cite{networkFramework} is Apple's closed-source
 TAPS implementation. It features several important TAPS abstractions
 such as Connections and Listeners.
 
-Network.framework does however deviate from TAPS in that
-it requires that
-applications specify a \term{NWParameters} object matching
+Network.framework deviates from TAPS in that
+it requires that applications specify a \term{NWParameters} object matching
 a specific transport layer protocol. This causes the application
 to be bound to this protocol at compile time. An example client
 can be seen in~\cref{lst:network-framework-example}, where
-a new connection to \enquote{example.com} is opened through QUIC
-using the custom ALPN \enquote{myproto}.
+a new connection is opened using QUIC.
+
 
 \begin{listing}[htbp]
 \begin{minted}{swift}
@@ -87,11 +86,11 @@ connection.stateUpdateHandler = { newState in
 // Start the connection with callback queue
 connection.start(queue: queue)
 \end{minted}
-\caption[Network.framework QUIC Example]{Network.framework example code of opening a QUIC connection to example.com~\cite{WWDC2021_10094}.}
+\caption[Network.framework QUIC Example]{Network.framework example code of opening a QUIC connection~\cite{WWDC2021_10094}.}
 \label{lst:network-framework-example}
 \end{listing}
 
-Network.framework does not support candidate racing between protocols and endpoints
+Network.framework does not support full candidate racing
 as described by TAPS,
 only performing Happy Eyeballs-style IP-family racing.
 
