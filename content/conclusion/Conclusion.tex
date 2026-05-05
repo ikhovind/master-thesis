@@ -299,7 +299,7 @@ applications needing to receive both QUIC and UDP data on the
 same Local Endpoint are rare, and that the added complexity
 does not bring much value for this specific case.
 
-\subsection{TLS}
+\subsection{TLS}\label{sec:future-work-tls}
 The most important protocol which is currently not supported
 in CTaps is TLS over TCP. While TLS conceptually resides
 above TCP, it would be best suited to be treated as a completely separate
@@ -311,6 +311,13 @@ support TLS, CTaps already has a transitive dependency on
 Picotls through Picoquic. This, alongside its sans-I/O functionality
 would make it a good candidate library, as long as supporting
 only TLS~1.3 is deemed acceptable.
+
+Adding more encrypted protocols
+also means that candidate racing should be reworked to be
+based on the Security Parameters used by the application,
+as described in \cref{sec:design-sec}. This would ensure
+that CTaps does not silently downgrade the security of
+a Connection.
 
 \section{Broader Significance}
 While CTaps could be developed to become a real production-ready library
