@@ -382,8 +382,8 @@ therefore re-use the achieved CWND.
 \end{tikzpicture}
 \caption[Avoiding head-of-line blocking with multistreaming]
 {
-An example of head-of-line blocking with TCP. Since TCP enforces ordered delivery between all
-objects, it cannot hand the data in packet 5 to the application until packets 1--4 have
+An example of head-of-line blocking caused by reordering. If packets were sent in order from 1 to 6,
+then TCP cannot hand the data in packet 5 to the application until packets 1--4 have
 arrived. For multistreaming, order is not enforced between streams and this issue
 is avoided.
 }
