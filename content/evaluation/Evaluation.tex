@@ -19,7 +19,7 @@ when performing experiments.
 All experiments were performed on a single laptop which is described in~\cref{tab:machine-specs}.
 Performance would not change significantly 
 on a more performant system, as the network emulation described
-in \cref{sec:softwaretools} makes all except the UDP RTT experiment I/O-bound.
+in \cref{sec:softwaretools} makes all experiments, except UDP RTT, I/O-bound.
 
 \begin{table}[htbp]
 \centering
@@ -43,21 +43,16 @@ in \cref{sec:softwaretools} makes all except the UDP RTT experiment I/O-bound.
 \end{table}
 
 
-\subsection{Software Tools} \label{sec:softwaretools}
-All four experiments were performed on localhost.\footnote{
+\subsection{Network Emulation} \label{sec:softwaretools}
+All five experiments were performed on localhost.\footnote{
 The experiment servers and clients used can be found in the \mono{benchmark/src/server/}
 and \mono{benchmark/src/client/}
 folders in the CTaps repository.}
-For most experiments, bandwidth emulation
+For all experiments except for UDP RTT, bandwidth emulation
 and delay were added using the Linux utility
 \mono{tc-netem}~\cite{tc-netem}. Jitter was added
-to the candidate racing experiment only, and is
+to the candidate racing experiment, and is
 described in \cref{sec:handshake-kde}.
-
-Since \mono{tc-netem} was invoked programmatically
-from the Python testing script to allow for
-a single experiment to vary its network conditions.
-For example to test multiple delay values in the handshake experiment.
 
 The connection migration experiment used \mono{iptables}~\cite{iptables_man} to block the initial
 path and force migration. This block was performed based on
@@ -76,7 +71,7 @@ iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j DROP
 
 This command adds a rule to the \mono{OUTPUT} chain of the \mono{filter} table via
 \mono{iptables}~\cite{iptables_man}. When the outgoing packet is dropped,
-\mono{nf_hook_slow()} returns \mono{-EPERM}~\cite{LinuxKernelNfHookSlow}.
+\mono{nf_hook_slow()} in the Linux kernel returns \mono{-EPERM}~\cite{LinuxKernelNfHookSlow}.
 This propagates back up through the networking stack and
 \mono{sendmsg()} returns \mono{-1} with \mono{errno} set to
 \mono{EPERM}.\footnote{
@@ -90,14 +85,14 @@ report any \mono{sendmsg()} failure directly to Picoquic.
 Picoquic would then communicate back to CTaps that the path has become unavailable through
 a callback and CTaps could start probing new paths.
 
-For the Picoquic client a small patch had to be applied in order to achieve
+For the Picoquic client, a small patch had to be applied in order to achieve
 the same migration behavior. The Picoquic packet loop only
 notifies the QUIC engine of a path failure if \mono{sendmsg()} fails with \mono{errno} set to a value implying 
 that the remote is unreachable. In the Picoquic packet loop this means one of the following errors: \mono{EAFNOSUPPORT},
 \mono{ECONNRESET}, \mono{EHOSTUNREACH}, \mono{ENETDOWN} or \mono{ENETUNREACH}
 \cite{PicoquicImpliesUnreachable}.
 
-For the simulation it was desirable for the Picoquic client
+For the experiment it was desirable for the Picoquic client
 to also treat \mono{EPERM} as implying that the remote is unreachable. Picoquic was therefore forked
 and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
@@ -105,32 +100,32 @@ unreachable~\cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic w
 for the Picoquic experiment client.
 
 \subsection{Measurement Approach}
-Experiment results were gathered through a common Python script.
-This script is invoked with a specific set of command line arguments for each
+Experiment results were gathered through a Python script and bash scripts.
+These were invoked with a specific set of command line arguments for each
 experiment and these invocations were stored in dedicated per-experiment shell
 scripts for the sake of reproducibility.\footnote{The associated shell scripts
 can be found in the \mono{benchmark/scripts/} folder of the main CTaps repository,
 together with a README on how to reproduce the experiments.}
 
+For I/O-dominated experiments without jitter, the
+variation in performance was found so small
+that increased sampling would not be visible in the results.
 
 \section{Experiments}
 This section will describe the experiments themselves and
 their results.
 
 \subsection{Handshake Time Experiment}\label{sec:single-endpoint-handshake}
-This experiment can be seen in~\cref{fig:racing-handshake} and
-intends to show that a single CTaps client
-can connect to multiple servers
-serving different protocols and
-that there is no significant overhead in CTaps when connecting to a server.
-It also shows the cost of the staggered racing delay as it currently exists in CTaps.
+This experiment can be seen in~\cref{fig:racing-handshake}.
+It demonstrates that a single CTaps client can connect to different servers
+using different protocols.
 
 This experiment iterates
 over delays of 25, 50, 75, and \qty{100}{\milli\second} to demonstrate the linear
 relationship between network delay and handshake time. No jitter was added
-to the network and results are therefore very consistent between runs.
+to the network and results have been observed to be very consistent between runs.
 
-CTaps does not support TLS and the
+CTaps does not support TLS, and the
 TCP handshakes are therefore run without encryption.
 The TCP 3-way handshake completes in one RTT, while 
 QUIC mandates TLS 1.3 and requires two RTTs for a full handshake
@@ -143,14 +138,12 @@ for QUIC and is given two remote endpoints. This is the reason for the
 handshake times, since CTaps tries two remote endpoints for QUIC before trying TCP
 and the stagger delay is a static \qty{250}{\milli\second} for each attempt.
 The high cost of this stagger delay is discussed further in~\cref{sec:discussion}.
-
-For each of the handshakes
-the bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
+The bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
 does not have an effect on the time taken for the initial handshake.
 
 \begin{figure}[htbp]
     \input{./resources/racing_handshake.pgf}
-    \caption[Single endpoint handshake experiment]{Measured handshake times for TCP, Picoquic and CTaps clients, ordered by RTT. ($N = 1$)}
+    \caption[Single endpoint handshake experiment]{Measured handshake times for TCP, Picoquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
 \end{figure}
 
@@ -173,19 +166,16 @@ and any added time will be due to either libuv or CTaps itself.
 
 This experiment shows that while the overhead in absolute numbers
 is small, the relative increase over a pure UDP client is quite large.
-For real-world applications this effect would naturally be dwarfed
-by the latency of the network itself. The more interesting
+For real-world applications this effect would be dwarfed
+by the latency of the network. The more interesting
 finding is that CTaps has a longer tail.
-Within CTaps, each message is allocated twice, once by the application
-and once when CTaps performs a deep copy. In addition it passes through
-libuv's \mono{uv_udp_t} handling and callback flow.
 
 \subsection{Candidate Racing Experiment}\label{sec:handshake-kde}
 This experiment can be seen in~\cref{fig:handshake-kde}. It intends to
-show the benefits of candidate racing and how it helps find the
+demonstrate benefits of candidate racing and how it helps find the
 endpoint with the smallest delay.
 This experiment was modeled after the theoretical
-scenario described in~\cref{fig:racingSeqDiagram} in~\cref{chap:impl}.
+scenario described in~\cref{fig:racingSeqDiagram}.
 
 Two possible paths were used with different remote endpoints.
 The slow endpoint had a delay of \qty{150}{\milli\second}
@@ -269,13 +259,13 @@ to carry the small file for all tested delay values.
 
 \begin{figure}[htbp]
   \input{./resources/small_file.pgf}
-  \caption[Small file transfer experiment]{Transfer time of a \qty{100}{\kilo\byte}~file after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC. ($N = 1$)}
+  \caption[Small file transfer experiment]{Transfer time of a \qty{100}{\kilo\byte}~file after first transferring a large file to grow the CWND, showing the benefit of multistreaming in QUIC.}
   \label{fig:small-file-bar}
 \end{figure}
 
 \subsection{Connection Migration Experiment}\label{sec:path-migration}
 This experiment can be seen in~\cref{fig:migration-throughput} and it intends
-to show the benefits of connection migration. In this experiment, a \qty{4.6}{\mega\byte} file is transferred over an emulated
+to demonstrate the benefits of connection migration. In this experiment, a \qty{4.6}{\mega\byte} file is transferred over an emulated
 \qty{5}{\mega\bit\per\second} link with a delay of \qty{25}{\milli\second}.
 All clients successfully connect through \mono{127.0.0.1} and start the transfer,
 but after five seconds the local endpoint is blocked through iptables as
@@ -310,7 +300,7 @@ were used for the small file transfer and the connection migration experiment.
 Their relative complexity measured in lines of code
 can be seen in~\cref{tab:loc_complexity}. This is intended to
 show that while a CTaps client is more complex than a QUIC or TCP client
-individually, it is less complex than each of them combined while
+individually, it is less complex than each of them combined, while
 still supporting both protocols.
 
 The two handshake experiments used custom clients which immediately
@@ -350,9 +340,9 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 \section{Discussion} \label{sec:discussion}
 \subsection{Handshake Time Experiment}\label{sec:single-endpoint-handshake-discussion}
 When it comes to CTaps, the results in~\cref{fig:racing-handshake} 
-show that there is little overhead in connection setup for
-CTaps and that a single CTaps client can successfully connect to multiple
-servers utilizing different protocols.
+demonstrate how a single CTaps client can successfully connect to multiple
+servers utilizing different protocols and achieve performance-parity
+in an I/O-bound experiment.
 
 The experiment also shows that candidate racing
 is not implemented optimally in CTaps.
@@ -366,7 +356,7 @@ This easily becomes a very significant delay, as the number of
 raced parameters easily becomes very high when racing both
 path combinations and protocol options.
 If an application is faced with a large number of Endpoints,
-as it for example might be after a remote hostname resolution,
+as it may be after a remote hostname resolution,
 then it could face a multi second delay in CTaps
 if the most desirable protocol is
 not compatible with the server.
@@ -400,17 +390,10 @@ load, although this cannot be inferred from the data. If CTaps were to
 be utilized in a latency-sensitive environment, more testing should be
 done in order to establish the actual behavior under load.
 
-CTaps has not been written with performance in mind. The duplicate
-memory allocations for every passed parameter are likely a large
-part of the seen delay and could be replaced with reference counting if performance was
-essential. This would lead to a slightly more complicated ownership
-model, but it would remove system calls for allocation and memory copying
-for every message passed from the application.
-
 \subsection{Candidate Racing Experiment}
 The high cost of the stagger delay shows up not only in the handshake experiment,
 but also in the candidate racing experiment. Here, the experiment itself becomes
-more contrived than needed because it needs to be. While it still serves to
+more contrived. While it still serves to
 show the benefit gained on a suboptimal ordering from a DNS resolution, the difference in the two endpoints has to be
 excessively large, so that candidate racing in CTaps can overcome the high cost of the stagger delay.
 
@@ -423,13 +406,8 @@ this specific scenario, downloading large files as required for
 this experiment is uncommon. In 2025 Cloudflare
 measured that the median number of packets sent to clients of their service
 was 12~\cite{sulemanahmadMeasuringCharacteristicsTCP2025}, meaning that a majority of 
-connections never even leave slow start.
-
-It can also be argued that
-these are exactly the connections which necessitate multistreaming. Since
-such a large number of connections consist of only short data transfer, they
-are never able to be scaled up to make use of the full available bandwidth.
-Multiple streams using the same congestion control could allow for a
+connections never even leave slow start. If some of these connections could be replaced with
+separate streams on existing connections, then applications could make
 more efficient use of the network.
 
 This experiment also shows that a single CTaps client can connect to both a
@@ -441,11 +419,10 @@ code independently of the underlying protocol.
 The connection migration experiment shows that connection migration is available through
 CTaps with minimal complexity for the CTaps client. While this is a promising result,
 the scenario in the experiment is also very specific since it requires a synchronous
-error message from \mono{sendmsg()}. Since the error is synchronous recovery is also very fast.
+error message from \mono{sendmsg()}. Since the error is synchronous, recovery is also very fast.
 For a situation where the QUIC implementation has to rely on
 a timeout, the recovery would naturally be much slower. CTaps has not been tested
-with a timeout-based migration, but since migration is proved to be available then
-timeout-based migration is likely already supported.
+with timeout-based migration, and verifying this is left for future work.
 
 The biggest takeaway from the experiment is that, like the multistreaming
 usage in the small file transfer experiment, it shows
@@ -462,27 +439,26 @@ within CTaps is discussed further in \cref{sec:future-conn-mig}.
 
 % Discuss performance in general
 \subsection{Performance}
-CTaps has not been written with performance in mind, but it
-is still of interest to establish a baseline for the overhead
-presented by TAPS as an abstractions. The experiments show
-that for simple, I/O-bound applications, the overhead will
+The experiments show that for simple, I/O-bound applications, the overhead of CTaps will
 not be noticeable. In addition, the UDP RTT experiment
-also shows that the CTaps features a longer tail in worst-case
+also shows that CTaps features a longer tail in worst-case
 performance, but it is not possible to say if this will remain
 relatively constant, or scale up with load.
 
-For future reference more testing should be performed, not only for
-the simple cases in the UDP RTT experiment, but also under high load
-to see if the CTaps abstractions are unreasonably expensive in any
-situation.
+CTaps has not been written with performance in mind. The duplicate
+memory allocations for every passed parameter are likely a large
+part of the delay seen for the UDP RTT experiment. This could be replaced with reference counting if performance was
+essential. This would lead to a slightly more complicated ownership
+model, but it would remove system calls for allocation and memory copying
+for every message passed from the application.
 
 % Discuss CTaps client complexity
 \subsection{Client Complexity}
-The complexity of each  client as seen in~\cref{tab:loc_complexity}
+The complexity of each client as seen in~\cref{tab:loc_complexity}
 shows that CTaps successfully abstracts away a lot of complexity for application programmers.
 CTaps achieves this not only when accessing advanced features of QUIC such as connection migration, but also in the protocol
-selection and the error handling itself. This does not only come with the added
-simplicity, but also much easier migration to future protocols.
+selection and the error handling itself. This comes with added
+simplicity and much easier migration to future protocols.
 
 While CTaps is the most complex
 individual client by lines of code, it provides TCP and QUIC support, connection racing,
@@ -497,7 +473,7 @@ fallback logic, which is not accounted for in this table.
 With the large amount of complexity which is abstracted away by CTaps, it becomes a very
 heavy dependency and therefore quite a large risk for downstream applications
 which become heavily reliant on the correctness of CTaps.
-With the built in libuv event loop, CTaps forces applications to be written in an
+With the built-in libuv event loop, CTaps forces applications to be written in an
 async model which does its work through callbacks. This means that an application wanting
 to use CTaps for underlying networking operations has to be designed with this in mind,
 from the very beginning, creating a barrier for adoption in existing applications.

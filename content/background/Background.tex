@@ -118,8 +118,8 @@ is described in detail in \cref{sec:background-multistreaming}.
 
 Despite its innovations, SCTP has struggled with widespread adoption
 for several reasons.
-First of all, it uses a separate protocol number from TCP and UDP and as mentioned
-previously this makes it vulnerable to middlebox interference.
+First of all, it uses a separate protocol number from TCP and UDP, which
+makes it vulnerable to middlebox interference.
 SCTP over UDP~\cite{rfc6951} was developed in an attempt to mitigate these issues, but
 it too has struggled to achieve widespread use.
 
@@ -411,14 +411,13 @@ and the 0-rtt handshakes described above.
 \section{QUIC}\label{sec:quic}
 QUIC is a protocol which was originally developed by Google and then formalized
 through RFC~9000 in 2021~\cite{rfc9000}. It is developed in user-space over UDP
-and is
-intended to be a replacement for TCP, it has achieved a fairly high adoption. 
+and is intended to be a replacement for TCP.
 By 2020, over \qty{75}{\percent} of traffic to Meta servers was already using
 QUIC~\cite{joras2020quic}.
 
 QUIC is a reliable, connection-oriented protocol and provides several
 features which either are not available or do not have a wide adoption
-in TCP. As mentioned previously, TLS is a mandatory part of QUIC 
+in TCP. TLS is a mandatory part of QUIC 
 and most of the QUIC header is also encrypted, unlike TLS over TCP.
 Encrypting the header hides as much as the wire image as possible
 from middleboxes, combating future network ossification~\cite{rfc9170}.
@@ -569,7 +568,7 @@ changes in the underlying four-tuple and therefore enables
 connection migration.
 
 \subsection{Multistreaming in QUIC}
-As mentioned, SCTP was the first transport layer
+SCTP was the first transport layer
 protocol to feature multistreaming, but it is also a major feature
 of QUIC. This means that QUIC connections can benefit from
 CWND re-use and avoid head-of-line blocking as described
@@ -1385,8 +1384,8 @@ but the fast endpoint still wins.}
 \section{ALPN}\label{sec:back-alpn}
 ALPN is a feature in TLS \cite{rfc7301} where the application layer
 protocol is negotiated between on
-the transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints
-use  agree on application protocol through a 
+transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints
+agree on application protocol through a 
 mechanism such as ALPN~\cite[Sec. 7]{rfc9000}.
 
 ALPN allows the client and server to negotiate a common protocol
