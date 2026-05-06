@@ -5,23 +5,23 @@ bind to an underlying transport protocol at compile time, which, together
 with middlebox interference, greatly hinders innovation at the transport layer.
 
 The IETF Transport Services (TAPS) working group was established to develop a
-protocol-agnostic interface to the network, to decouple applications from the underlying
-transport protocols and ease innovation.
+protocol-agnostic interface to the network, decoupling applications from the underlying
+transport protocols and easing innovation.
 The working group has produced three core RFCs: 9621, 9622 and 9623, which cover the architecture,
 API and implementation guidance of a TAPS System.
 No open-source implementations
-of TAPS support QUIC, making it unclear exactly how QUIC, as the most successful recent protocol innovation
+of TAPS support QUIC, making it unclear exactly how QUIC, as the most prominent recent protocol innovation
 at the transport layer, maps onto the TAPS API.
 
 This thesis presents CTaps, a C implementation of TAPS using the libuv event loop library and the Picoquic
 QUIC implementation.
 CTaps supports QUIC, TCP and
 UDP, along with several important QUIC features, such as multistreaming, connection
-migration and session resumption. In addition, CTaps supports important internal TAPS
-features such as candidate gathering and candidate racing.
+migration and session resumption, as well as core TAPS
+mechanisms such as candidate gathering and candidate racing.
 
 A survey of 28 QUIC features found that 24 are
-either fully or partially available through the TAPS API, with only 5 gaps.
+either fully or partially available through the TAPS API, with only 4 gaps.
 We evaluate CTaps against native TCP, UDP and Picoquic QUIC clients in terms of handshake
 latency, ping overhead, multistream transfer, candidate racing and connection migration.
 We argue that CTaps effectively serves as a reference for future implementations of TAPS,

@@ -1,31 +1,9 @@
 \chapter{Background}\label{chap:background}
-This chapter will lay out background information which forms the
-basis for both the design and the limitations of CTaps.
-It will describe the low level networking concepts,
+This chapter will lay out background information necessary
+for understanding TAPS and CTaps.
+It will describe the necessary networking concepts,
 transport layer protocols and the current barriers
 for innovation on the transport layer.
-Extra care is taken in describing QUIC, as exposing
-QUIC features forms the basis for the design
-of CTaps and the experiments in~\cref{chap:eval}.
-
-
-\section{Network Interfaces and Paths}
-Modern devices are often connected to multiple networks simultaneously.
-For example, a laptop may be connected to both a Wi-Fi network and a wired Ethernet at the same time.
-Each separate network is interacted with through a separate network interface
-and each network interface is associated with distinct source IP addresses for outgoing data.
-If a device can reach the same endpoint through several network interfaces,
-then it can utilize multiple interfaces for a single network connection as long as this is supported
-by the underlying transport protocol.
-
-The combination of source IP, source port, destination IP and destination port
-is referred to as a \term{network path} following the terminology used by QUIC in RFC~9000~\cite{rfc9000}.
-Since each network interface is associated with distinct IP addresses,
-each interface that can reach the same destination will represent a distinct network path.
-Utilizing multiple network interfaces for a single connection can improve
-both stability and the throughput of the connection.
-Support for multiple network paths is a notable feature of QUIC
-and is described in detail in~\cref{sec:quic}.
 
 \section{Network Sockets}
 When it comes to network programming,
@@ -55,7 +33,7 @@ for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
 example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
 for a reliable stream of bytes. The type usually corresponds to a
-single transport layer protocol, usually UDP and TCP.
+single transport layer protocol, usually UDP or TCP.
 
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
@@ -103,7 +81,7 @@ UDP has, along with TCP, grown to become one of the two dominant
 transport layer protocols on the internet. It is a connectionless
 protocol and provides an unreliable, unordered transfer of datagrams
 to the application layer. It is often used for applications which
-prioritize low latency over reliability, such as real-time applications.
+prioritize low latency over reliability.
 
 UDP is designed to be a lightweight protocol, and it uses
 a simple 8-byte header. The header contains
@@ -112,9 +90,11 @@ only the source port, destination port, length and checksum.
 \section{SCTP}
 SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960},
 and it features several innovations over TCP.
-Notably, it was the first protocol to support multiplexing multiple independent logical streams
-over a single network connection, which is known as multistreaming. Multistreaming
-is described in detail in \cref{sec:background-multistreaming}.
+Notably, it was the first protocol to support both multistreaming and multihoming.
+Multistreaming allows multiple independent logical streams to be multiplexed over
+a single connection and is described in detail in \cref{sec:background-multistreaming}.
+Multihoming allows a connection to span multiple network interfaces simultaneously,
+a concept explored further in the context of QUIC in \cref{sec:connection-migration}.
 
 Despite its innovations, SCTP has struggled with widespread adoption
 for several reasons.
@@ -141,7 +121,7 @@ a new TCP connection for each object which needs to be transferred.
 This creates independent streams each responsible for transferring
 a single object and was the basis of early HTTP-standards.
 
-Utilizing TCP this way has the major issue of that each new
+Utilizing TCP this way has the major drawback that each new
 connection has to go through slow start. This means that
 when transferring small objects, the full bandwidth of the
 connection cannot be utilized.
@@ -149,28 +129,21 @@ In TCP, this issue is usually mitigated by re-using the same
 TCP connection for several transfers. An example
 here is HTTP/1.1,
 which introduced the concept of persistent
-TCP connections for when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
+TCP connections when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
 
-Using a single TCP connection this way allows for a more
+This way allows for a more
 efficient use of bandwidth, but also introduces the issue of
 head-of-line blocking. Head-of-line blocking is a performance bottleneck where a queue of packets
 is held up by an issue with earlier packet. Commonly caused
 either by reordering or packet loss.
 
-Multistreaming is an innovation which solves both of these issues
-with TCP. It allows a single connection to be re-used when organizing
-transfers into logical streams, allowing for a more efficient
-use of bandwidth. A figure displaying this can be seen in
-\cref{fig:connection-clone-gains}. In addition, it avoids
-head-of-line blocking by only enforcing ordering within streams.
-When a stream is used to transfer a single object it can guarantee
-the in-order delivery of that single object, but allows it to
-be delivered out-of-order when compared to other objects.
-
-A figure displaying head-of-line blocking
-can be seen in \cref{fig:background-multi-streaming}. Here,
-reordering causes delay in delivery for TCP, but for the multistreaming
-protocol it is avoided by using separate streams.
+Multistreaming is an innovation which solves both of these issues.
+It allows a single connection to be reused across multiple logical streams,
+improving bandwidth efficiency while avoiding head-of-line blocking by
+only enforcing ordering within individual streams.
+The bandwidth gains from CWND reuse are illustrated in~\cref{fig:connection-clone-gains},
+while \cref{fig:background-multi-streaming} shows how separate streams avoid
+head-of-line blocking caused by reorderi.
 
 
 
@@ -376,7 +349,7 @@ therefore re-use the achieved CWND.
 \node[waiting] (p5) at ($(p4)+(0.9cm,0.5)$)            {\scriptsize 2};
 \node[lost]    (p6) at ($(p5)+(0.9cm,-1.0)$)            {\scriptsize 6};
 
-\node[font=\small\bfseries] at (0.0, 4.0) {Multistreaming Protocol};
+\node[font=\small\bfseries] at (0.0, 4.0) {Multistreaming};
 \end{scope}
 
 \end{tikzpicture}
@@ -389,6 +362,24 @@ is avoided.
 }
 \label{fig:background-multi-streaming}
 \end{figure}
+
+\section{Network Paths}\label{sec:back-multihoming}
+Modern devices are often connected to multiple networks simultaneously.
+For example, a laptop may be connected to both a Wi-Fi network and a wired Ethernet at the same time.
+Each separate network is interacted with through a separate network interface
+and each network interface is associated with distinct source IP addresses for outgoing data.
+If a device can reach the same endpoint through several network interfaces,
+then it can utilize multiple interfaces for a single network connection as long as this is supported
+by the underlying transport protocol.
+
+The combination of source IP, source port, destination IP and destination port
+is referred to as a \term{network path} following the terminology used by QUIC in RFC~9000~\cite{rfc9000}.
+Since each network interface is associated with distinct IP addresses,
+each interface that can reach the same destination will represent a distinct network path.
+Utilizing multiple network interfaces for a single connection can improve
+both stability and the throughput of the connection.
+Support for multiple network paths is a notable feature of QUIC
+and is described in detail in~\cref{sec:quic}.
 
 
 \section{TLS}
@@ -412,15 +403,15 @@ and the 0-rtt handshakes described above.
 QUIC is a protocol which was originally developed by Google and then formalized
 through RFC~9000 in 2021~\cite{rfc9000}. It is developed in user-space over UDP
 and is intended to be a replacement for TCP.
-By 2020, over \qty{75}{\percent} of traffic to Meta servers was already using
+By 2020, over \qty{75}{\percent} of traffic to Meta servers was using
 QUIC~\cite{joras2020quic}.
 
 QUIC is a reliable, connection-oriented protocol and provides several
-features which either are not available or do not have a wide adoption
+features which are not available
 in TCP. TLS is a mandatory part of QUIC 
 and most of the QUIC header is also encrypted, unlike TLS over TCP.
 Encrypting the header hides as much as the wire image as possible
-from middleboxes, combating future network ossification~\cite{rfc9170}.
+from middleboxes, combating future network ossification.
 
 While QUIC does present an overarching connection, the
 abstraction for each actual data transfer is called a stream.
@@ -494,7 +485,7 @@ to QUIC's congestion control is the \term{packet number space} which
 is defined as \enquote{the context in which a packet can be processed
 and acknowledged}~\cite{rfc9000}. 
 
-The packet number space reflects the level of encryption that has been reached and there 
+The packet number space reflects the level of encryption that has been reached, and there 
 are three separate packet number spaces. \term{Initial space},
 for the initial handshake packets, \term{handshake space}, for packets
 exchanged during the cryptographic handshake, and \term{application
