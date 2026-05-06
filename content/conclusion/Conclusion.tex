@@ -24,11 +24,11 @@ and flexible protocol handling, but leaves details up to the
 implementations themselves. This means that several
 implicit architectural requirements are posed by TAPS, but not
 stated explicitly in the RFCs. This section will describe
-the implicit architectural constraints encountered during
-the development of CTaps.
+the implicit architectural constraints encountered when developing
+a TAPS System.
 
 One of the largest requirements from the TAPS API is that of flexibility.
-While not strictly required per the TAPS RFCs, all TAPS implementations
+All TAPS implementations
 should use a generic protocol interface internally, in order to be as maintainable as possible.
 Without a generic interface, the internal implementation code
 risks becoming very tightly bound to specific protocols, making it
@@ -76,6 +76,12 @@ binding between Connections and sockets, allowing for a many-to-many
 binding which enables migration, multistreaming and future protocol support.
 Finally, they must feature a demultiplexing layer allowing Connections to
 be emulated over non-connection-oriented protocols.
+
+In summary, the key implicit architectural constraints of a TAPS System are:
+a flexible many-to-many binding between Connections and sockets to support migration and
+multistreaming; a demultiplexing layer to emulate connections over connectionless protocols;
+and a generic internal protocol interface to enable easy support of new
+protocols.
 
 \subsection{Research Question Two}
 While not all QUIC features are directly controllable through the TAPS API,
@@ -323,9 +329,7 @@ a Connection.
 While CTaps could be developed to become a real production-ready library
 through the steps described in~\cref{sec:future-work}, the broader
 significance is more tightly coupled to it being the first
-publicly announced open-source
-implementation of TAPS developed after the finalization of the TAPS RFCs,
-as well as the first open source TAPS implementation to support QUIC.
+publicly announced open-source implementation of TAPS to support QUIC.
 This has led to insight on not only how to map
 QUIC features through a TAPS API, but also on exactly how to build a TAPS
 implementation and which internal architectural considerations need to
@@ -348,5 +352,5 @@ clients. The primary obstacle for TAPS' wider adoption is therefore
 not the standard itself, but that an implementation of a TAPS System must be
 fairly feature complete before it becomes useful to downstream
 applications. This would require a sustained investment, but
-CTaps lowers the bar slightly by providing a library to develop
+CTaps lowers the bar by providing a library to develop
 further and architectural patterns that others can follow.
