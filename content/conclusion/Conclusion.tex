@@ -35,7 +35,7 @@ risks becoming very tightly bound to specific protocols, making it
 far more difficult to adapt the TAPS implementation to support new protocols.
 RFC~9623 also recommends that a Listener should
 be able to receive from multiple transport protocols at once over a single
-socket \cite[Sec. 4.7]{rfc9623}. TAPS implementations should therefore
+socket \cite[sec. 4.7]{rfc9623}. TAPS implementations should therefore
 implement internal logic to listen for incoming data from multiple different protocols
 when opening a Listener. If an implementation wants to support this fully and
 support simultaneous listening for protocols which use the same protocol number
@@ -85,7 +85,7 @@ intentions of the application.
 Several key features of QUIC are directly supported through the TAPS
 API and give the application fine-grained control.
 For example, connection migration and multipath QUIC are available
-through using multiple local endpoints, setting the \mono{multipath}
+through using multiple Local Endpoints, setting the \mono{multipath}
 Selection Property and setting the \mono{multipathPolicy} Connection Property.
 While this does not expose functionality to explicitly trigger a migration,
 it allows for fine-grained control of the expected behavior, as seen in
@@ -198,12 +198,12 @@ TAPS implementations will likely want to give preference to IPv6 links,
 care must be taken when deciding exactly how to interleave candidates.
 Happy Eyeballs V3 is currently being developed, with suggestions on
 how to exactly extend normal IP-family racing to transport layer
-protocols \cite[Sec.~5]{ietf-happy-happyeyeballs-v3-03}.
+protocols \cite[sec.~5]{ietf-happy-happyeyeballs-v3-03}.
 
 In addition to the ordering of candidates, the connection establishment time
 for CTaps is also affected by possible DNS delay. To mitigate this, candidate racing in CTaps
 should be modified to start racing as soon as a resolved endpoint arrives with a \qty{50}{\milli\second} resolution delay,
-as recommended in Happy Eyeballs~\cite[Sec.~3]{rfc8305}.
+as recommended in Happy Eyeballs~\cite[sec.~3]{rfc8305}.
 This would give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
 
@@ -255,7 +255,7 @@ can implement functions to combine and split Messages
 without having to risk memory leaks.
 
 RFC~9622 states that Framers can be used to interact
-with the setup and teardown of Connections~\cite[Sec.~9.1.2]{rfc9622},
+with the setup and teardown of Connections~\cite[sec.~9.1.2]{rfc9622},
 but this is not currently supported in CTaps. The abstract Framer
 interface presented through the CTaps API could
 be expanded with two function pointers, one for
@@ -266,11 +266,11 @@ it for data to send, upon setup and teardown.
 
 \subsection{More flexible Listeners}\label{sec:protocol-ag-listener}
 RFC~9621 says that Listeners by default bind to multiple paths,
-protocols and Local Endpoints~\cite[Sec.~4.1.4]{rfc9621}. This
+protocols and Local Endpoints~\cite[sec.~4.1.4]{rfc9621}. This
 is not supported in CTaps and would be an important future addition
 in order to improve flexibility. CTaps currently binds Listeners
 to the most desirable protocol and the first endpoint provided by the
-application. Listening on multiple local endpoints
+application. Listening on multiple Local Endpoints
 at the same time would be fairly simple to implement, only needing
 to maintain a list of sockets for listening, similar to the multiple sockets described in
 \cref{sec:future-conn-mig}.

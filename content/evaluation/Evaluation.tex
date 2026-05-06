@@ -65,7 +65,9 @@ TCP data was also run, in order to illustrate the TCP connection failing after a
     \begin{minted}[fontsize=\small]{bash}
 iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j DROP 
 \end{minted}
-\caption[Command to block path using iptables.]{Command to block UDP data from local endpoint to file server on localhost with port 8080 using iptables.}
+\caption[Command to block path using iptables.]{
+Command to block UDP data from Local Endpoint to file server on localhost with port 8080 using iptables.
+}
 \label{lst:iptables-command}
 \end{listing}
 
@@ -133,9 +135,9 @@ when including the \mono{HANDSHAKE_DONE} frame.
 
 Because the handshake client used for CTaps here is the same as
 the client used in~\cref{sec:handshake-kde}, the client has a preference
-for QUIC and is given two remote endpoints. This is the reason for the
+for QUIC and is given two Remote Endpoints. This is the reason for the
 \qty{500}{\milli\second} stagger delay between the CTaps TCP and QUIC
-handshake times, since CTaps tries two remote endpoints for QUIC before trying TCP
+handshake times, since CTaps tries two Remote Endpoints for QUIC before trying TCP
 and the stagger delay is a static \qty{250}{\milli\second} for each attempt.
 The high cost of this stagger delay is discussed further in~\cref{sec:discussion}.
 The bandwidth was set to \qty{6.25}{\mega\byte\per\second}, although the bandwidth
@@ -177,7 +179,7 @@ endpoint with the smallest delay.
 This experiment was modeled after the theoretical
 scenario described in~\cref{fig:racingSeqDiagram}.
 
-Two possible paths were used with different remote endpoints.
+Two possible paths were used with different Remote Endpoints.
 The slow endpoint had a delay of \qty{150}{\milli\second}
 while the fast endpoint had a delay of \qty{50}{\milli\second}.
 Bandwidth was limited to \qty{50}{\mega\bit\per\second}, although
@@ -268,7 +270,7 @@ This experiment can be seen in~\cref{fig:migration-throughput} and it intends
 to demonstrate the benefits of connection migration. In this experiment, a \qty{4.6}{\mega\byte} file is transferred over an emulated
 \qty{5}{\mega\bit\per\second} link with a delay of \qty{25}{\milli\second}.
 All clients successfully connect through \mono{127.0.0.1} and start the transfer,
-but after five seconds the local endpoint is blocked through iptables as
+but after five seconds the Local Endpoint is blocked through iptables as
 described in~\cref{sec:softwaretools}. Picoquic and CTaps then migrate to \mono{127.0.0.2}
 in order to continue the transfer, while TCP fails and cannot recover.
 

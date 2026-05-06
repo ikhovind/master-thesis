@@ -20,7 +20,7 @@ Modern sockets are standardized across UNIX-like systems through
 the POSIX standard. Implementations of the C POSIX library define
 the socket API primarily through the \texttt{sys/socket.h} header file~\cite{posix:2024:socket}.
 
-When creating a socket on an UNIX-like system, the application
+When creating a socket on a UNIX-like system, the application
 invokes the \texttt{socket} system call. This system call
 \enquote{creates an endpoint for communication and returns a file 
 descriptor that refers to that endpoint}~\cite{Socket2LinuxManual}.
@@ -28,10 +28,10 @@ This system call takes three parameters, the domain, the type
 and the protocol which will be used for the socket.
 
 The domain specifies the type of
-addressing which will be used, for example \texttt{AF\_UNIX}
-for local sockets, \texttt{AF\_INET} for IPv4 and \texttt{AF\_INET6}
+addressing which will be used, for example \mono{AF_UNIX}
+for local sockets, \mono{AF_INET} for IPv4 and \mono{AF_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
-example \texttt{SOCK\_DGRAM} for datagrams and \texttt{SOCK\_STREAM}
+example \mono{SOCK_DGRAM} for datagrams and \mono{SOCK_STREAM}
 for a reliable stream of bytes. The type usually corresponds to a
 single transport layer protocol, usually UDP or TCP.
 
@@ -49,7 +49,7 @@ This naturally makes adopting new transport protocols difficult, even
 if a new protocol is better suited to the application's requirements.
 
 Another challenge with the adoption of new transport layer protocols
-is network middleboxes. Network Middleboxes have been
+is network middleboxes. Network middleboxes have been
 optimized to support TCP and UDP and may sometimes
 drop packets if the protocol field in the IP header
 does not match TCP or UDP.
@@ -129,7 +129,7 @@ In TCP, this issue is usually mitigated by re-using the same
 TCP connection for several transfers. An example
 here is HTTP/1.1,
 which introduced the concept of persistent
-TCP connections when fetching multiple URLs~\cite[Sec.~8.1]{rfc2616}.
+TCP connections when fetching multiple URLs~\cite[sec.~8.1]{rfc2616}.
 
 This way allows for a more
 efficient use of bandwidth, but also introduces the issue of
@@ -143,7 +143,7 @@ improving bandwidth efficiency while avoiding head-of-line blocking by
 only enforcing ordering within individual streams.
 The bandwidth gains from CWND reuse are illustrated in~\cref{fig:connection-clone-gains},
 while \cref{fig:background-multi-streaming} shows how separate streams avoid
-head-of-line blocking caused by reorderi.
+head-of-line blocking caused by reordering.
 
 
 
@@ -398,6 +398,20 @@ a previous connection to a server~\cite{rfc8446}.
 TLS is a mandatory part of QUIC, which inherits both the security
 and the 0-rtt handshakes described above.
 
+\section{ALPN}\label{sec:back-alpn}
+Application-layer protocol negotiation (ALPN) is a feature in TLS \cite{rfc7301} where the application layer
+protocol is negotiated between on
+transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints
+agree on application protocol through a 
+mechanism such as ALPN~\cite[sec. 7]{rfc9000}.
+
+ALPN allows the client and server to negotiate a common protocol
+without adding network round trips. The client puts 
+a list of supported protocols in its \mono{clientHello} message
+and the server chooses a single protocol and puts it in
+its \mono{serverHello} message. If the server does not support any
+protocols that the client supports, then it responds with an
+error notifying the client of this.
 
 \section{QUIC}\label{sec:quic}
 QUIC is a protocol which was originally developed by Google and then formalized
@@ -497,20 +511,20 @@ spurious retransmission at another encryption level.
 Although the packet number spaces are handled
 separately for acknowledgments, they are
 unified when it comes to congestion control and round trip
-time measurements~\cite[Sec.~4.1]{rfc9002}.
+time measurements~\cite[sec.~4.1]{rfc9002}.
 
 Another difference between how QUIC and TCP handle acknowledgments
 is that QUIC separates the transmission order from the delivery order.
 This is done by using stream offset as delivery order, and packet number as
 transmission order. This removes ambiguity about whether the
 original or the retransmitted packet is acknowledged in the case
-of retransmissions, making RTT measurements in these cases more accurate~\cite[Sec.~4.2]{rfc9002}.
+of retransmissions, making RTT measurements in these cases more accurate~\cite[sec.~4.2]{rfc9002}.
 
 \subsection{Transport parameters}
 Transport parameters in QUIC are settings which are transferred to the
-peer during the QUIC handshake. These can be used to for example
-limit the initial amount of streams the peer can open or the amount
-of data it can send.
+peer during the QUIC handshake.
+These can be used to control settings such as the initial number of streams
+the peer can open or the amount of data it can send
 
 \subsection{Frames}
 In QUIC, a frame is defined as \enquote{a unit of structured protocol information}~\cite{rfc9000}.
@@ -541,7 +555,7 @@ STREAM Frame {
 In order to uniquely identify a connection QUIC uses connection IDs
 instead of a four-tuple like TCP. Each endpoint generates a list of
 valid IDs which it shares with the peer. The peer can then use one
-of these IDs as a destination when transferring data~\cite{rfc9000}.
+of these IDs as a destination when transferring data~\cite[sec.~5.1]{rfc9000}.
 
 Since Connection IDs are needed for routing packets they are
 carried in the clear text part of both the short and the long QUIC header.
@@ -559,9 +573,7 @@ changes in the underlying four-tuple and therefore enables
 connection migration.
 
 \subsection{Multistreaming in QUIC}
-SCTP was the first transport layer
-protocol to feature multistreaming, but it is also a major feature
-of QUIC. This means that QUIC connections can benefit from
+QUIC connections can benefit from
 CWND re-use and avoid head-of-line blocking as described
 in \cref{sec:background-multistreaming}. This is one of the key
 reasons why QUIC is the transport protocol used in HTTP/3~\cite{rfc9114}.
@@ -571,15 +583,15 @@ QUIC connections can survive changes to the underlying four-tuple
 because they are identified by connection IDs. This enables connection
 migration, where an established connection is moved to a new network path,
 for example switching between Wi-Fi and cellular, without requiring a new handshake.
-In the current version of QUIC, only clients are able to migrate~\cite[Sec.~1]{rfc9000}.
+In the current version of QUIC, only clients are able to migrate~\cite[sec.~1]{rfc9000}.
 Servers can state a preferred local IP address and request that the client
 migrate by using the \mono{preferred_address} transport parameter,
-but this can only be done during the initial TLS handshake~\cite[Sec.~9.6.1]{rfc9000}.
+but this can only be done during the initial TLS handshake~\cite[sec.~9.6.1]{rfc9000}.
 
 If the server does not support migration, such as when it is behind a simple load balancer which multiplexes
 by source IP instead of the QUIC connection ID, then the server can mandate
 that the client does not change local address by setting the \mono{disable_active_migration}
-transport parameter~\cite[Sec.~5.2.3]{rfc9000}.
+transport parameter~\cite[sec.~5.2.3]{rfc9000}.
 
 In order to initiate path migration, an endpoint will send a non-probing packet 
 over a new network path. Non-probing packets are any packets which contain any
@@ -588,28 +600,28 @@ frame that is not \mono{PATH_CHALLENGE}, \mono{PATH_RESPONSE}, \mono{NEW_CONNECT
 that the peer has migrated to that address. Both peers are required to use a new connection
 IDs when performing migration, in order to ensure that the connection cannot
 be used to link packets from the same connection over different network paths
-\cite[Sec.~9.5]{rfc9000}.
+\cite[sec.~9.5]{rfc9000}.
 
 If the receiving endpoint permits connection migration,
 then any new packets must be sent to the new address
 and path validation must be initiated.
 The endpoint initiating connection migration may defer path validation until after
 the receiving endpoint has sent non-probing data to the initiating endpoint's new
-address~\cite[Sec.~9.2]{rfc9000}.
+address~\cite[sec.~9.2]{rfc9000}.
 Path validation is used to verify
-that a peer is reachable on a given path and it is done by using \mono{PATH_CHALLENGE} and \mono{PATH_RESPONSE} 
+that a peer is reachable on a given path, and it is done by using \mono{PATH_CHALLENGE} and \mono{PATH_RESPONSE} 
 frames. The challenge frame contains \qty{8}{\Bytes} of arbitrary data,
 which the peer must echo back in the response frame. This ensures that the source address
 is not spoofed and therefore avoids potential amplification attacks.
 
 If path validation fails, which happens if no matching response
-is received within the Probe Timeout (PTO)~\cite[Sec. 6.2]{rfc9002},
+is received within the Probe Timeout~\cite[sec. 6.2]{rfc9002},
 the endpoints can continue communicating using other known paths.
 If no viable paths remain, then the connection fails. This can be signaled to the peer 
 using a \mono{NO_VIABLE_PATH} connection error, although the only
 situation where this can be communicated is
 if a path exists, but it does not support the required
-maximum transmission unit (MTU)~\cite[Sec.~8.2.4]{rfc9000}.
+maximum transmission unit (MTU)~\cite[sec.~8.2.4]{rfc9000}.
 
 A figure comparing QUIC connection migration with TCP can be seen in~\cref{fig:connectionBeforeAfterMigration}.
 Here, a local address becomes unavailable and the TCP connection is therefore broken
@@ -617,7 +629,7 @@ since the underlying four-tuple has changed. The
 QUIC connection is able to survive since the connection
 ID is recognized by the peer.
 When performing the migration, a new connection ID is picked
-from the pool of valid IDs generated by the peer to
+from the pool of valid IDs generated by the peer, to
 avoid linkability.
 
 \begin{figure}[htbp]
@@ -705,40 +717,36 @@ In addition to supporting multiple paths through connection migration,
 support for using multiple paths simultaneously through a single QUIC 
 connection is currently actively being
 standardized through the QUIC multipath extension draft~\cite{ietf-quic-multipath-21}.
-Multipath extension builds on the mechanisms of connection migration,
+The QUIC multipath extension builds on the mechanisms of connection migration,
 but introduces a new path ID in order to manage multiple paths.
-
-The QUIC multipath extension draft does not specify how
-alternative paths are discovered, and actual setup and
-teardown of paths is handled by the application.
 
 \subsection{Session Resumption}\label{sec:back-session-resumption}
 Like TLS, QUIC supports session resumption and 0-rtt
 initial data. This requires that the server and the client
 have already exchanged cryptographic keys, that the
-client remembers critical parameters such as the selected
-application-layer protocol negotiation (ALPN)
-value and that the client provides the server with a
+client remembers critical parameters, such as the selected
+ALPN value,
+and that the client provides the server with a
 session ticket for the server to recover the same
-information~\cite[Sec.~4.6]{rfc9001}.
+information~\cite[sec.~4.6]{rfc9001}.
 
 \section{Transport Services}
 At its core, a protocol is an abstraction which provides a set of
-services to an higher-layer protocol or application. In the context of
+services to a higher-layer protocol or application. In the context of
 networking, these services encompass transporting data from one endpoint
-to another, with the protocol itself deciding the which services are
+to another, with the protocol itself deciding which services are
 provided. For example, TCP provides a guarantee of reliable
 delivery while UDP does not.
 
-As an example, if an application requires that the
+If an application requires that the
 transferred data is received as an in-order stream, then
 any transport layer protocol offering this as a service to the application layer
-could function as a transport protocol, and swapping the
+could function as a transport protocol. Swapping the
 protocols should in theory be simple. This is of course
 not currently the case due to issues described in \cref{sec:motivation}.
 
 Exactly which services are provided by which transport
-protocols has been mapped in RFC~8095 by the Transport Services (TAPS) working group~\cite{rfc8095}.
+protocols has been mapped in RFC~8095~\cite{rfc8095} by the Transport Services (TAPS) working group.
 
 \section{TAPS}
 The TAPS WG was an IETF working group which aimed to solve the strong
@@ -750,7 +758,7 @@ abstract away network-layer details from the application layer.
 
 The main RFCs produced by the TAPS WG are RFC~9621~\cite{rfc9621},
 RFC~9622~\cite{rfc9622} and RFC~9623~\cite{rfc9623}. Together, these
-describe a TAPS System, which is an implementation of of the TAPS
+describe a TAPS System, which is an implementation of the TAPS
 API and the TAPS Implementation. The TAPS API is the API of a
 TAPS System which offers a generic way to interact with the network
 independent of the underlying protocol. The TAPS Implementation 
@@ -875,9 +883,6 @@ with through the \term{Preconnection}, \term{Connection},
 \term{Message}, \term{Listener}, \term{Local Endpoint}, \term{Remote Endpoint},
 \term{Transport Properties} and \term{Security Parameters} objects.
 
-A Connection represents a \enquote{shared state of two or more endpoints that persists
-across Messages that are transmitted between these endpoints}~\cite{rfc8303}.
-
 When working with Connection objects, TAPS provides five high
 level groups of actions that an application can perform:
 \begin{itemize}
@@ -893,7 +898,7 @@ level groups of actions that an application can perform:
         a Connection is torn down.
 \end{itemize}
 
-In addition, the lifeline of a Connection is divided into three distinct
+In addition, the lifetime of a Connection is divided into three distinct
 phases: preestablishment, the established state, and
 termination of a Connection~\cite{rfc9621}.
 Each of these phases are associated
@@ -908,7 +913,7 @@ transfer data.
 A Connection can be established in one of three ways, \mono{initiate()}, \mono{listen()} or 
 \mono{rendezvous()}~\cite{rfc9621}.
 
-Invoking \mono{initiate()} establishes a Connection to a remote endpoint which
+Invoking \mono{initiate()} establishes a Connection to a Remote Endpoint which
 is assumed to be listening for incoming Connections. How this Connection
 is established internally is dependent on the underlying transport
 protocol. The Created Connection object is passed to the application through a callback.
@@ -941,7 +946,7 @@ In TAPS a \term{Framer} is an object responsible for bridging the TAPS concept
 of a Message, with the underlying protocol concept of either a data stream
 or a datagram. In its simplest form, a Framer is responsible for encoding
 or decoding outgoing and incoming data, as well as interacting with setup and
-teardown of a Connection if necessary~\cite[Sec.~9.1.2]{rfc9622}. Because Framers may need to send
+teardown of a Connection if necessary~\cite[sec.~9.1.2]{rfc9622}. Because Framers may need to send
 data upon the creation of a Connection, they must be added to a Preconnection
 during the preestablishment phase.
 The application can define custom framers and pass them to a Preconnection
@@ -958,7 +963,7 @@ ways of converting TCP's byte-stream into usable messages has been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
 delimiter-separated formats, where the beginning and end of a piece of
-data is separated by delimiters~\cite[Sec.~6.1]{rfc9623}.
+data is separated by delimiters~\cite[sec.~6.1]{rfc9623}.
 Examples of the two categories are HTTP/1.1 for a delimiter-separated format
 and DHCP for TLV~\cite{rfc2131}.
 
@@ -1008,7 +1013,7 @@ protocol.
 
 
 \subsubsection{Selection Properties}
-Selection properties are the subset of Transport Properties which are
+Selection Properties are the subset of Transport Properties which are
 primarily used to filter and sort candidate protocols
 when performing candidate gathering as described
 in~\cref{sec:candidate-gathering}. Certain Selection Properties
@@ -1025,9 +1030,9 @@ Not all Selection Properties are a Preference,
 and they can also be specified as a boolean, an integer, an enum or other types.
 
 An example of a Selection Property is \mono{reliability}.
-This property is used to specify whether or not the application
+This property is used to specify whether the application
 should use a protocol which ensures that all data is received in order,
-without loss or duplication~\cite[Sec.~6.2.1]{rfc9621}. Setting \mono{reliability}
+without loss or duplication~\cite[sec.~6.2.1]{rfc9621}. Setting \mono{reliability}
 to Require will force TAPS to use an underlying protocol
 which handles loss such as TCP or QUIC. Setting this as
 Prohibit will force TAPS to use an unreliable protocol
@@ -1039,9 +1044,9 @@ are used to control the behavior of the underlying protocol after
 a Connection has been established.
 
 An example of a Connection Property is \mono{connTimeout}.
-This property is used to specify the how long to wait before deciding that an
+This property is used to specify how long to wait before deciding that an
 active Connection has failed when trying to reliably deliver data to the
-Remote Endpoint~\cite[Sec.~8.1.3]{rfc9622}
+Remote Endpoint~\cite[sec.~8.1.3]{rfc9622}.
 
 \subsection{Message Properties}
 Message Properties are settings set on an
@@ -1052,42 +1057,42 @@ not affect any other Messages transferred by the Connection.
 In certain cases these can override the Transport Properties
 of the Connection, for example by setting \mono{msgOrdered}
 to indicate that this individual message does not have to be
-ordered~\cite[Sec.~9.1.3.4]{rfc9622}.
+ordered~\cite[sec.~9.1.3.4]{rfc9622}.
 
 \subsection{TAPS Implementation}
-While the TAPS RFCs does not prescribe implementation specific details,
-RFC~9623 serves as a guide in how to best develop a TAPS System.
-This includes how to present actions which are present in the TAPS API
-such as data transfer as well as provided services which are not
-directly exposed such as candidate gathering or candidate racing.
+The TAPS RFCs do not prescribe implementation specific details,
+but RFC~9623 serves as a guide in how to develop a TAPS System.
+This includes how to implement both actions from the TAPS API
+such as data transfer, as well as provided services which are not
+directly exposed, such as candidate gathering or candidate racing.
 
 \subsection{Candidate Gathering}\label{sec:candidate-gathering}
 When the application invokes \mono{initiate()} on a Preconnection,
 a TAPS System will gather a list of candidates for establishing a
 Connection. This process is known as candidate gathering. The candidates are based on
 the specified Local and Remote Endpoints of the Preconnection,
-as well as the given Selection Properties which are available to use. 
+as well as the supported protocols. 
 
-RFC~9623 conceptualizes these combinations as a tree,
+RFC~9623 conceptualizes these combinations as a tree~\cite[sec.~4.2]{rfc9623},
 with the first level of child nodes representing the
 possible Local Endpoints, which are resolved to local socket addresses
-(each a specific IP address and port) when building the tree~\cite{rfc9623}.
+(each a specific IP address and port) when building the tree.
 The second level of the candidate tree represents the possible protocol
 options which can be used. This includes not only the protocol
 itself, but also any combination of options for this protocol which
 influence Connection establishment.
 
-The selected local interface can be restricted through 
-either using specific local endpoints or through the
+The selected local interface can be restricted 
+using either specific Local Endpoints or through the
 \mono{interface} Selection Property. The viable
 remote socket addresses can be influenced by for
 example the \mono{useTemporaryLocalAddress} Selection Property,
-as this is only supported in IPv6 \cite[Sec.~6.2.13]{rfc9622}.
+as this is only supported in IPv6 \cite[sec.~6.2.13]{rfc9622}.
 
 RFC~9623 does not mandate that implementations follow the same tree
-structure when performing candidate gathering, but it does recommend to branch in the
+structure when performing candidate gathering, but it recommends branching in the
 same order as the RFC, in order to branch by the most important concepts
-first~\cite[Sec.~4.1.2]{rfc9623}.
+first~\cite[sec.~4.1.2]{rfc9623}.
 
 After branching, incomplete paths and leaf nodes
 not compatible with the specified Selection Properties are
@@ -1174,45 +1179,25 @@ network load.
 Staggered racing is the process of trying to establish Connections
 with several candidates at once, but with a delay between each attempt.
 This delay is configurable, but should be based
-on the expected handshake time~\cite[Sec.~4.3.2]{rfc9623}. 
+on the expected handshake time~\cite[sec.~4.3.2]{rfc9623}. 
 The most desirable candidates are raced first, and all subsequent
 attempts are canceled after the first success.
-RFC~9623 recommends following the algorithm described in
-RFC~8305~\cite{rfc8305}, known as Happy Eyeballs, when performing staggered racing of IP addresses.
-Happy Eyeballs is a staggered racing algorithm designed to maximize IPv6 usage by
-racing IPv4 and IPv6 addresses on dual-stack hosts.
-
-RFC~8305 lists four steps for protocol racing,
-which conceptually divide into candidate gathering and candidate racing 
-in a TAPS Implementation: 
-
-\begin{enumerate}
-  \item Initiation of asynchronous DNS queries
-  \item Sorting of resolved destination addresses
-  \item Initiation of asynchronous connection attempts
-  \item Establishment of one connection, which cancels all other attempts
-\end{enumerate}
-
-Step one and two map into the TAPS concept of candidate gathering
-while step three and four map into the TAPS concept of candidate racing.
+RFC~9623 recommends following the Happy Eyeballs algorithm~\cite{rfc8305}
+when performing staggered racing of IP addresses. Happy Eyeballs is designed
+to maximize IPv6 usage on dual-stack hosts by racing IPv4 and IPv6 addresses
+with a small stagger delay, using steps that map naturally onto the TAPS
+concepts of candidate gathering and candidate racing.
 
 Failover racing is the process of racing a single candidate
 at a time, only attempting the next candidate if the previous
 fails. This can be used when an application has a strong preference
 of one branch over another.
 
-Connection establishment has been completed when a single candidate
-has successfully established a Connection, or
-when all candidates have failed. 
-
 An example flow of candidate racing can be seen in~\cref{fig:racingSeqDiagram}.
-Here, DNS resolution resolves two endpoints with delays of
-RTT of \qty{300}{\milli\second} and \qty{100}{\milli\second} respectively. The slower endpoint is attempted first,
-but the faster RTT leads to the second endpoint winning the race and being
-presented to the application.
-In the example the DNS resolution is set to take \qty{100}{\milli\second}
-which is an arbitrary value with no influence on the following candidate racing.
-The stagger delay is set to be \qty{250}{\milli\second}.
+% Here, DNS resolution resolves two endpoints with delays of
+% \qty{150}{\milli\second} and \qty{50}{\milli\second} respectively.
+% The slower endpoint is attempted first, but the smaller RTT leads to the second
+% endpoint winning the race and being presented to the application.
 
 \begin{figure}[htbp]
 \centering
@@ -1220,7 +1205,7 @@ The stagger delay is set to be \qty{250}{\milli\second}.
   >=Stealth,
   msglbl/.style={font=\scriptsize, fill=white, inner sep=1pt},
   head/.style={draw, rectangle, minimum width=1.8cm, minimum height=0.6cm,
-               font=\small, fill=white}
+               font=\small, fill=gray!10}
 ]
 
 % ── x positions ─────────────────────────────────────────────────────────────
@@ -1367,25 +1352,11 @@ The stagger delay is set to be \qty{250}{\milli\second}.
 
 \end{tikzpicture}
 \caption[Example candidate racing with slow and fast endpoint]
-{Example of candidate racing functionality when the order of a DNS resolution causes a slow endpoint to be attempted first,
-but the fast endpoint still wins.}
+{Example of staggered candidate racing where DNS resolution leads to a slow 
+endpoint being attempted first. Despite being attempted second, the faster endpoint wins the 
+race and is presented to the application.}
 \label{fig:racingSeqDiagram}
 \end{figure}
-
-\section{ALPN}\label{sec:back-alpn}
-ALPN is a feature in TLS \cite{rfc7301} where the application layer
-protocol is negotiated between on
-transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints
-agree on application protocol through a 
-mechanism such as ALPN~\cite[Sec. 7]{rfc9000}.
-
-ALPN allows the client and server to negotiate a common protocol
-without adding network round trips. The client puts 
-a list of supported protocols in its \mono{clientHello} message
-and the server chooses a single protocol and puts it in
-its \mono{serverHello} message. If the server does not support any
-protocols that the client supports, then it responds with an
-error notifying the client of this.
 
 \section{Asynchronous I/O and event loops} \label{sec:async-background}
 The naive way to write a networking application is to treat
@@ -1393,7 +1364,7 @@ any interaction with the network like a normal CPU-bound task,
 waiting for I/O bound operations to complete before progressing.
 This is a simple, but very inefficient model and the CPU will
 be spending much of its time waiting for I/O. Modern networking
-applications therefore interact with the network in an asynchronous way, this
+applications therefore interact with the network asynchronously, this
 is reflected in the design of TAPS, which is asynchronous and
 event-driven.
 
@@ -1504,8 +1475,8 @@ as event loop libraries can use threads internally to achieve an asynchronous fl
 for synchronous operations, but from the view of an application
 interacting with the network, they are fairly distinct.
 
-Although real implementations naturally feature more advanced features than
-illustrated in \cref{fig:event-loop-queue}, the event loop model is very common,
+Real implementations naturally feature more advanced features than
+illustrated in \cref{fig:event-loop-queue}, but the event loop model is overall very common,
 and is used in Node.js~\cite{nodejsEventLoop} and Python's asyncio~\cite{pythonAsyncio},
 among others.
 
@@ -1532,7 +1503,7 @@ the event loop to stop execution.
 
 \section{Picoquic}\label{sec:picoquic}
 Picoquic~\cite{christianhuitemaPicoquic} is a C library which aims to be a
-minimalist implementation of the QUIC standard. It is a cross-platform
+minimalist implementation of QUIC. It is a cross-platform
 library compatible with Windows, Linux, macOS and BSD.
 Though it features an optional event loop,
 Picoquic is a sans-I/O \cite{cannon2016sansio} library
@@ -1571,8 +1542,7 @@ ALPN values and the various key files.
 
 As an alternative to driving the polling API,
 simple clients which do not want to run their own I/O
-can run Picoquic's built-in event loop through
-\mono{picoquic_packet_loop()}. This takes
+can run Picoquic's built-in event loop. This takes
 control over the invoking thread and allows the application to
 control the behavior of the loop through returning values
 from a callback. When using this packet loop, Picoquic

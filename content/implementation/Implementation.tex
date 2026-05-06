@@ -304,7 +304,7 @@ slow start.
 \section{Connection Migration} \label{sec:connection-migration-impl}
 Connection migration is supported in CTaps,
 but is disabled by default as
-specified in RFC 9622~\cite[Sec. 6.2.14]{rfc9622}.
+specified in RFC 9622~\cite[sec. 6.2.14]{rfc9622}.
 If multipath is set to active then CTaps will probe all
 Local Endpoints registered with the Connection,
 when Picoquic notifies CTaps that a path has become unavailable.
@@ -332,7 +332,7 @@ Endpoint in the list of gathered candidates, this is the address that CTaps will
 CTaps therefore requires that an application passes a wildcard address as
 the first Local Endpoint, to successfully utilize connection migration.
 
-Lacking support for multiple local endpoints was deemed acceptable, since CTaps is
+Lacking support for multiple Local Endpoints was deemed acceptable, since CTaps is
 a research project and a workaround exists. Improvements to achieve
 a more robust connection migration, without having to
 perform this workaround are discussed in~\cref{sec:future-work}.
@@ -455,8 +455,8 @@ Socket Manager as described in \cref{sec:socketManager}.
 When opening a client, CTaps creates a new UDP handle through libuv
 and starts receiving data over that handle,
 invoking the \mono{ready()}-callback for the associated Connection immediately.
-This does not actually transfer any data to the remote endpoint
-and CTaps cannot guarantee that the remote endpoint is reachable via UDP.
+This does not actually transfer any data to the Remote Endpoint
+and CTaps cannot guarantee that the Remote Endpoint is reachable via UDP.
 
 \subsection{TCP}
 TCP is supported in libuv through the \mono{uv_tcp_t} handle~\cite{libuvLibuvTCPHandle}.
@@ -634,7 +634,7 @@ const ct_protocol_impl_t
                      [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
                      [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
                      [MULTISTREAMING] = {.value = {.simple_preference = NO_PREFERENCE}},
-                     // ... Other Selection properties
+                     // ... Other Selection Properties
                  }
            },
         .init = quic_init,
@@ -666,7 +666,7 @@ but utilizing multistreaming is optional.
 When an application initiates a Selection Property object, it
 will be instantiated with default values.
 The default Selection Properties for applications are described in
-RFC~9622~\cite[Sec.~6.2]{rfc9622}.
+RFC~9622~\cite[sec.~6.2]{rfc9622}.
 \Cref{tab:selection-properties}
 shows both the default values for when an application creates a Selection Properties
 object, in addition to the properties fulfilled by each protocol, as defined by CTaps.
@@ -674,7 +674,7 @@ object, in addition to the properties fulfilled by each protocol, as defined by 
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-\caption[Selection properties per protocol]{Selection properties for each protocol
+\caption[Selection Properties per protocol]{Selection Properties for each protocol
          implemented in CTaps, compared against TAPS defaults.
          Require means that a Property is mandated by a protocol, Prohibit
          means that a protocol cannot fulfill it and No Preference means that
@@ -711,7 +711,7 @@ object, in addition to the properties fulfilled by each protocol, as defined by 
     \footnotesize
     \item[1] CTaps only supports multipath in terms of connection migration, and does
       not support using multiple paths at once.
-    \item[2] AdvertisesAltAddress is set to a boolean RFC~9622~\cite[Sec. 6.2.15]{rfc9622},
+    \item[2] AdvertisesAltAddress is set to a boolean RFC~9622~\cite[sec. 6.2.15]{rfc9622},
       but this cannot be used to reflect a protocol which can both advertise and not advertise.
       This becomes problematic if this value is used for filtering candidates.
 \end{tablenotes}

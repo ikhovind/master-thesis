@@ -35,10 +35,7 @@ and multistreaming over SCTP.
 NEATPy~\cite{gundersenNEATPyStandardsConformantProtocolIndependent2020}
 is an open source Python library developed as a master's thesis at UiO in 2020.
 It was developed as a
-Python layer to bridge the growing gap between NEAT and TAPS. Among
-the goals was to move away from specifying the protocol at design time
-instead using Selection Properties as specified by TAPS.
-
+Python layer to bridge the growing gap between NEAT and TAPS.
 Because NEATPy is a Python shim on top of NEAT, certain parts of it are
 limited by NEAT itself. For example,
 using NEATPy it is not possible to specify the \mono{interface}
@@ -56,17 +53,13 @@ and is needed to support connection migration.
 NEATPy has not had active development since 2020.
 
 \section{Network framework}
-Network framework~\cite{networkFramework} is Apple's closed-source
-TAPS implementation. It features several important TAPS abstractions
-such as Connections and Listeners.
-
-Network framework deviates from TAPS in that
-it requires that applications specify a \term{NWParameters} object matching
-a specific transport layer protocol. This causes the application
-to be bound to this protocol at compile time. An example client
-can be seen in~\cref{lst:network-framework-example}, where
-a new connection is opened using QUIC.
-
+Network framework~\cite{networkFramework} is Apple's closed-source TAPS 
+implementation and it features core TAPS abstractions such as Connections and 
+Listeners. However, it deviates from the TAPS specification in two ways: 
+applications must specify a \term{NWParameters} object bound to a specific 
+transport protocol at compile time, and candidate racing is limited to 
+Happy Eyeballs-style IP-family racing rather than full TAPS racing. 
+An example client using QUIC is shown in~\cref{lst:network-framework-example}.
 
 \begin{listing}[htbp]
 \begin{minted}{swift}
@@ -90,10 +83,6 @@ connection.start(queue: queue)
 \label{lst:network-framework-example}
 \end{listing}
 
-Network framework does not support full candidate racing
-as described by TAPS,
-only performing Happy Eyeballs-style IP-family racing.
-
 \section{PyTAPS}
 PyTAPS~\cite{frankePythonasynciotaps2025} 
 is a standalone open source TAPS implementation
@@ -115,8 +104,7 @@ is in the early stages of development and has not had
 active development since 2021.
 
 \section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
-A table comparing the features of CTaps with the most complete existing
-TAPS implementations can be seen in~\cref{tab:comparison}.
+\Cref{tab:comparison} compares CTaps with the most complete TAPS implementations found in.
 
 \begin{table}[htbp]
 \centering
@@ -158,13 +146,11 @@ TAPS implementations can be seen in~\cref{tab:comparison}.
 While the most complete and production-ready implementation is Apple's Network framework, it
 also has several limitations. The largest limitation is naturally that it is a closed source
 implementation and is only designed to be compatible with the Apple ecosystem.
-This also means that the exact features supported
-are harder to verify than for open source implementations, since the exact
-logic cannot be inspected. In the overview it has therefore been assumed that any feature not
-documented clearly, such as connection migration for QUIC, is not supported.
+This also means that verifying exactly which features are supported
+is more difficult, since the internal logic cannot be inspected.
 
 Compared to the existing implementations as shown in \cref{tab:comparison}, CTaps has
 had the chance to innovate in two primary areas. First, when compared to Network framework it is open
 source and implements full candidate racing. Secondly, when compared to other open source
-implementations it has been developed after the finalization of the TAPS RFCs and is the
+implementations it has been developed after the finalization of the TAPS RFCs, and it is the
 first open source TAPS implementation to support QUIC. 
