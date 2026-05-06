@@ -72,7 +72,7 @@ void ct_socket_manager_unref(ct_socket_manager_t* socket_manager) {
     }
 }
   \end{minted}
-  \caption{Internal Socket Manager reference counting, ensuring that the Socket Manager remains valid until all associated objects have been freed.}
+  \caption[Socket Manager reference counting]{Internal Socket Manager reference counting, ensuring that the Socket Manager remains valid until all associated objects have been freed.}
   \label{lst:socketManagerRefCount}
 \end{listing}
 
@@ -163,7 +163,7 @@ node[lbl, above, midway] {\mono{ready()}};
     node[lbl, below, midway] {\mono{abort()}};
 
 \end{tikzpicture}
-  \caption{Diagram of Connection state transitions in CTaps.
+\caption[Connection life cycle state diagram]{Diagram of Connection state transitions in CTaps.
       Connections are only passed to applications after they have been
       established and if racing fails then the application will never
       receive a Connection object.

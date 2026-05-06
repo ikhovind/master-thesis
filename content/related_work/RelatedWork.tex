@@ -100,14 +100,12 @@ is a standalone open source TAPS implementation
 in Python using asyncio. PyTAPS is based on version 4 of the TAPS
 interface draft and it has not had active
 development since 2020. It features support for TCP and UDP.\footnote{
-PyTAPS' documentation claims support
-for TLS~\cite{pytaps_docs}, but this is not reflected in the code. 
-The security context created when passing Security Parameters
-to a Preconnection in PyTAPS is overwritten both when creating
-a Listener \cite{pytaps_listener_constructor}
-and when creating a Connection \cite{pytaps_connection_constructor}.
-This means that the \mono{ssl} parameter passed to asyncio's
-\mono{create_server()} and \mono{create_connection()} is always None.
+PyTAPS' documentation~\cite{pytaps_docs} claims support for TLS,
+which was present in earlier versions of the code.
+However, TLS support was removed during a refactoring
+commit~\cite{pytaps_tls_refactor} without corresponding updates
+to the documentation, leaving the current codebase without
+functional TLS support.
 }
 
 \section{Dynamic TAPS}
