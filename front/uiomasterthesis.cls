@@ -95,7 +95,6 @@
 
 %% Redefine the table of contents and lists of figures and tables:
 \RequirePackage{titletoc}
-\contentsmargin{0.9cm}
 \titlecontents{part}[0.0em]{\addvspace{2.25em plus 1pt}\large\sf\bfseries}{}{}
   {\hfill\contentspage}
 \titlecontents{chapter}[2.5em]{\sf}{\contentslabel{2.5em}}{\hspace*{-2.5em}}

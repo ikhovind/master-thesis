@@ -55,12 +55,12 @@ This is used to indicate that several endpoints are eligible for the connection
 and is needed to support connection migration.
 NEATPy has not had active development since 2020.
 
-\section{Network.framework}
-Network.framework~\cite{networkFramework} is Apple's closed-source
+\section{Network framework}
+Network framework~\cite{networkFramework} is Apple's closed-source
 TAPS implementation. It features several important TAPS abstractions
 such as Connections and Listeners.
 
-Network.framework deviates from TAPS in that
+Network framework deviates from TAPS in that
 it requires that applications specify a \term{NWParameters} object matching
 a specific transport layer protocol. This causes the application
 to be bound to this protocol at compile time. An example client
@@ -86,11 +86,11 @@ connection.stateUpdateHandler = { newState in
 // Start the connection with callback queue
 connection.start(queue: queue)
 \end{minted}
-\caption[Network.framework QUIC Example]{Network.framework example code of opening a QUIC connection~\cite{WWDC2021_10094}.}
+\caption[Network framework QUIC Example]{Network framework example code of opening a QUIC connection~\cite{WWDC2021_10094}.}
 \label{lst:network-framework-example}
 \end{listing}
 
-Network.framework does not support full candidate racing
+Network framework does not support full candidate racing
 as described by TAPS,
 only performing Happy Eyeballs-style IP-family racing.
 
@@ -127,7 +127,7 @@ TAPS implementations can be seen in~\cref{tab:comparison}.
 \begin{tabular}{lccccc}
 \toprule
 \rowcolor{gray!25}
-\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network.framework}     & \textbf{CTaps}\\
+\textbf{Feature}                                     & \textbf{NEATPy\tnote{1}} & \textbf{PyTAPS} & \textbf{Network framework}     & \textbf{CTaps}\\
 \midrule
 \multicolumn{1}{l||}{Language}                       & Python                   & Python          & Swift / Obj.-C              & C         \\
 \multicolumn{1}{l||}{Candidate racing}               & \cmark                   & \cmark          & \xmark\tnote{2}            & \cmark         \\
@@ -145,7 +145,7 @@ TAPS implementations can be seen in~\cref{tab:comparison}.
 \begin{tablenotes}
     \footnotesize
     \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
-    \item[2] Network.framework Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing.
+    \item[2] Network framework Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing.
     \item[3] Supported for TCP based on the NWProtocolTCP.Options~\cite{apple_allowfastopen} class.
         Lacks explicit support in the NWProtocolQUIC.Options~\cite{apple_nwprotocolquic} class.
     \item[4] Through SCTP.
@@ -155,7 +155,7 @@ TAPS implementations can be seen in~\cref{tab:comparison}.
 \end{threeparttable}
 \end{table}
 
-While the most complete and production-ready implementation is Apple's Network.framework, it
+While the most complete and production-ready implementation is Apple's Network framework, it
 also has several limitations. The largest limitation is naturally that it is a closed source
 implementation and is only designed to be compatible with the Apple ecosystem.
 This also means that the exact features supported
@@ -164,7 +164,7 @@ logic cannot be inspected. In the overview it has therefore been assumed that an
 documented clearly, such as connection migration for QUIC, is not supported.
 
 Compared to the existing implementations as shown in \cref{tab:comparison}, CTaps has
-had the chance to innovate in two primary areas. First, when compared to Network.framework it is open
+had the chance to innovate in two primary areas. First, when compared to Network framework it is open
 source and implements full candidate racing. Secondly, when compared to other open source
 implementations it has been developed after the finalization of the TAPS RFCs and is the
 first open source TAPS implementation to support QUIC. 
