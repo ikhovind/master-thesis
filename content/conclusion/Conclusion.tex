@@ -71,12 +71,6 @@ The CTaps decision of preserving
 behavior expected by QUIC is discussed further in
 \cref{sec:quic-streams-under-taps}.
 
-In summary, TAPS implementations must support a flexible
-binding between Connections and sockets, allowing for a many-to-many
-binding which enables migration, multistreaming and future protocol support.
-Finally, they must feature a demultiplexing layer allowing Connections to
-be emulated over non-connection-oriented protocols.
-
 In summary, the key implicit architectural constraints of a TAPS System are:
 a flexible many-to-many binding between Connections and sockets to support migration and
 multistreaming; a demultiplexing layer to emulate connections over connectionless protocols;
@@ -165,9 +159,7 @@ does not support adding endpoints during the lifetime of a connection.
 Not being able to add endpoints to an active Connection places a real limitation on
 an application's ability to control connection migration, since all Local and Remote
 endpoints must be passed to a Preconnection before initiation.
-CTaps does not feature listening on more than a single connection, which means
-that every Listener only supports the most preferable protocol according to the
-set Selection Properties.
+CTaps does not support listening on multiple protocols for a single listener.
 
 CTaps also contains a known limitation with \mono{sent()}-callbacks,
 since CTaps has no way of reliably connecting outgoing QUIC packets
@@ -187,8 +179,7 @@ For example, the \mono{soft_error()} callback is never invoked and
 there are several error paths where the previously allocated memory is not freed.
 This has not been an issue with the experiments since these have been run over
 a simulated network on a single computer and therefore not faced various network
-errors, but for real-world usage the application needs to both be notified about and not risk memory errors
-when an error occurred.
+errors, but this is not suitable for a production setting.
 
 While there are too many possible failure branches to mention a full list,
 further development of CTaps should add testing for

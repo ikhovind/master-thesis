@@ -89,7 +89,7 @@ and are stored in an array of currently supported protocols.
 Since the protocol implementations themselves have no state, it is safe to use a
 single global instance of each protocol among multiple Socket Managers.
 
-\section{Connection Lifecycle}
+\section{Connection Life Cycle}
 When an application initiates a Connection in CTaps it flows through
 a series of distinct phases. During racing, Connections are marked
 as \term{establishing}. The winning Connection is marked as \term{established}
@@ -107,7 +107,7 @@ typedef enum {
     CT_CONN_STATE_CLOSED            ///< Connection is fully closed
 } ct_connection_state_enum_t;
   \end{minted}
-  \caption{Connection Lifecycle States}
+  \caption{Connection Life Cycle States}
   \label{lst:conn-lifecycle-states}
 \end{listing}
 
