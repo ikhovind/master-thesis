@@ -1,10 +1,493 @@
+% ===================================================
+% ========           c++ standard            ========
+% ===================================================
+
+@online{P3482R1,
+  title        = {Design for {C++} networking based on {IETF} {TAPS} (P3482R1)},
+  author       = {Thomas Rodgers and Dietmar Kühl},
+  date         = {2024-10-14},
+  url          = {https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3482r1.html},
+  urldate      = {2026-04-20}
+}
+
+% ===================================================
+% ========           Paper            ========
+% ===================================================
+
+@inproceedings{sctpstruggles,
+  author={Michael Welzl and Florian Niederbacher and Stein Gjessing},
+  booktitle={2011 IEEE Global Telecommunications Conference - GLOBECOM 2011}, 
+  title={Beneficial Transparent Deployment of SCTP: The Missing Pieces}, 
+  year={2011},
+  pages={1-5},
+  doi={10.1109/GLOCOM.2011.6133554}
+}
+
+
+% ===================================================
+% ========           Blogs            ========
+% ===================================================
+
+@online{joras2020quic,
+  title        = {How {Facebook} is bringing {QUIC} to billions},
+  author       = {Matt Joras and Yang Chi},
+  date         = {2020-10-21},
+  url          = {https://engineering.fb.com/2020/10/21/networking-traffic/how-facebook-is-bringing-quic-to-billions/},
+  urldate         = {2026-04-18}
+}
+
+@online{cannon2016sansio,
+  title  = {Network protocols, sans {I/O}},
+  author = {Brett Cannon},
+  date   = {2016-08-07},
+  url    = {https://snarky.ca/network-protocols-sans-i-o/},
+  urldate = {2026-04-25},
+}
+
+@online{sulemanahmadMeasuringCharacteristicsTCP2025,
+  title = {Measuring characteristics of {TCP} connections at {Internet} scale},
+  author = {Suleman Ahmad and Peter Wu},
+  date = {2025-10-29},
+  url = {https://blog.cloudflare.com/measuring-network-connections-at-scale/},
+  urldate = {2026-03-19},
+}
+
+% ===================================================
+% ========           Books            ========
+% ===================================================
+
+@book{donahooTCPIPSockets2009,
+  title = {{TCP}/{IP} Sockets in {C}: Practical Guide for Programmers},
+  shorttitle = {{TCP}/{IP} Sockets in {C}},
+  author = {Michael J. Donahoo and Kenneth L. Calvert},
+  date = {2009},
+  series = {The {Morgan Kaufmann} Practical Guides Series},
+  edition = {2nd ed},
+  publisher = {Morgan Kaufmann},
+  location = {Amsterdam Boston},
+  isbn = {978-0-12-374540-8},
+}
+
+@book{tanenbaumComputerNetworks2011,
+  title = {Computer Networks},
+  author = {Andrew S. Tanenbaum and David J. Wetherall},
+  date = {2011},
+  edition = {5th ed},
+  publisher = {Pearson Prentice Hall},
+  location = {Boston},
+  isbn = {978-0-13-212695-3},
+}
+
+% ===================================================
+% ========           MANUAL            ========
+% ===================================================
+
+@online{posix:2024:socket,
+  title        = {sys/socket.h — main sockets header},
+  author       = {{The Open Group}},
+  edition      = {Issue 8},
+  year         = {2024},
+  url          = {https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_socket.h.html},
+  urldate      = {2026-03-31}
+}
+
+
+@online{pythonAsyncio,
+  author       = {{Python Software Foundation}},
+  title        = {asyncio --- Asynchronous I/O},
+  url          = {https://docs.python.org/3/library/asyncio.html},
+  urldate      = {2026-04-06}
+}
+
+@online{nodejsEventLoop,
+  author       = {{Node.js Foundation}},
+  title        = {The Node.js Event Loop},
+  url          = {https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick},
+  urldate      = {2026-04-06}
+}
+
+@online{ctapsDocs,
+  title         = {{CTaps} Documentation},
+  author        = {Ingebrigt Hovind},
+  url           = {https://ikhovind.github.io/CTaps/},
+  urldate       = {2026-04-20},
+}
+
+
+@online{tc-netem,
+  title        = {tc-netem(8) --- Linux manual page},
+  author       = {Stephen Hemminger and Fabio Ludovici and Hagen Paul Pfeifer},
+  url          = {https://man7.org/linux/man-pages/man8/tc-netem.8.html},
+  urldate      = {2026-04-18}
+}
+
+
+@online{Socket2LinuxManual,
+  title = {Socket(2) - {{Linux}} Manual Page},
+  author       = {{Linux man-pages project}},
+  url = {https://man7.org/linux/man-pages/man2/socket.2.html},
+  urldate = {2025-05-23},
+}
+
+@online{iptables_man,
+  title        = {iptables(8) --- Linux manual page},
+  author = {Rusty Russell and Michael Neuling and Marc Boucher and
+            James Morris and Jozsef Kadlecsik and Harald Welte and
+            Pablo Neira Ayuso and Eric Leblond and Florian Westphal and
+            Arturo Borrero Gonzalez and Martin Josefsson and Yasuyuki Kozakai
+            and Herve Eychenne},
+  url          = {https://man7.org/linux/man-pages/man8/iptables.8.html},
+  urldate      = {2026-04-07}
+}
+
+
+@online{gnuLinkerManual,
+  title = {ld(1) - GNU Linker Command-line Options},
+  author = {{Free Software Foundation}},
+  url = {https://sourceware.org/binutils/docs/ld/Options.html},
+  urldate = {2026-03-30}
+}
+
+
+% ===================================================
+% ========         software projects         ========
+% ===================================================
+
+@report{transportServicesMappingForQuic,
+  title = {A Transport Services Mapping for QUIC},
+  author = {Tommy Pauly},
+  url = {https://github.com/tfpauly/draft-taps-quic-mapping},
+  urldate = {2026-03-30}
+}
+
+@online{LinuxKernelNfHookSlow,
+  title = {{Linux kernel source: \texttt{nf\_hook\_slow()}, \texttt{net/netfilter/core.c}}},
+  url = {https://elixir.bootlin.com/linux/v6.1/source/net/netfilter/core.c#L605-L639},
+  urldate = {2026-03-19},
+  version = {v6.1}
+}
+
+@online{PicoquicImpliesUnreachable,
+  title        = {{Picoquic: \texttt{implies\_unreachable()}, \texttt{src/picosocks.c}}},
+  author = {Christian Huitema},
+  url =   {https://github.com/private-octopus/picoquic/blob/d6ba0415d5b2284e49413adc994560510b4c7c75/picoquic/picosocks.c#L1392-L1411},
+  urldate = {2026-03-19}
+}
+
+@online{PicobrigtImpliesUnreachable,
+  title        = {{Picoquic fork with EPERM: \texttt{implies\_unreachable()}, \texttt{src/picosocks.c}}},
+  author = {Christian Huitema and Ingebrigt Hovind},
+  url = {https://github.com/ikhovind/picoquic/blob/7b4c96cee25772e0811bb46ac9035d4ede441d9d/picoquic/picosocks.c#L1392-L1411},
+  urldate = {2026-03-19}
+}
+
+
+@online{dukeDynamictaps2025,
+  title = {dynamic-taps},
+  author = {Martin Duke},
+  url = {https://github.com/F5Networks/dynamic-taps},
+  urldate = {2025-05-05}
+}
+
+@online{cTaps,
+  title = {{CTaps: A C implementation of IETF Transport Services}},
+  author = {Ingebrigt Hovind},
+  url = {https://github.com/ikhovind/ctaps},
+  urldate = {2026-03-30}
+}
+
+@online{ctaps-example-project,
+  title = {{CTaps Example Project}},
+  author = {Ingebrigt Hovind},
+  url = {https://github.com/ikhovind/CTaps-example-project},
+  urldate = {2026-03-30}
+}
+
+
+@online{christianhuitemaPicoquic,
+  title = {{Picoquic}},
+  author = {Christian Huitema},
+  url = {https://github.com/private-octopus/picoquic},
+  urldate = {2025-11-21}
+}
+
+
+@online{GoogleTest2025,
+  title = {Google {Test}},
+  author = {{Google}},
+  url = {https://github.com/google/googletest},
+  urldate = {2026-04-18}
+}
+
+@online{longFakeFunctionFramework2025,
+  title = {{Fake Function Framework}},
+  author = {Mike Long},
+  url = {https://github.com/meekrosoft/fff/},
+  urldate = {2025-08-29}
+}
+
+@online{MsQuic,
+  title = {{MsQuic}},
+  author = {{Microsoft}},
+  url = {https://github.com/microsoft/msquic},
+  urldate = {2025-11-21}
+}
+
+
+@online{logc,
+  title = {log.c: A simple logging library implemented in {C99}},
+  author = {{rxi}},
+  url = {https://github.com/rxi/log.c},
+  urldate = {2026-03-31},
+}
+
+
+@online{GLibGitLab,
+  title  = {{GLib}: A general-purpose utility library},
+  author = {{The GNOME Project}},
+  url    = {https://gitlab.gnome.org/GNOME/glib},
+  urldate   = {2026-04-01}
+}
+
+
+@online{picotls,
+  author = {{H2O}},
+  title = {picotls: A tiny {TLS} 1.3 implementation in {C}},
+  url = {https://github.com/h2o/picotls},
+  urldate = {2026-04-15}
+}
+
+% ===================================================
+% ========                 AI                ========
+% ===================================================
+
+@Online{claude,
+  title        = {Claude},
+  author       = {{Anthropic}},
+  url          = {https://claude.com/product/overview},
+  urldate      = {2026-04-19}
+}
+
+@online{gemini,
+  author       = {{Google}},
+  title        = {Gemini},
+  url          = {https://gemini.google.com},
+  urldate      = {2026-04-19}
+}
+
+% ===================================================
+% ========              Apple                ========
+% ===================================================
+
+@online{networkFramework,
+  title = {{Network} framework},
+  author = {{Apple}},
+  url = {https://developer.apple.com/documentation/network},
+  urldate = {2026-04-02}
+}
+
+@online{apple_allowfastopen,
+  title        = {{NWProtocolTCP.Options.allowFastOpen} --- {Network} framework documentation},
+  author       = {{Apple}},
+  url          = {https://developer.apple.com/documentation/network/nwprotocoltcp/options/enablefastopen},
+  urldate      = {2026-04-21},
+}
+
+@online{apple_nwprotocolquic,
+  title        = {{NWProtocolQUIC.Options} --- {Network} framework documentation},
+  author       = {{Apple}},
+  url          = {https://developer.apple.com/documentation/network/nwprotocolquic/options},
+  urldate      = {2026-04-21},
+}
+
+@online{networkframework_happy_eyeballs_wwdc,
+  title        = {Use Structured Concurrency with {Network} framework --- Apple Worldwide Developers Conference (WWDC25)},
+  author       = {Scott Herscher},
+  year         = {2025},
+  url          = {https://developer.apple.com/videos/play/wwdc2025/250/},
+  urldate      = {2026-04-21},
+  note         = {Session 250, timestamp 0:45}
+}
+
+@online{WWDC2021_10094,
+  title        = {Accelerate networking with {HTTP/3} and {QUIC} --- Apple Worldwide Developers Conference (WWDC21)},
+  author       = {Rui Paulo and Eric Kinnear},
+  year         = {2021},
+  url          = {https://developer.apple.com/videos/play/wwdc2021/10094/},
+  urldate      = {2026-04-22},
+  note         = {Timestamp: 13:20}
+}
+
+
+% ===================================================
+% ========            NEAT(Py)               ========
+% ===================================================
+
+@thesis{gundersenNEATPyStandardsConformantProtocolIndependent2020,
+  type = {mathesis},
+  title = {{NEATPy}: {A Standards-Conformant Protocol-Independent Transport System}},
+  shorttitle = {{NEATPy}},
+  author = {Michael Gundersen},
+  year = {2020},
+  institution = {University of Oslo},
+  location = {Oslo},
+  url = {https://www.duo.uio.no/handle/10852/78765},
+  urldate = {2025-05-22},
+  pagetotal = {152}
+}
+
+
+@online{NEATPyDocumentationNEATPy,
+  title = {{NEATPy} 1.0.0 Documentation},
+  author = {Michael Gundersen},
+  url = {https://neatpy.readthedocs.io/en/latest/},
+  urldate = {2025-05-22}
+}
+
+
+@article{khademiNEATPlatformProtocolIndependent2017,
+  title={NEAT: A Platform- and Protocol-Independent Internet Transport API}, 
+  author = {Naeem Khademi and David Ros and Michael Welzl and Zdravko Bozakov
+            and Anna Brunstrom and Gorry Fairhurst and Karl-Johan Grinnemo and
+            David Hayes and Per Hurtig and Tom Jones and Simone Mangiante and
+            Michael Tuxen and Felix Weinrank},
+  journal={IEEE Communications Magazine}, 
+  year={2017},
+  volume={55},
+  number={6},
+  pages={46--54},
+  doi={10.1109/MCOM.2017.1601052}
+}
+
+@online{neatCode,
+  title        = {NEAT: A New, Evolutive {API} and Transport-Layer Architecture for the Internet},
+  author       = {{NEAT}},
+  url          = {https://github.com/NEAT-project/neat},
+  urldate      = {2026-04-01},
+}
+
+@misc{neatFunding,
+  title        = {NEAT: A New, Evolutive API and Transport-Layer Architecture for the Internet},
+  author       = {{European Commission}},
+  year         = {2015},
+  howpublished = {CORDIS Project Database},
+  note         = {Grant agreement ID: 644334},
+  doi          = {10.3030/644334},
+}
+
+@techreport{neat-d23,
+  author = {Zdravko Bozakov and Anna Brunstrom
+            and {\O}ystein Dale and Dragana Damjanovic and Kristian Riktor Evensen
+            and Gorry Fairhurst and Andreas Fischer and Karl-Johan Grinnemo and
+            Tom Jones and Simone Mangiante and Andreas Petlund and David Ros and
+            Irene R{\"u}ngeler and Daniel Stenberg and Michael T{\"u}xen and Felix
+            Weinrank and Michael Welzl
+            },
+  editor       = {Naeem Khademi},
+  title        = {Final Version of Core Transport System},
+  type         = {Deliverable},
+  number       = {D2.3},
+  institution  = {NEAT Project},
+  note         = {H2020-ICT-05-2014, Grant agreement no.~644334},
+  year         = {2017},
+  month        = aug,
+  url          = {https://neat.nntb.no/wp-content/uploads/2017/10/D2.3.pdf},
+  urldate      = {2026-04-26}
+}
+
+% ===================================================
+% ========              pytaps               ========
+% ===================================================
+
+@software{frankePythonasynciotaps2025,
+  title = {{PyTAPS}},
+  author = {Max Franke},
+  url = {https://github.com/fg-inet/python-asyncio-taps},
+  urldate = {2025-05-05}
+}
+
+@online{pytaps_docs,
+  title        = {{PyTAPS} Documentation},
+  author       = {Max Franke},
+  year         = {2020},
+  url          = {https://pytaps.readthedocs.io/en/latest/index.html},
+  urldate      = {2026-04-26}
+}
+
+@online{pytaps_tls_refactor,
+  title   = {{TLS} refactoring commit, {PyTAPS}},
+  author = {Max Franke},
+  year   = {2020},
+  url    = {https://github.com/fg-inet/python-asyncio-taps/commit/e701cdee95d29ae65e668b92b6e7aa4f6553a39c},
+  urldate = {2025-05-06}
+}
+
+% ===================================================
+% ========              libuv                ========
+% ===================================================
+
+@online{Libuv2025,
+  title = {Asynchronous {I/O} made simple.},
+  author = {{libuv}},
+  url = {https://libuv.org/},
+  urldate = {2025-08-29}
+}
+
+@online{libuvLibuvTCPHandle,
+  title = {\texttt{uv\_tcp\_t} --- {TCP} handle},
+  author = {{libuv}},
+  url = {https://docs.libuv.org/en/v1.x/tcp.html},
+  urldate = {2025-10-31}
+}
+
+@online{libuvLibuvUDPHandle,
+  title = {\texttt{uv\_udp\_t} --- {UDP} handle},
+  author = {{libuv}},
+  url = {https://docs.libuv.org/en/v1.x/udp.html},
+  urldate = {2025-10-31},
+}
+
+
+@online{libuv_threading,
+  title        = {Threading and synchronization utilities},
+  author       = {{libuv}},
+  url          = {https://docs.libuv.org/en/v1.x/threading.html},
+  urldate      = {2026-04-08},
+}
+
+@online{libuv_errors,
+  title        = {Error handling},
+  author       = {{libuv}},
+  url          = {https://docs.libuv.org/en/v1.x/errors.html},
+  urldate      = {2026-03-22}
+}
+
+
+@online{libuv_udp_send,
+  title        = {\texttt{uv\_udp\_t} --- {UDP} handle: \texttt{uv\_udp\_send()}},
+  author       = {{libuv}},
+  url          = {https://docs.libuv.org/en/v1.x/udp.html#c.uv_udp_send},
+  urldate      = {2026-04-11}
+}
+
+@online{libuv_design,
+  title        = {Design overview},
+  author       = {{libuv}},
+  url          = {https://docs.libuv.org/en/v1.x/design.html},
+  urldate      = {2026-03-21}
+}
+
+% ===================================================
+% ========                RFC                ========
+% ===================================================
+
 @misc{rfc8546,
     series =    {Request for Comments},
     number =    8546,
     howpublished =  {RFC 8546},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC8546},
-    url =       {https://www.rfc-editor.org/info/rfc8546},
+    %url =       {https://www.rfc-editor.org/info/rfc8546},
     author =    {Brian Trammell and Mirja Kühlewind},
     title =     {{The Wire Image of a Network Protocol}},
     pagetotal = 10,
@@ -19,7 +502,7 @@
     howpublished =  {RFC 9623},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC9623},
-    url =       {https://www.rfc-editor.org/info/rfc9623},
+    %url =       {https://www.rfc-editor.org/info/rfc9623},
     author =    {Anna Brunstrom and Tommy Pauly and Reese Enghardt and Philipp S. Tiesel and Michael Welzl},
     title =     {{Implementing Interfaces to Transport Services}},
     pagetotal = 46,
@@ -33,7 +516,7 @@
     howpublished =  {RFC 33},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC0033},
-    url =       {https://www.rfc-editor.org/info/rfc33},
+   % url =       {https://www.rfc-editor.org/info/rfc33},
     author =    {Crocker, S.D.},
     title =     {{New Host-Host Protocol}},
     pagetotal = 19,
@@ -48,7 +531,7 @@
     howpublished =  {RFC 675},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC0675},
-    url =       {https://www.rfc-editor.org/info/rfc675},
+    %url =       {https://www.rfc-editor.org/info/rfc675},
     author = {Cerf, V. and Dalal, Y. and Sunshine, C.},
     title =     {{Specification of Internet Transmission Control Program}},
     pagetotal = 70,
@@ -57,32 +540,6 @@
     abstract =  {The first detailed specification of TCP; see RFC 793.},
 }
 
-@software{christianhuitemaPicoquic,
-  title = {Picoquic},
-  author = {{Christian Huitema}},
-  url = {https://github.com/private-octopus/picoquic},
-  urldate = {2025-11-21}
-}
-
-@software{networkFramework,
-  title = {Network},
-  author = {{Apple}},
-  url = {https://developer.apple.com/documentation/network},
-  urldate = {2026-04-02}
-}
-
-@book{donahooTCPIPSockets2009,
-  title = {{{TCP}}/{{IP}} Sockets in {{C}}: Practical Guide for Programmers},
-  shorttitle = {{{TCP}}/{{IP}} Sockets in {{C}}},
-  author = {Donahoo, Michael J. and Calvert, Kenneth L.},
-  date = {2009},
-  series = {The {{Morgan Kaufmann}} Practical Guides Series},
-  edition = {2nd ed},
-  publisher = {Morgan Kaufmann},
-  location = {Amsterdam Boston},
-  isbn = {978-0-12-374540-8},
-  langid = {english}
-}
 
 @misc{rfc2131,
     series =    {Request for Comments},
@@ -90,7 +547,7 @@
     howpublished =  {RFC 2131},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC2131},
-    url =       {https://www.rfc-editor.org/info/rfc2131},
+    %url =       {https://www.rfc-editor.org/info/rfc2131},
     author =    {Ralph Droms},
     title =     {{Dynamic Host Configuration Protocol}},
     pagetotal = 45,
@@ -99,38 +556,13 @@
     abstract =  {The Dynamic Host Configuration Protocol (DHCP) provides a framework for passing configuration information to hosts on a TCPIP network. DHCP is based on the Bootstrap Protocol (BOOTP), adding the capability of automatic allocation of reusable network addresses and additional configuration options. {[}STANDARDS-TRACK{]}},
 }
 
-@software{dukeDynamictaps2025,
-  title = {Dynamic-Taps},
-  shorttitle = {Dynamic {{Taps}}},
-  author = {Duke, Martin},
-  date = {2025-05-05},
-  url = {https://github.com/F5Networks/dynamic-taps},
-  urldate = {2025-05-05}
-}
-
-@software{cTaps,
-  title = {CTaps},
-  author = {Hovind, Ingebrigt},
-  date = {2026},
-  url = {https://github.com/ikhovind/ctaps},
-  urldate = {2026-03-30}
-}
-
-@software{ctaps-example-project,
-  title = {CTaps Example Project},
-  author = {Hovind, Ingebrigt},
-  date = {2026},
-  url = {https://github.com/ikhovind/CTaps-example-project},
-  urldate = {2026-03-30}
-}
-
 @misc{rfc8095,
     series =    {Request for Comments},
     number =    8095,
     howpublished =  {RFC 8095},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC8095},
-    url =       {https://www.rfc-editor.org/info/rfc8095},
+    %url =       {https://www.rfc-editor.org/info/rfc8095},
     author =    {Gorry Fairhurst and Brian Trammell and Mirja Kühlewind},
     title =     {{Services Provided by IETF Transport Protocols and Congestion Control Mechanisms}},
     pagetotal = 54,
@@ -139,34 +571,6 @@
     abstract =  {This document describes, surveys, and classifies the protocol mechanisms provided by existing IETF protocols, as background for determining a common set of transport services. It examines the Transmission Control Protocol (TCP), Multipath TCP, the Stream Control Transmission Protocol (SCTP), the User Datagram Protocol (UDP), UDP-Lite, the Datagram Congestion Control Protocol (DCCP), the Internet Control Message Protocol (ICMP), the Real-Time Transport Protocol (RTP), File Delivery over Unidirectional Transport / Asynchronous Layered Coding (FLUTE/ALC) for Reliable Multicast, NACK- Oriented Reliable Multicast (NORM), Transport Layer Security (TLS), Datagram TLS (DTLS), and the Hypertext Transport Protocol (HTTP), when HTTP is used as a pseudotransport. This survey provides background for the definition of transport services within the TAPS working group.},
 }
 
-@software{frankePythonasynciotaps2025,
-  title = {Python-Asyncio-Taps},
-  author = {Franke, Max},
-  year = {2020},
-  url = {https://github.com/fg-inet/python-asyncio-taps},
-  urldate = {2025-05-05}
-}
-
-@software{GoogleTest2025,
-  title = {Google {{Test}}},
-  url = {https://github.com/google/googletest},
-  urldate = {2026-04-18},
-  organization = {Google}
-}
-
-@thesis{gundersenNEATPyStandardsConformantProtocolIndependent2020,
-  type = {mathesis},
-  title = {{{NEATPy}}: {{A Standards-Conformant Protocol-Independent Transport System}}},
-  shorttitle = {{{NEATPy}}},
-  author = {Gundersen, Michael},
-  date = {2020-21},
-  institution = {University of Oslo},
-  location = {Oslo},
-  url = {https://www.duo.uio.no/handle/10852/78765},
-  urldate = {2025-05-22},
-  langid = {english},
-  pagetotal = {152}
-}
 
 @misc{rfc9002,
     series =    {Request for Comments},
@@ -174,7 +578,7 @@
     howpublished =  {RFC 9002},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC9002},
-    url =       {https://www.rfc-editor.org/info/rfc9002},
+    %url =       {https://www.rfc-editor.org/info/rfc9002},
     author =    {Jana Iyengar and Ian Swett},
     title =     {{QUIC Loss Detection and Congestion Control}},
     pagetotal = 42,
@@ -189,7 +593,7 @@
     howpublished =  {RFC 9000},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC9000},
-    url =       {https://www.rfc-editor.org/info/rfc9000},
+    %url =       {https://www.rfc-editor.org/info/rfc9000},
     author =    {Jana Iyengar and Martin Thomson},
     title =     {{QUIC: A UDP-Based Multiplexed and Secure Transport}},
     pagetotal = 151,
@@ -198,22 +602,6 @@
     abstract =  {This document defines the core of the QUIC transport protocol. QUIC provides applications with flow-controlled streams for structured communication, low-latency connection establishment, and network path migration. QUIC includes security measures that ensure confidentiality, integrity, and availability in a range of deployment circumstances. Accompanying documents describe the integration of TLS for key negotiation, loss detection, and an exemplary congestion control algorithm.},
 }
 
-@article{khademiNEATPlatformProtocolIndependent2017,
-  title = {{{NEAT}}: {{A Platform-}} and {{Protocol-Independent Internet Transport API}}},
-  shorttitle = {{{NEAT}}},
-  author = {Khademi, Naeem and Ros, David and Welzl, Michael and Bozakov, Zdravko and Brunstrom, Anna and Fairhurst, Gorry and Grinnemo, Karl-Johan and Hayes, David and Hurtig, Per and Jones, Tom and Mangiante, Simone and Tuxen, Michael and Weinrank, Felix},
-  date = {2017},
-  journaltitle = {IEEE Communications Magazine},
-  shortjournal = {IEEE Commun. Mag.},
-  volume = {55},
-  number = {6},
-  pages = {46--54},
-  issn = {0163-6804},
-  doi = {10.1109/MCOM.2017.1601052},
-  url = {http://ieeexplore.ieee.org/document/7945852/},
-  urldate = {2025-05-22},
-  file = {/home/ikhovind/Zotero/storage/ZZXEU6JI/Khademi et al. - 2017 - NEAT A Platform- and Protocol-Independent Internet Transport API.pdf}
-}
 
 @misc{rfc2960,
     series =    {Request for Comments},
@@ -221,7 +609,7 @@
     howpublished =  {RFC 2960},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC2960},
-    url =       {https://www.rfc-editor.org/info/rfc2960},
+    %url =       {https://www.rfc-editor.org/info/rfc2960},
     author =    {Malleswar Kalla and Randall R. Stewart and Tom Taylor and Dr. Vern Paxson and Chip Sharp and Ken Morneault and Dr. HannsJuergen Schwarzbauer and Qiaobing Xie and Ian Rytina and Lixia Zhang},
     title =     {{Stream Control Transmission Protocol}},
     pagetotal = 134,
@@ -230,56 +618,6 @@
     abstract =  {This document describes the Stream Control Transmission Protocol (SCTP). {[}STANDARDS-TRACK{]}},
 }
 
-@software{Libuv2025,
-  title = {Libuv},
-  date = {2025-08-29},
-  url = {https://libuv.org/},
-  urldate = {2025-08-29}
-}
-
-@software{libuvLibuvTCPHandle,
-  title = {Libuv {{TCP Handle}} Documentation},
-  author = {{libuv}},
-  url = {https://docs.libuv.org/en/v1.x/tcp.html},
-  urldate = {2025-10-31}
-}
-
-@software{libuvLibuvTimerHandle,
-  title = {Libuv {{Timer}} Handle Documentation},
-  author = {{libuv}},
-  url = {https://docs.libuv.org/en/v1.x/timer.html},
-  urldate = {2025-10-31}
-}
-
-@software{libuvLibuvUDPHandle,
-  title = {Libuv {{UDP Handle}} Documentation},
-  author = {{libuv}},
-  url = {https://docs.libuv.org/en/v1.x/udp.html},
-  urldate = {2025-10-31},
-  organization = {libuv}
-}
-
-@software{longFakeFunctionFramework2025,
-  title = {Fake {{Function Framework}}},
-  author = {Long, Mike},
-  date = {2025-08-29},
-  url = {https://github.com/meekrosoft/fff/},
-  urldate = {2025-08-29}
-}
-
-@software{MsQuic,
-  title = {{{MsQuic}}},
-  url = {https://github.com/microsoft/msquic},
-  urldate = {2025-11-21},
-  organization = {Microsoft}
-}
-
-@online{NEATPyDocumentationNEATPy,
-  title = {{{NEATPy Documentation}} — {{NEATPy}} 1.0.0 Documentation},
-  url = {https://neatpy.readthedocs.io/en/latest/},
-  urldate = {2025-05-22},
-  file = {/home/ikhovind/Zotero/storage/DSLVWWIX/latest.html}
-}
 
 @misc{rfc9621,
     series =    {Request for Comments},
@@ -287,7 +625,7 @@
     howpublished =  {RFC 9621},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC9621},
-    url =       {https://www.rfc-editor.org/info/rfc9621},
+    %url =       {https://www.rfc-editor.org/info/rfc9621},
     author =    {Tommy Pauly and Brian Trammell and Anna Brunstrom and Gorry Fairhurst and Colin Perkins},
     title =     {{Architecture and Requirements for Transport Services}},
     pagetotal = 29,
@@ -302,13 +640,183 @@
     howpublished =  {RFC 8305},
     publisher = {RFC Editor},
     doi =       {10.17487/RFC8305},
-    url =       {https://www.rfc-editor.org/info/rfc8305},
+    %url =       {https://www.rfc-editor.org/info/rfc8305},
     author =    {David Schinazi and Tommy Pauly},
     title =     {{Happy Eyeballs Version 2: Better Connectivity Using Concurrency}},
     pagetotal = 15,
     year =      2017,
     month =     dec,
     abstract =  {Many communication protocols operating over the modern Internet use hostnames. These often resolve to multiple IP addresses, each of which may have different performance and connectivity characteristics. Since specific addresses or address families (IPv4 or IPv6) may be blocked, broken, or sub-optimal on a network, clients that attempt multiple connections in parallel have a chance of establishing a connection more quickly. This document specifies requirements for algorithms that reduce this user-visible delay and provides an example algorithm, referred to as "Happy Eyeballs". This document obsoletes the original algorithm description in RFC 6555.},
+}
+
+
+@misc{rfc9622,
+    series =    {Request for Comments},
+    number =    9622,
+    howpublished =  {RFC 9622},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9622},
+    %url =       {https://www.rfc-editor.org/info/rfc9622},
+    author =    {Brian Trammell and Michael Welzl and Reese Enghardt and Gorry Fairhurst and Mirja Kühlewind and Colin Perkins and Philipp S. Tiesel and Tommy Pauly},
+    title =     {{An Abstract Application Programming Interface (API) for Transport Services}},
+    pagetotal = 84,
+    year =      2025,
+    month =     jan,
+    abstract =  {This document describes an abstract Application Programming Interface (API) to the transport layer that enables the selection of transport protocols and network paths dynamically at runtime. This API enables faster deployment of new protocols and protocol features without requiring changes to the applications. The specified API follows the Transport Services Architecture by providing asynchronous, atomic transmission of Messages. It is intended to replace the BSD Socket API as the common interface to the transport layer, in an environment where endpoints could select from multiple network paths and potential transport protocols.},
+}
+
+@misc{rfc8303,
+    series =    {Request for Comments},
+    number =    8303,
+    howpublished =  {RFC 8303},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC8303},
+    %url =       {https://www.rfc-editor.org/info/rfc8303},
+    author =    {Michael Welzl and Michael Tüxen and Naeem Khademi},
+    title =     {{On the Usage of Transport Features Provided by IETF Transport Protocols}},
+    pagetotal = 56,
+    year =      2018,
+    month =     feb,
+    abstract =  {This document describes how the transport protocols Transmission Control Protocol (TCP), MultiPath TCP (MPTCP), Stream Control Transmission Protocol (SCTP), User Datagram Protocol (UDP), and Lightweight User Datagram Protocol (UDP-Lite) expose services to applications and how an application can configure and use the features that make up these services. It also discusses the service provided by the Low Extra Delay Background Transport (LEDBAT) congestion control mechanism. The description results in a set of transport abstractions that can be exported in a transport services (TAPS) API.},
+}
+
+
+@misc{rfc8446,
+    series =    {Request for Comments},
+    number =    8446,
+    howpublished =  {RFC 8446},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC8446},
+    %url =       {https://www.rfc-editor.org/info/rfc8446},
+    author =    {Eric Rescorla},
+    title =     {{The Transport Layer Security (TLS) Protocol Version 1.3}},
+    pagetotal = 160,
+    year =      2018,
+    month =     aug,
+    abstract =  {This document specifies version 1.3 of the Transport Layer Security (TLS) protocol. TLS allows client/server applications to communicate over the Internet in a way that is designed to prevent eavesdropping, tampering, and message forgery. This document updates RFCs 5705 and 6066, and obsoletes RFCs 5077, 5246, and 6961. This document also specifies new requirements for TLS 1.2 implementations.},
+}
+
+
+@misc{rfc9221,
+    series =    {Request for Comments},
+    number =    9221,
+    howpublished =  {RFC 9221},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9221},
+    %url =       {https://www.rfc-editor.org/info/rfc9221},
+    author =    {Tommy Pauly and Eric Kinnear and David Schinazi},
+    title =     {{An Unreliable Datagram Extension to QUIC}},
+    pagetotal = 9,
+    year =      2022,
+    month =     mar,
+    abstract =  {This document defines an extension to the QUIC transport protocol to add support for sending and receiving unreliable datagrams over a QUIC connection.},
+}
+
+@misc{rfc9001,
+    series =    {Request for Comments},
+    number =    9001,
+    howpublished =  {RFC 9001},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9001},
+    %url =       {https://www.rfc-editor.org/info/rfc9001},
+    author =    {Martin Thomson and Sean Turner},
+    title =     {{Using TLS to Secure QUIC}},
+    pagetotal = 52,
+    year =      2021,
+    month =     may,
+    abstract =  {This document describes how Transport Layer Security (TLS) is used to secure QUIC.},
+}
+
+@misc{rfc6951,
+    series =    {Request for Comments},
+    number =    6951,
+    howpublished =  {RFC 6951},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC6951},
+    %url =       {https://www.rfc-editor.org/info/rfc6951},
+    author =    {Michael Tüxen and Randall R. Stewart},
+    title =     {{UDP Encapsulation of Stream Control Transmission Protocol (SCTP) Packets for End-Host to End-Host Communication}},
+    pagetotal = 12,
+    year =      2013,
+    month =     may,
+    abstract =  {This document describes a simple method of encapsulating Stream Control Transmission Protocol (SCTP) packets into UDP packets and its limitations. This allows the usage of SCTP in networks with legacy NATs that do not support SCTP. It can also be used to implement SCTP on hosts without directly accessing the IP layer, for example, implementing it as part of the application without requiring special privileges. Please note that this document only describes the functionality required within an SCTP stack to add on UDP encapsulation, providing only those mechanisms for two end-hosts to communicate with each other over UDP ports. In particular, it does not provide mechanisms to determine whether UDP encapsulation is being used by the peer, nor the mechanisms for determining which remote UDP port number can be used. These functions are out of scope for this document. This document covers only end-hosts and not tunneling (egress or ingress) endpoints.},
+}
+
+
+@misc{rfc9868,
+    series =    {Request for Comments},
+    number =    9868,
+    howpublished =  {RFC 9868},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9868},
+    %url =       {https://www.rfc-editor.org/info/rfc9868},
+    author =    {Dr. Joseph D. Touch and C. M. Heard},
+    title =     {{Transport Options for UDP}},
+    pagetotal = 51,
+    year =      2025,
+    month =     oct,
+    abstract =  {Transport protocols are extended through the use of transport header options. This document updates RFC 768 (UDP) by indicating the location, syntax, and semantics for UDP transport layer options within the surplus area after the end of the UDP user data but before the end of the IP datagram.},
+}
+
+@misc{rfc9170,
+    series =    {Request for Comments},
+    number =    9170,
+    howpublished =  {RFC 9170},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9170},
+    %url =       {https://www.rfc-editor.org/info/rfc9170},
+    author =    {Martin Thomson and Tommy Pauly},
+    title =     {{Long-Term Viability of Protocol Extension Mechanisms}},
+    pagetotal = 17,
+    year =      2021,
+    month =     dec,
+    abstract =  {The ability to change protocols depends on exercising the extension and version-negotiation mechanisms that support change. This document explores how regular use of new protocol features can ensure that it remains possible to deploy changes to a protocol. Examples are given where lack of use caused changes to be more difficult or costly.},
+}
+
+@misc{rfc7301,
+    series =    {Request for Comments},
+    number =    7301,
+    howpublished =  {RFC 7301},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC7301},
+    %url =       {https://www.rfc-editor.org/info/rfc7301},
+    author =    {Stephan Friedl and Andrei Popov and Adam Langley and Emile Stephan},
+    title =     {{Transport Layer Security (TLS) Application-Layer Protocol Negotiation Extension}},
+    pagetotal = 9,
+    year =      2014,
+    month =     jul,
+    abstract =  {This document describes a Transport Layer Security (TLS) extension for application-layer protocol negotiation within the TLS handshake. For instances in which multiple application protocols are supported on the same TCP or UDP port, this extension allows the application layer to negotiate which protocol will be used within the TLS connection.},
+}
+
+
+@misc{rfc2616,
+    series =    {Request for Comments},
+    number =    2616,
+    howpublished =  {RFC 2616},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC2616},
+    %url =       {https://www.rfc-editor.org/info/rfc2616},
+    author =    {Henrik Nielsen and Jeffrey Mogul and Larry M Masinter and Roy T. Fielding and Jim Gettys and Paul J. Leach and Tim Berners-Lee},
+    title =     {{Hypertext Transfer Protocol -- HTTP/1.1}},
+    pagetotal = 176,
+    year =      1999,
+    month =     jun,
+    abstract =  {HTTP has been in use by the World-Wide Web global information initiative since 1990. This specification defines the protocol referred to as "HTTP/1.1", and is an update to RFC 2068. {[}STANDARDS-TRACK{]}},
+}
+
+@misc{rfc9114,
+    series =    {Request for Comments},
+    number =    9114,
+    howpublished =  {RFC 9114},
+    publisher = {RFC Editor},
+    doi =       {10.17487/RFC9114},
+    %url =       {https://www.rfc-editor.org/info/rfc9114},
+    author =    {Mike Bishop},
+    title =     {{HTTP/3}},
+    pagetotal = 57,
+    year =      2022,
+    month =     jun,
+    abstract =  {The QUIC transport protocol has several features that are desirable in a transport for HTTP, such as stream multiplexing, per-stream flow control, and low-latency connection establishment. This document describes a mapping of HTTP semantics over QUIC. This document also identifies HTTP/2 features that are subsumed by QUIC and describes how HTTP/2 extensions can be ported to HTTP/3.},
 }
 
 @techreport{ietf-happy-happyeyeballs-v3-03,
@@ -327,257 +835,6 @@
     abstract =  {Many communication protocols operating over the modern Internet use hostnames. These often resolve to multiple IP addresses, each of which may have different performance and connectivity characteristics. Since specific addresses or address families (IPv4 or IPv6) may be blocked, broken, or sub-optimal on a network, clients that attempt multiple connections in parallel have a chance of establishing a connection more quickly. This document specifies requirements for algorithms that reduce this user-visible delay and provides an example algorithm, referred to as "Happy Eyeballs". This document updates the algorithm description in RFC 8305.},
 }
 
-@online{Socket2LinuxManual,
-  title = {Socket(2) - {{Linux}} Manual Page},
-  url = {https://man7.org/linux/man-pages/man2/socket.2.html},
-  urldate = {2025-05-23},
-  file = {/home/ikhovind/Zotero/storage/P86NRAAP/socket.2.html}
-}
-
-@manual{iptables_man,
-  title        = {iptables(8) — Linux manual page},
-  author       = {{Netfilter Core Team}},
-  organization = {Linux man-pages project},
-  url          = {https://man7.org/linux/man-pages/man8/iptables.8.html},
-  urldate         = {2026-04-07}
-}
-
-
-@online{gnuLinkerManual,
-  title = {ld(1) - GNU Linker Command-line Options},
-  url = {https://sourceware.org/binutils/docs/ld/Options.html},
-  author = {Free Software Foundation},
-  date = {2026},
-  urldate = {2026-03-30}
-}
-
-@online{sulemanahmadMeasuringCharacteristicsTCP2025,
-  title = {Measuring Characteristics of {{TCP}} Connections at {{Internet}} Scale},
-  author = {{Suleman Ahmad} and {Peter Wu}},
-  date = {2025-10-29},
-  url = {https://blog.cloudflare.com/measuring-network-connections-at-scale/},
-  urldate = {2026-03-19},
-  langid = {english},
-  organization = {The Cloudflare Blog}
-}
-
-@book{tanenbaumComputerNetworks2011,
-  title = {Computer Networks},
-  author = {Tanenbaum, Andrew S. and Wetherall, D.},
-  date = {2011},
-  edition = {5th ed},
-  publisher = {Pearson Prentice Hall},
-  location = {Boston},
-  isbn = {978-0-13-212695-3},
-  pagetotal = {933},
-  keywords = {Computer networks},
-  annotation = {OCLC: ocn660087726}
-}
-
-@report{rfc9622,
-  title = {An {{Abstract Application Programming Interface}} ({{API}}) for {{Transport Services}}},
-  author = {Trammell, B. and Welzl, M. and Enghardt, R. and Fairhurst, G. and Kühlewind, M. and S. Perkins, C. and Tiesel, P.S. and Pauly, T.},
-  date = {2025-01},
-  number = {RFC9622},
-  pages = {RFC9622},
-  institution = {RFC Editor},
-  doi = {10.17487/RFC9622},
-  url = {https://www.rfc-editor.org/info/rfc9622},
-  urldate = {2025-05-09},
-  langid = {english}
-}
-
-@report{transportServicesMappingForQuic,
-  title = {A Transport Services Mapping for QUIC},
-  author = {Pauly, T.},
-  url = {https://github.com/tfpauly/draft-taps-quic-mapping},
-  urldate = {2026-03-30}
-}
-
-@misc{rfc8303,
-    series =    {Request for Comments},
-    number =    8303,
-    howpublished =  {RFC 8303},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC8303},
-    url =       {https://www.rfc-editor.org/info/rfc8303},
-    author =    {Michael Welzl and Michael Tüxen and Naeem Khademi},
-    title =     {{On the Usage of Transport Features Provided by IETF Transport Protocols}},
-    pagetotal = 56,
-    year =      2018,
-    month =     feb,
-    abstract =  {This document describes how the transport protocols Transmission Control Protocol (TCP), MultiPath TCP (MPTCP), Stream Control Transmission Protocol (SCTP), User Datagram Protocol (UDP), and Lightweight User Datagram Protocol (UDP-Lite) expose services to applications and how an application can configure and use the features that make up these services. It also discusses the service provided by the Low Extra Delay Background Transport (LEDBAT) congestion control mechanism. The description results in a set of transport abstractions that can be exported in a transport services (TAPS) API.},
-}
-
-@software{LinuxKernelNfHookSlow,
-  title = {{Linux kernel source: \texttt{nf\_hook\_slow()}, \texttt{net/netfilter/core.c}}},
-  url = {https://elixir.bootlin.com/linux/v6.1/source/net/netfilter/core.c#L605-L639},
-  urldate = {2026-03-19},
-  version = {v6.1}
-}
-
-@software{logc,
-  title = {log.c},
-  url = {https://github.com/rxi/log.c},
-  urldate = {2026-03-31}
-}
-
-@software{PicoquicImpliesUnreachable,
-  title        = {{Picoquic: \texttt{implies\_unreachable()}, \texttt{src/picosocks.c}}},
-  howpublished = {\url{https://github.com/private-octopus/picoquic/blob/d6ba0415d5b2284e49413adc994560510b4c7c75/picoquic/picosocks.c\#L1392-L1411}},
-  urldate = {2026-03-19}
-}
-
-@software{PicobrigtImpliesUnreachable,
-  title        = {{Picoquic fork with EPERM: \texttt{implies\_unreachable()}, \texttt{src/picosocks.c}}},
-  howpublished = {\url{https://github.com/ikhovind/picoquic/blob/7b4c96cee25772e0811bb46ac9035d4ede441d9d/picoquic/picosocks.c\#L1392-L1411}},
-  urldate = {2026-03-19}
-}
-
-@manual{posix:2024:socket,
-  title        = {sys/socket.h — main sockets header},
-  author       = {{The IEEE and The Open Group}},
-  organization = {The Austin Group},
-  edition      = {Issue 8},
-  year         = {2024},
-  note         = {IEEE Std 1003.1-2024},
-  url          = {https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/sys_socket.h.html},
-  urldate      = {2026-03-31}
-}
-
-@software{GLibGitLab,
-  title  = {{GLib}: A general-purpose utility library},
-  author = {{The GNOME Project}},
-  year   = {2026},
-  url    = {https://gitlab.gnome.org/GNOME/glib},
-  urldate   = {2026-04-01}
-}
-
-@software{neatCode,
-  author       = {{NEAT Project Team}},
-  title        = {NEAT: A New, Evolutive {API} and Transport-Layer Architecture for the Internet},
-  month        = {mar},
-  year         = {2026},
-  publisher    = {GitHub},
-  version      = {1.0.0},
-  url          = {https://github.com/NEAT-project/neat},
-  abstract     = {The NEAT library offers a new, evolutive API and transport-layer architecture for the Internet, allowing applications to use transport protocols dynamically.}
-}
-
-@misc{neatFunding,
-  title        = {A New, Evolutive API and Transport-Layer Architecture for the Internet},
-  author       = {{European Commission}},
-  year         = {2015},
-  howpublished = {CORDIS Project Database},
-  note         = {Grant agreement ID: 644334},
-  doi          = {10.3030/644334},
-  url          = {https://doi.org/10.3030/644334}
-}
-
-@misc{rfc8446,
-    series =    {Request for Comments},
-    number =    8446,
-    howpublished =  {RFC 8446},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC8446},
-    url =       {https://www.rfc-editor.org/info/rfc8446},
-    author =    {Eric Rescorla},
-    title =     {{The Transport Layer Security (TLS) Protocol Version 1.3}},
-    pagetotal = 160,
-    year =      2018,
-    month =     aug,
-    abstract =  {This document specifies version 1.3 of the Transport Layer Security (TLS) protocol. TLS allows client/server applications to communicate over the Internet in a way that is designed to prevent eavesdropping, tampering, and message forgery. This document updates RFCs 5705 and 6066, and obsoletes RFCs 5077, 5246, and 6961. This document also specifies new requirements for TLS 1.2 implementations.},
-}
-
-@misc{nodejsEventLoop,
-  author       = {{Node.js Foundation}},
-  title        = {The Node.js Event Loop, Timers, and process.nextTick()},
-  howpublished = {Node.js Official Documentation},
-  year         = {n.d.},
-  url          = {https://nodejs.org/learn/asynchronous-work/event-loop-timers-and-nexttick},
-  urldate      = {2026-04-06}
-}
-
-@misc{pythonAsyncio,
-  author       = {{Python Software Foundation}},
-  title        = {asyncio --- Asynchronous I/O},
-  howpublished = {Python 3.12 Documentation},
-  year         = {2026},
-  url          = {https://docs.python.org/3/library/asyncio.html},
-  urldate      = {2026-04-06}
-}
-
-@manual{tc-netem,
-  title        = {tc-netem(8) — Linux manual page},
-  author       = {Hemminger, Stephen and Ludovici, Fabio and Pfeifer, Hagen Paul},
-  organization = {Linux Traffic Control (iproute2)},
-  year         = {2026},
-  url          = {https://man7.org/linux/man-pages/man8/tc-netem.8.html},
-  urldate      = {2026-04-18}
-}
-
-@online{libuv_threading,
-  author       = {{libuv project contributors}},
-  title        = {Threading and synchronization utilities},
-  journal      = {libuv documentation},
-  url          = {https://docs.libuv.org/en/v1.x/threading.html},
-  urldate      = {2026-04-08},
-  version      = {v1.x}
-}
-
-@manual{libuv_errors,
-  title        = {Error handling --- libuv documentation},
-  author       = {{libuv contributors}},
-  year         = {2024},
-  url          = {https://docs.libuv.org/en/v1.x/errors.html},
-  urldate      = {2026-03-22}
-}
-
-@misc{gtk_website,
-  author       = {{The GTK Project}},
-  title        = {The GTK Project - A free and open-source cross-platform widget toolkit},
-  year         = {2024},
-  howpublished = {\url{https://www.gtk.org/}},
-  urldate      = {2026-03-22}
-}
-
-@misc{libuv_udp_send,
-  title        = {{uv\_udp\_send} --- libuv documentation},
-  author       = {{libuv contributors}},
-  howpublished = {\url{https://docs.libuv.org/en/v1.x/udp.html\#c.uv_udp_send}},
-  urldate      = {2026-04-11}
-}
-
-@misc{rfc9221,
-    series =    {Request for Comments},
-    number =    9221,
-    howpublished =  {RFC 9221},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC9221},
-    url =       {https://www.rfc-editor.org/info/rfc9221},
-    author =    {Tommy Pauly and Eric Kinnear and David Schinazi},
-    title =     {{An Unreliable Datagram Extension to QUIC}},
-    pagetotal = 9,
-    year =      2022,
-    month =     mar,
-    abstract =  {This document defines an extension to the QUIC transport protocol to add support for sending and receiving unreliable datagrams over a QUIC connection.},
-}
-
-@misc{rfc9001,
-    series =    {Request for Comments},
-    number =    9001,
-    howpublished =  {RFC 9001},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC9001},
-    url =       {https://www.rfc-editor.org/info/rfc9001},
-    author =    {Martin Thomson and Sean Turner},
-    title =     {{Using TLS to Secure QUIC}},
-    pagetotal = 52,
-    year =      2021,
-    month =     may,
-    abstract =  {This document describes how Transport Layer Security (TLS) is used to secure QUIC.},
-}
-
 @techreport{ietf-quic-multipath-21,
     number =    {draft-ietf-quic-multipath-21},
     type =      {Internet-Draft},
@@ -594,246 +851,5 @@
     abstract =  {This document specifies a multipath extension for the QUIC protocol to enable the simultaneous usage of multiple paths for a single connection. It introduces explicit path identifiers to create, delete, and manage multiple paths. This document does not specify address discovery or management, nor how applications using QUIC schedule traffic over multiple paths.},
 }
 
-@misc{joras2020quic,
-  author       = {Joras, Matt and Chi, Yang},
-  title        = {How {Facebook} is bringing {QUIC} to billions},
-  year         = {2020},
-  month        = oct,
-  day          = {21},
-  howpublished = {Engineering at Meta},
-  url          = {https://engineering.fb.com/2020/10/21/networking-traffic/how-facebook-is-bringing-quic-to-billions/},
-  urldate         = {2026-04-18}
-}
 
-@misc{picotls,
-  author = {Kazuho Oku and H2O.ai},
-  title = {picotls: A tiny {TLS} 1.3 implementation in {C}},
-  year = {2026},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/h2o/picotls}},
-  commit = {main}
-}
 
-@online{libuv_design,
-  author       = {{libuv project contributors}},
-  title        = {Design overview --- libuv documentation},
-  url          = {https://docs.libuv.org/en/v1.x/design.html},
-  version      = {v1.x},
-  urldate         = {2026-03-21}
-}
-
-@misc{rfc6951,
-    series =    {Request for Comments},
-    number =    6951,
-    howpublished =  {RFC 6951},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC6951},
-    url =       {https://www.rfc-editor.org/info/rfc6951},
-    author =    {Michael Tüxen and Randall R. Stewart},
-    title =     {{UDP Encapsulation of Stream Control Transmission Protocol (SCTP) Packets for End-Host to End-Host Communication}},
-    pagetotal = 12,
-    year =      2013,
-    month =     may,
-    abstract =  {This document describes a simple method of encapsulating Stream Control Transmission Protocol (SCTP) packets into UDP packets and its limitations. This allows the usage of SCTP in networks with legacy NATs that do not support SCTP. It can also be used to implement SCTP on hosts without directly accessing the IP layer, for example, implementing it as part of the application without requiring special privileges. Please note that this document only describes the functionality required within an SCTP stack to add on UDP encapsulation, providing only those mechanisms for two end-hosts to communicate with each other over UDP ports. In particular, it does not provide mechanisms to determine whether UDP encapsulation is being used by the peer, nor the mechanisms for determining which remote UDP port number can be used. These functions are out of scope for this document. This document covers only end-hosts and not tunneling (egress or ingress) endpoints.},
-}
-
-@manual{claude,
-  title        = {Claude},
-  author       = {{Anthropic}},
-  organization = {Anthropic},
-  address      = {San Francisco, CA},
-  year         = {2026},
-  url          = {https://claude.com/product/overview}
-}
-
-@misc{gemini,
-  author       = {{Google}},
-  title        = {Gemini 3.1 Pro},
-  year         = {2026},
-  url          = {https://gemini.google.com}
-}
-@misc{P3482R1,
-  author       = {Thomas Rodgers and Dietmar Kühl},
-  title        = {Design for {C++} networking based on {IETF} {TAPS}},
-  howpublished = {ISO/IEC JTC1/SC22/WG21 (C++ Standards Committee) Paper P3482R1},
-  year         = {2024},
-  month        = oct,
-  url          = {https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3482r1.html},
-  urldate      = {2026-04-20}
-}
-
-@misc{ctapsDocs,
-  author        = {Ingebrigt Hovind},
-  title         = {{CTaps: A C implementation of IETF Transport Services}},
-  url           = {https://ikhovind.github.io/CTaps/},
-  year          = {2026},
-  urldate       = {2026-04-20},
-}
-
-@misc{apple_allowfastopen,
-  author       = {{Apple}},
-  title        = {{NWProtocolTCP.Options.allowFastOpen}},
-  howpublished = {Apple Developer Documentation},
-  url          = {https://developer.apple.com/documentation/network/nwprotocoltcp/options/enablefastopen},
-  urldate      = {2026-04-21},
-}
-
-@misc{apple_nwprotocolquic,
-  author       = {{Apple}},
-  title        = {{NWProtocolQUIC.Options}},
-  howpublished = {Apple Developer Documentation},
-  url          = {https://developer.apple.com/documentation/network/nwprotocolquic/options},
-  urldate      = {2026-04-21},
-}
-
-@misc{networkframework_happy_eyeballs_wwdc,
-  author       = {{Apple}},
-  title        = {Use Structured Concurrency with {Network} Framework},
-  howpublished = {Apple Worldwide Developers Conference (WWDC25)},
-  year         = {2025},
-  url          = {https://developer.apple.com/videos/play/wwdc2025/250/},
-  urldate      = {2026-04-21},
-  note         = {Session 250, timestamp 0:45}
-}
-
-@misc{WWDC2021_10094,
-  author       = {Rui Paulo and Eric Kinnear},
-  title        = {Accelerate networking with {HTTP/3} and {QUIC}},
-  journal      = {Apple Developer},
-  series       = {WWDC21},
-  number       = {10094},
-  year         = {2021},
-  url          = {https://developer.apple.com/videos/play/wwdc2021/10094/},
-  urldate      = {2026-04-22},
-  note         = {Timestamp: 13:20}
-}
-
-@misc{rfc9868,
-    series =    {Request for Comments},
-    number =    9868,
-    howpublished =  {RFC 9868},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC9868},
-    url =       {https://www.rfc-editor.org/info/rfc9868},
-    author =    {Dr. Joseph D. Touch and C. M. Heard},
-    title =     {{Transport Options for UDP}},
-    pagetotal = 51,
-    year =      2025,
-    month =     oct,
-    abstract =  {Transport protocols are extended through the use of transport header options. This document updates RFC 768 (UDP) by indicating the location, syntax, and semantics for UDP transport layer options within the surplus area after the end of the UDP user data but before the end of the IP datagram.},
-}
-
-@misc{rfc9170,
-    series =    {Request for Comments},
-    number =    9170,
-    howpublished =  {RFC 9170},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC9170},
-    url =       {https://www.rfc-editor.org/info/rfc9170},
-    author =    {Martin Thomson and Tommy Pauly},
-    title =     {{Long-Term Viability of Protocol Extension Mechanisms}},
-    pagetotal = 17,
-    year =      2021,
-    month =     dec,
-    abstract =  {The ability to change protocols depends on exercising the extension and version-negotiation mechanisms that support change. This document explores how regular use of new protocol features can ensure that it remains possible to deploy changes to a protocol. Examples are given where lack of use caused changes to be more difficult or costly.},
-}
-
-@misc{rfc7301,
-    series =    {Request for Comments},
-    number =    7301,
-    howpublished =  {RFC 7301},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC7301},
-    url =       {https://www.rfc-editor.org/info/rfc7301},
-    author =    {Stephan Friedl and Andrei Popov and Adam Langley and Emile Stephan},
-    title =     {{Transport Layer Security (TLS) Application-Layer Protocol Negotiation Extension}},
-    pagetotal = 9,
-    year =      2014,
-    month =     jul,
-    abstract =  {This document describes a Transport Layer Security (TLS) extension for application-layer protocol negotiation within the TLS handshake. For instances in which multiple application protocols are supported on the same TCP or UDP port, this extension allows the application layer to negotiate which protocol will be used within the TLS connection.},
-}
-
-@INPROCEEDINGS{sctpstruggles,
-  author={Welzl, Michael and Niederbacher, Florian and Gjessing, Stein},
-  booktitle={2011 IEEE Global Telecommunications Conference - GLOBECOM 2011}, 
-  title={Beneficial Transparent Deployment of SCTP: The Missing Pieces}, 
-  year={2011},
-  volume={},
-  number={},
-  pages={1-5},
-  keywords={Internet;Sockets;Transport protocols;Message systems;Linux;Logic gates},
-  doi={10.1109/GLOCOM.2011.6133554}}
-
-@online{cannon2016sansio,
-  author = {Cannon, Brett},
-  title  = {Network protocols, sans {I/O}},
-  year   = {2016},
-  url    = {https://snarky.ca/network-protocols-sans-i-o/},
-  urldate = {2026-04-25},
-}
-
-@techreport{neat-d23,
-  author       = {Khademi, Naeem and Bozakov, Zdravko and Brunstrom, Anna
-                  and Dale, {\O}ystein and Damjanovic, Dragana
-                  and Evensen, Kristian Riktor and Fairhurst, Gorry
-                  and Fischer, Andreas and Grinnemo, Karl-Johan
-                  and Jones, Tom and Mangiante, Simone and Petlund, Andreas
-                  and Ros, David and R{\"u}ngeler, Irene and Stenberg, Daniel
-                  and T{\"u}xen, Michael and Weinrank, Felix and Welzl, Michael},
-  editor       = {Khademi, Naeem},
-  title        = {Final Version of Core Transport System},
-  type         = {Deliverable},
-  number       = {D2.3},
-  institution  = {NEAT Project},
-  note         = {H2020-ICT-05-2014, Grant agreement no.~644334},
-  year         = {2017},
-  month        = aug,
-  url          = {https://neat.nntb.no/wp-content/uploads/2017/10/D2.3.pdf},
-  urldate      = {2026-04-26}
-}
-
-@manual{pytaps_docs,
-  title        = {PyTAPS Documentation},
-  author       = {Franke, Max},
-  year         = {2020},
-  url          = {https://pytaps.readthedocs.io/en/latest/index.html},
-  urldate      = {2026-04-26}
-}
-
-@misc{rfc2616,
-    series =    {Request for Comments},
-    number =    2616,
-    howpublished =  {RFC 2616},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC2616},
-    url =       {https://www.rfc-editor.org/info/rfc2616},
-    author =    {Henrik Nielsen and Jeffrey Mogul and Larry M Masinter and Roy T. Fielding and Jim Gettys and Paul J. Leach and Tim Berners-Lee},
-    title =     {{Hypertext Transfer Protocol -- HTTP/1.1}},
-    pagetotal = 176,
-    year =      1999,
-    month =     jun,
-    abstract =  {HTTP has been in use by the World-Wide Web global information initiative since 1990. This specification defines the protocol referred to as "HTTP/1.1", and is an update to RFC 2068. {[}STANDARDS-TRACK{]}},
-}
-
-@misc{rfc9114,
-    series =    {Request for Comments},
-    number =    9114,
-    howpublished =  {RFC 9114},
-    publisher = {RFC Editor},
-    doi =       {10.17487/RFC9114},
-    url =       {https://www.rfc-editor.org/info/rfc9114},
-    author =    {Mike Bishop},
-    title =     {{HTTP/3}},
-    pagetotal = 57,
-    year =      2022,
-    month =     jun,
-    abstract =  {The QUIC transport protocol has several features that are desirable in a transport for HTTP, such as stream multiplexing, per-stream flow control, and low-latency connection establishment. This document describes a mapping of HTTP semantics over QUIC. This document also identifies HTTP/2 features that are subsumed by QUIC and describes how HTTP/2 extensions can be ported to HTTP/3.},
-}
-
-@misc{pytaps_tls_refactor,
-  author = {Falk, Max},
-  title  = {More refactoring},
-  year   = {2020},
-  url    = {https://github.com/fg-inet/python-asyncio-taps/commit/e701cdee95d29ae65e668b92b6e7aa4f6553a39c}
-}
