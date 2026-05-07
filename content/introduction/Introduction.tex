@@ -15,15 +15,15 @@ middleboxes not supporting changes to the wire image~\cite{rfc8546} of a protoco
 
 Another issue with utilizing new innovations on the
 transport layer is the coordination required in order to
-start utilizing new protocols. Developer of server applications
-will not spend time adding support for a new transport layer protocol
+start utilizing new protocols. Developers of server applications
+will not spend time adding support for a new transport-layer protocol
 if no applications are using it, and no applications
 will utilize a new protocol if no servers support it.
 If a fallback to TCP is always needed, then all applications
 can avoid a great deal of complexity by only utilizing TCP.
 
 Together, network ossification and the deployment barriers
-for new transport layer protocols combine to make it hard
+for new transport-layer protocols combine to make it hard
 for applications to make use of genuine innovations.
 
 Transport Services (TAPS) is a series of IETF RFCs which aim
@@ -56,7 +56,7 @@ and how QUIC features are expressed under the TAPS API.
 These form the basis for the research questions addressed in this thesis.
 
 \section{Research Questions}
-Thes gaps described in \cref{sec:prob-statement} give rise to two research questions:
+These gaps described in \cref{sec:prob-statement} give rise to two research questions:
 
 \newcommand{\rqone}{What implicit architectural constraints does the TAPS specification impose on an implementation of a TAPS System?}
 \newcommand{\rqtwo}{To what extent does the TAPS API expose the distinctive features of QUIC?}
@@ -77,7 +77,7 @@ architectural concerns are encountered when implementing TAPS.
 
 CTaps supports key QUIC features such as multistreaming, connection migration and session resumption.
 Applications can utilize these features while remaining compatible with other
-transport layer protocols. CTaps also supports key TAPS features, such as candidate
+transport-layer protocols. CTaps also supports key TAPS features, such as candidate
 gathering and candidate racing. This allows CTaps to race protocols and endpoints when
 establishing connections.
 

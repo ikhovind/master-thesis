@@ -9,8 +9,8 @@ Additionally, the use of Security Parameters, Transport Properties
 and protocol racing is demonstrated.
 
 CTaps does not currently support listening for multiple protocols on a single
-listener, so two separate servers are created. An alternative would be
-to create two separate listeners in a single application. This gap is
+Listener, so two separate servers are created. An alternative would be
+to create two separate Listeners in a single application. This gap is
 discussed in \cref{sec:protocol-ag-listener}.
 \begin{listing}[htbp]
     \begin{minted}{cmake}
@@ -83,7 +83,7 @@ void ping_on_ready(ct_connection_t* connection) {
         // QUIC is the underlying protocol and create a new
         // TCP connection if TCP is the underlying protocol.
         //
-        // This way the application gain advantages from
+        // This way the application gains advantages from
         // multistreaming when available, without worrying
         // about compatibility
         ct_connection_clone(connection);

@@ -8,7 +8,7 @@ through the TAPS API.
 
 \section{Choice of Scope}
 CTaps currently features all major aspects of the TAPS API
-described in RFC~9622 except for rendezvous.
+described in RFC~9622 except for Rendezvous.
 Internally it supports  candidate gathering,
 candidate racing, TCP, UDP and QUIC.
 
@@ -71,10 +71,10 @@ which CTaps uses to interact with the network. It additionally powers
 the main event loop which applications run by
 invoking \mono{ct_start_event_loop()}.
 It also provides the timer which CTaps uses to know when to query Picoquic,
-according to the sans-IO model described in \cref{sec:picoquic}.
+according to the sans-I/O model described in \cref{sec:picoquic}.
 
 \subsection{Picoquic}
-Since QUIC is not supported natively by libuv an external library
+Since QUIC is not supported natively by libuv, an external library
 was needed to add QUIC support to CTaps, with the largest
 priority being ease of use.
 
@@ -100,15 +100,15 @@ such as GTK.
 
 \subsection{log.c}
 In order to create structured logs which can
-easily be filtered by level
+easily be filtered by level,
 CTaps uses log.c~\cite{logc}.
-log.c was specifically chosen because of its simplicity
+It was chosen because of its simplicity
 and pure C implementation, making it easy to integrate
 with CTaps.
 
 \section{Architecture of CTaps} \label{sec:ctaps-arch-design}
 Internally in CTaps, the most important architectural concept is the
-protocol interface. This is a interface used
+protocol interface. This is an interface used
 to interact with underlying transport protocols, which ensures that CTaps is extensible.
 Common logic such as state tracking
 is extracted to the higher level concept of the Socket Manager. This is an internal layer 
@@ -538,11 +538,11 @@ int rc = ct_preconnection_initiate(preconnection, &connection_callbacks);
     \label{lst:preconnection-init-flow}
 \end{listing}
 
-Since the results of asynchronous operations in CTaps is available through callbacks,
+Since the results of asynchronous operations in CTaps are available through callbacks,
 applications need a way to connect these results to state from outside the
-callback. This could be achieved this through global variables, but CTaps 
+callback. This could be achieved through global variables, but CTaps 
 also allows applications to pass a void pointer when registering callbacks,
-allowing applications can avoid global variables. 
+allowing applications to avoid global variables. 
 
 When initiating a Connection, the void pointer will be stored in the Connection
 structure, and it can be fetched when the Connection is passed
@@ -577,7 +577,7 @@ involve DNS resolution.
 
 CTaps notifies an application of errors
 through either a return code or an error callback.
-Return codes are used for synchronous error while callbacks
+Return codes are used for synchronous errors, while callbacks
 are used for asynchronous errors.
 Error codes in CTaps are
 negative values matching
@@ -720,11 +720,11 @@ how an application should interact with the TAPS API.
 This mapping of QUIC connections to TAPS Connection Groups also affects how
 CTaps handles the notification of path changes. In TAPS, the \mono{path_change()} 
 event is per-Connection~\cite[sec. 8.3.2]{rfc9622},
-while QUIC migrations is per-Connection Group.
-For CTaps this means that for each path change event every CTaps Connection is notified
+while QUIC migration is per-Connection Group.
+For CTaps, this means that for each path change event every CTaps Connection is notified
 separately, even though the event is always common to an
 entire Connection Group. This could be mitigated by allowing registration
-of callbacks on a per-Connection Group basis, but this not featured
+of callbacks on a per-Connection Group basis, but this is not featured
 in the current TAPS API.
 
 There are also features related to streams in QUIC which are not available
@@ -786,8 +786,8 @@ incoming connections to migrate to its highest
 preference interface, and
 set \mono{preferred_address} accordingly.
 
-The combination of \mono{multipath} Selection Property and the \mono{multipathPolicy} 
-Connection Property~\cite[sec. 8.1.7]{rfc9622} allow applications to express multipath preferences,
+The combination of the \mono{multipath} Selection Property and the \mono{multipathPolicy} 
+Connection Property~\cite[sec. 8.1.7]{rfc9622} allows applications to express multipath preferences,
 such as requesting server-initiated migration,
 that go beyond what QUIC currently supports.
 This is expected from TAPS,
@@ -911,7 +911,7 @@ A design decision therefore had to be made in CTaps on how to perform
 racing when UDP was among the viable protocols.
 
 Since UDP has no handshake to complete, CTaps has chosen to assume that a UDP connection
-is established as soon as Local Endpoint has been set up. This means that
+is established as soon as a socket has been opened. This means that
 if the Remote Endpoint does not support UDP then racing will be unable to detect
 this and UDP can win candidate racing without being supported by the remote.
 
@@ -958,7 +958,7 @@ security protocols~\cite[sec.~6.3]{rfc9622}.
 
 With disabled Security Parameters, a TAPS System will not attempt
 to establish any transport security, while opportunistic Security Parameters
-allow for the coexistence of secure and insecure transport layer protocols.
+allow for the coexistence of secure and insecure transport-layer protocols.
 When racing secure and insecure protocols, TAPS implementations
 should take the increased number of RTTs required to establish a secure protocol
 into account. This could take the form of longer stagger delays for insecure
@@ -990,7 +990,7 @@ defaults.
 Fingerprinting may also be an issue inherent in TAPS itself.
 Using a networking library which standardizes the interaction
 with the network to a certain degree would naturally lead to potential fingerprinting
-of clients. This is an inherent property of software libraries whose behavior are exposed to the internet.
+of clients. This is an inherent property of software libraries whose behavior is exposed to the internet.
 Without a large and diverse enough user base, fairly accurate assumptions can
 be made about the users behind a connection, if the underlying library being
 used can be ascertained. This becomes a larger risk if the behavior

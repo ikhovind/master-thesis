@@ -96,7 +96,7 @@ virtual function table, instantiated as a singleton for each supported protocol.
 The concrete protocols themselves are defined as global variables,
 and are stored in an array of currently supported protocols.
 Since protocol interfaces have no state, it is safe to use a
-single global instance of each protocol among multiple Socket Managers.
+single global instance of each protocol interface among multiple Socket Managers.
 
 \section{Connection Life Cycle}
 When an application initiates a Connection in CTaps it flows through
@@ -226,7 +226,7 @@ void ct_socket_manager_aborted_connection_cb(ct_connection_t* connection) {
 \subsection{Candidate Gathering} \label{sec:candidateGathering}
 Before a Connection can be established, a list of possible Local Endpoints,
 possible protocols and possible Remote Endpoints
-need to be generated. These are based on the data passed to the associated Preconnection.
+needs to be generated. These are based on the data passed to the associated Preconnection.
 In CTaps, this candidate gathering follows the procedure described in \cref{sec:candidate-gathering}
 very closely.
 
@@ -270,7 +270,41 @@ the message queue.
 
 When sending Messages, the Message is not cached in CTaps, but is
 immediately passed to the libuv protocol handle or to Picoquic, depending
-on the underlying protocol.
+on the underlying protocol. An example displaying the two branches when
+applications enqueue a \mono{receive()}-callback can be seen in \cref{lst:recv-msg}.
+
+\begin{listing}[htbp]
+  \begin{minted}{C}
+int ct_receive_message(ct_connection_t* connection, const ct_receive_callbacks_t* receive_callbacks) {
+    // ... Parameter validation
+    if (!g_queue_is_empty(connection->received_messages)) {
+        // Message already available, invoke callback immediately
+        ct_queued_message_t* queued_message = g_queue_pop_head(connection->received_messages);
+        queued_message->context->per_receive_context = receive_callbacks->per_receive_context;
+        if (receive_callbacks->receive_callback) {
+            receive_callbacks->receive_callback(connection, queued_message->message,
+                                               queued_message->context);
+        }
+        ct_queued_message_free_all(queued_message);
+        return 0;
+    }
+
+    // No message ready, cache the callback until a message arrives
+    ct_receive_callbacks_t* ptr = malloc(sizeof(ct_receive_callbacks_t));
+    memcpy(ptr, receive_callbacks, sizeof(ct_receive_callbacks_t));
+    g_queue_push_tail(connection->received_callbacks, ptr);
+    return 0;
+}
+
+  \end{minted}
+  \caption[CTaps receive message implementation]
+  {
+    Excerpt of \mono{ct_receive_message()},
+    showing how CTaps either invokes the callback immediately if a
+    message is already queued, or caches the callback until a message arrives
+  }
+  \label{lst:recv-msg}
+\end{listing}
 
 \subsection{Connection Teardown}
 Since both aborting and closing Connections may involve over-the-wire teardown,
@@ -451,7 +485,7 @@ static ct_framer_impl_t length_prepend_framer = {
 \end{listing}
 
 \section{Protocol Implementations}
-CTaps natively supports three transport layer protocols: UDP, TCP and QUIC.
+CTaps natively supports three transport-layer protocols: UDP, TCP and QUIC.
 
 \subsection{UDP} \label{sec:udpImpl}
 UDP is the simplest of the three currently supported protocols.
@@ -488,7 +522,7 @@ Since TCP is also connection-based, listening and creating new sockets
 for incoming connections is handled by the TCP stack itself. 
 This also means that the lifetimes of sockets are far easier to manage.
 A single Connection is always
-bound to a single socket which are never shared. This means that
+bound to a single socket which is never shared. This means that
 the associated socket can always be closed when closing a Connection.
 
 \subsection{QUIC} \label{sec:quicImpl}
@@ -510,7 +544,7 @@ if more encrypted protocols
 are added in the future, as described in \cref{sec:future-work-tls}.
 
 \subsubsection{Socket Management}
-As mentioned previously, Picoquic is a sans-io library. This means that CTaps is responsible for
+As mentioned previously, Picoquic is a sans-I/O library. This means that CTaps is responsible for
 interacting with the network, while Picoquic formats outgoing QUIC packets and interprets incoming data.
 CTaps will regularly query Picoquic for when it needs to be woken up next
 and a libuv timer is used to wake up at the appropriate time.
@@ -582,6 +616,11 @@ seen in~\cref{fig:ctaps-quic-loop}.
 \label{fig:ctaps-quic-loop}
 \end{figure}
 
+Due to QUIC's internal stream management, CTaps cannot reliably associate
+outgoing QUIC packets with specific Messages. \mono{sent()} therefore signals
+that a Message has been handed to Picoquic for transmission, rather than that
+it has actually been sent.
+
 \subsubsection{Connection Management}
 When initiating a Connection over QUIC, CTaps needs to open a socket on
 a Local Endpoint and inform Picoquic about wanting to open a QUIC connection.
@@ -615,8 +654,7 @@ but only for protocols which support ALPN.
 
 In situations with many possible ALPN values, this
 will lead to a larger delay in connection establishment than strictly
-necessary. The consequences of this stagger delay as it is currently
-implemented in CTaps is discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
+necessary. The consequences of this stagger delay are discussed further in~\cref{sec:single-endpoint-handshake-discussion}.
 
 \subsubsection{Implementation Struct}
 Like other protocols, QUIC is implemented
@@ -637,18 +675,13 @@ const ct_protocol_impl_t
                  {
                      [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
                      [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = REQUIRE}},
-                     [PER_MSG_RELIABILITY] = {.value = {.simple_preference = NO_PREFERENCE}},
-                     [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
-                     [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
                      [MULTISTREAMING] = {.value = {.simple_preference = NO_PREFERENCE}},
                      // ... Other Selection Properties
                  }
            },
         .init = quic_init,
-        .send = quic_send,
          // ... Other function implementations
 };
-
   \end{minted}
   \caption[QUIC protocol implementation excerpt]
 {
@@ -694,31 +727,31 @@ object, in addition to the properties fulfilled by each protocol, as defined by 
 \rowcolor{gray!25}
 \textbf{Property} & \textbf{Default} & \textbf{UDP} & \textbf{TCP} & \textbf{QUIC} \\
 \midrule
-\multicolumn{1}{l|}{Reliability}            & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{PreserveMsgBoundaries}  & \multicolumn{1}{c||}{No Pref.} & Require       & Prohibit      & Require       \\
-\multicolumn{1}{l|}{PerMsgReliability}      & \multicolumn{1}{c||}{No Pref.} & Prohibit      & Prohibit      & No Pref.        \\
-\multicolumn{1}{l|}{PreserveOrder}          & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{ZeroRttMsg}             & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{Multistreaming}         & \multicolumn{1}{c||}{Prefer}        & Prohibit      & Prohibit      & No Pref. \\
-\multicolumn{1}{l|}{FullChecksumSend}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
-\multicolumn{1}{l|}{FullChecksumRecv}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
-\multicolumn{1}{l|}{CongestionControl}      & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
-\multicolumn{1}{l|}{KeepAlive}              & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{UseTemporaryLocalAddr}  & \multicolumn{1}{c||}{Runtime dep.}  & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{SoftErrorNotify}        & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{ActiveReadBeforeSend}   & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
-\multicolumn{1}{l|}{Multipath\tnote{1}}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Pref. \\
-\multicolumn{1}{l|}{AdvertisesAltAddress\tnote{2}} & \multicolumn{1}{c||}{false}       & false         & false         & false \\
-\multicolumn{1}{l|}{Direction}              & \multicolumn{1}{c||}{Bidir.} & Bidir. & Bidir. & Bidir. \\
-\multicolumn{1}{l|}{Interface}              & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
-\multicolumn{1}{l|}{Pvd}                    & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
+\multicolumn{1}{l|}{\mono{reliability}}            & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
+\multicolumn{1}{l|}{\mono{preserveMsgBoundaries}}  & \multicolumn{1}{c||}{No Pref.} & Require       & Prohibit      & Require       \\
+\multicolumn{1}{l|}{\mono{perMsgReliability}}      & \multicolumn{1}{c||}{No Pref.} & Prohibit      & Prohibit      & No Pref.        \\
+\multicolumn{1}{l|}{\mono{preserveOrder}}          & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
+\multicolumn{1}{l|}{\mono{zeroRttMsg}}             & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{\mono{multistreaming}}         & \multicolumn{1}{c||}{Prefer}        & Prohibit      & Prohibit      & No Pref. \\
+\multicolumn{1}{l|}{\mono{fullChecksumSend}}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
+\multicolumn{1}{l|}{\mono{fullChecksumRecv}}       & \multicolumn{1}{c||}{Require}       & Require       & Require       & Require       \\
+\multicolumn{1}{l|}{\mono{congestionControl}}      & \multicolumn{1}{c||}{Require}       & Prohibit      & Require       & Require       \\
+\multicolumn{1}{l|}{\mono{keepAlive}}              & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{\mono{useTemporaryLocalAddr}}  & \multicolumn{1}{c||}{Runtime dep.}  & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{\mono{softErrorNotify}}        & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{\mono{activeReadBeforeSend}}   & \multicolumn{1}{c||}{No Pref.} & No Pref. & No Pref. & No Pref. \\
+\multicolumn{1}{l|}{\mono{multipath}\tnote{1}}          & \multicolumn{1}{c||}{Runtime dep.}  & Disabled      & Disabled      & No Pref. \\
+\multicolumn{1}{l|}{\mono{advertisesAltAddress}\tnote{2}} & \multicolumn{1}{c||}{false}       & false         & false         & false \\
+\multicolumn{1}{l|}{\mono{direction}}              & \multicolumn{1}{c||}{Bidir.} & Bidir. & Bidir. & Bidir. \\
+\multicolumn{1}{l|}{\mono{interface}}              & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
+\multicolumn{1}{l|}{\mono{pvd}}                    & \multicolumn{1}{c||}{Empty set}     & Empty set     & Empty set     & Empty set \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
     \footnotesize
-    \item[1] CTaps only supports multipath in terms of connection migration, and does
+    \item[1] CTaps only supports \mono{multipath} in terms of connection migration, but does
       not support using multiple paths at once.
-    \item[2] AdvertisesAltAddress is set to a boolean RFC~9622~\cite[sec. 6.2.15]{rfc9622},
+    \item[2] \mono{advertisesAltAddress} is set to a boolean RFC~9622~\cite[sec. 6.2.15]{rfc9622},
       but this cannot be used to reflect a protocol which can both advertise and not advertise.
       This becomes problematic if this value is used for filtering candidates.
 \end{tablenotes}
@@ -735,6 +768,12 @@ of QUIC being \textasciitilde2.6 times larger than that of TCP, QUIC support als
 requires Picoquic as an
 external dependency to handle incoming and outgoing data,
 instead of relying on built-in libuv support.
+
+The complexity of the QUIC protocol interface has two primary causes. First, the lack of native libuv support 
+for QUIC requires that Picoquic is integrated manually, whereas TCP and UDP benefit 
+from built-in libuv handles. Second, QUIC's additional features (multistreaming, 
+connection migration, session resumption) require corresponding implementation 
+logic that has no equivalent in TCP or UDP.
 
 \begin{table}[htbp]
 \centering
@@ -759,20 +798,6 @@ instead of relying on built-in libuv support.
 \end{threeparttable}
 \end{table}
 
-This increased complexity reflects primarily two things for QUIC.
-First, a lower degree of toolchain support and secondly the increased
-number of features provided. The complexity of integrating QUIC into CTaps
-could likely be greatly reduced if libuv integrated QUIC support into a custom handle
-like it has for UDP and TCP. The second cause of complexity is more innate. Since
-QUIC contains several features that are not available through UDP or TCP,
-CTaps must implement additional logic to actually make use of these features.
-
-The complexity of the QUIC protocol interface has two primary causes. First, the lack of native libuv support 
-for QUIC requires that Picoquic is integrated manually, whereas TCP and UDP benefit 
-from built-in libuv handles. Second, QUIC's additional features, multistreaming, 
-connection migration, session resumption, require corresponding implementation 
-logic that has no equivalent in TCP or UDP.
-
 \section{Testing} \label{testing}
 CTaps uses a test system built around Google Test~\cite{GoogleTest2025} and
 Fake Function Framework~(FFF)~\cite{longFakeFunctionFramework2025}. Google Test is a C++ library developed by
@@ -789,6 +814,8 @@ are automatically run on localhost, and are used
 to test the system end-to-end. Setup and teardown of these
 ping servers is done through a standardized test fixture, which is used for all
 integration tests.
+All tests are compiled and run with AddressSanitizer~\cite{addressSanitizer}
+enabled, in order to detect memory errors and leaks during test execution.
 
 FFF can mock functions both from CTaps and from external libraries,
 such as libuv. Since mocking in FFF creates a new symbol, it can lead to
@@ -800,10 +827,7 @@ An example of function mocking using FFF can be seen in~\cref{lst:example-fff-mo
 
 \begin{listing}[htbp]
 \begin{minted}{Cpp}
-DEFINE_FFF_GLOBALS;
-
 extern "C" {
-// The __wrap name is from the linker
 FAKE_VALUE_FUNC(int, __wrap_picoquic_set_stream_priority, picoquic_cnx_t*, uint64_t, uint8_t);
 }
 
@@ -813,10 +837,7 @@ protected:
         RESET_FAKE(__wrap_picoquic_set_stream_priority);
         FFF_RESET_HISTORY();
         __wrap_picoquic_set_stream_priority_fake.return_val = 0;
-        // ... Initate test variables
     }
-
-    // ... Test variable declaration
 };
 
 TEST_F(QuicUnitTest, picoquicSetConnectionPriorityInvoked) {
@@ -831,7 +852,7 @@ TEST_F(QuicUnitTest, picoquicSetConnectionPriorityInvoked) {
     ASSERT_EQ(__wrap_picoquic_set_stream_priority_fake.arg2_val, 50);
 }
 \end{minted}
-\caption{Example test mocking udp functions using FFF.}
+\caption{Example test mocking UDP functions using FFF.}
 \label{lst:example-fff-mocking}
 \end{listing}
 
@@ -924,7 +945,7 @@ and hash tables keeping track of Connections associated with a Connection Group.
 \subsection{libuv}
 Libuv is CTaps' most core dependency and it has therefore shaped the implementation
 of CTaps itself. CTaps uses libuv abstractions where possible and relies on libuv
-to perform all asynchronous interactions with the network. An example with this
+to perform all asynchronous interactions with the network. An example of this
 can be seen in the CTaps DNS lookup function~\cref{lst:get-addrinfo-uv}, where CTaps relies on the asynchronous
 \mono{uv_getaddrinfo()} to perform an asynchronous DNS lookup, instead of the synchronous
 \mono{getaddrinfo()}.

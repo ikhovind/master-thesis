@@ -4,7 +4,7 @@ and demonstrate why a new open source implementation
 is valuable.
 
 \section{NEAT}
-NEAT~\cite{khademiNEATPlatformProtocolIndependent2017},
+NEAT~\cite{khademiNEATPlatformProtocolIndependent2017}
 is an open source \cite{neatCode} TAPS implementation whose development was funded by the EU Horizon 2020 program 
 from 2015 to 2018~\cite{neatFunding}.
 Developed alongside TAPS, NEAT and TAPS naturally
@@ -44,7 +44,7 @@ or the \mono{useTemporaryLocalAddress} Selection Properties
 
 Another limitation of NEATPy is that it was developed before the finalization of
 the TAPS RFCs. NEATPy is based mostly on
-version 4 and 5 of the TAPS interface draft~\cite[p.~109]{gundersenNEATPyStandardsConformantProtocolIndependent2020}.
+version 4 and 5 of the TAPS interface draft~\cite[p.~109]{gundersenNEATPyStandardsConformantProtocolIndependent2020},
 but several changes have been made to TAPS since then.
 An example of a new feature in the TAPS API is the support for passing more than one local and remote
 endpoint when creating a Preconnection.
@@ -104,7 +104,7 @@ is in the early stages of development and has not had
 active development since 2021.
 
 \section{Comparison of TAPS implementations}\label{sec:tapsfeatures}
-\Cref{tab:comparison} compares CTaps with the most complete TAPS implementations found in.
+\Cref{tab:comparison} compares CTaps with the most complete TAPS implementations found.
 
 \begin{table}[htbp]
 \centering
@@ -133,7 +133,7 @@ active development since 2021.
 \begin{tablenotes}
     \footnotesize
     \item[1] NEAT is excluded as its features would be a subset of NEATPy's.
-    \item[2] Network framework Supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing.
+    \item[2] Network framework supports Happy Eyeballs-style IP family racing~\cite{networkframework_happy_eyeballs_wwdc}, but not full candidate racing.
     \item[3] Supported for TCP based on the NWProtocolTCP.Options~\cite{apple_allowfastopen} class.
         Lacks explicit support in the NWProtocolQUIC.Options~\cite{apple_nwprotocolquic} class.
     \item[4] Through SCTP.

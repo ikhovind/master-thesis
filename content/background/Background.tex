@@ -2,7 +2,7 @@
 This chapter will lay out background information necessary
 for understanding TAPS and CTaps.
 It will describe the necessary networking concepts,
-transport layer protocols and the current barriers
+transport-layer protocols and the current barriers
 for innovation on the transport layer.
 
 \section{Network Sockets}
@@ -33,7 +33,7 @@ for local sockets, \mono{AF_INET} for IPv4 and \mono{AF_INET6}
 for IPv6. The type specifies the protocol which will be used over the socket, for
 example \mono{SOCK_DGRAM} for datagrams and \mono{SOCK_STREAM}
 for a reliable stream of bytes. The type usually corresponds to a
-single transport layer protocol, usually UDP or TCP.
+single transport-layer protocol, usually UDP or TCP.
 
 The protocol parameter is used if there are multiple protocols
 which support the requirements given by the domain and type.
@@ -41,20 +41,20 @@ which support the requirements given by the domain and type.
 \section{Barriers to Protocol Adoption}\label{sec:transport-protocol-barriers}
 The fact that an application has to specify both the domain
 and the type of the socket means that the
-underlying addressing and the transport layer protocol are bound at compile time.
+underlying addressing and the transport-layer protocol are bound at compile time.
 Updating
 the underlying transport protocol will therefore require at least recompilation and 
 likely a refactoring of the application. 
 This naturally makes adopting new transport protocols difficult, even
 if a new protocol is better suited to the application's requirements.
 
-Another challenge with the adoption of new transport layer protocols
+Another challenge with the adoption of new transport-layer protocols
 is network middleboxes. Network middleboxes have been
 optimized to support TCP and UDP and may sometimes
 drop packets if the protocol field in the IP header
 does not match TCP or UDP.
 
-In an attempt to combat this aspect of network ossification, transport layer protocols are often built
+In an attempt to combat this aspect of network ossification, transport-layer protocols are often built
 using UDP as a substrate, allowing them to use the same IP
 protocol number as UDP. Examples of this include QUIC \cite{rfc9000} and
 SCTP over UDP \cite{rfc6951}.
@@ -64,7 +64,7 @@ Since UDP presents no guarantees of reliability or ordered
 delivery, protocols can choose to develop only the features they need.
 
 \section{TCP}
-TCP is by far the most common transport layer protocol used on the
+TCP is by far the most common transport-layer protocol used on the
 internet today. It is a connection-oriented protocol and provides
 a reliable, in-order transfer of a stream of bytes to the application layer.
 It has also become common to use TCP for message-based applications,
@@ -78,7 +78,7 @@ and the destination port.
 
 \section{UDP}
 UDP has, along with TCP, grown to become one of the two dominant
-transport layer protocols on the internet. It is a connectionless
+transport-layer protocols on the internet. It is a connectionless
 protocol and provides an unreliable, unordered transfer of datagrams
 to the application layer. It is often used for applications which
 prioritize low latency over reliability.
@@ -88,7 +88,7 @@ a simple 8-byte header. The header contains
 only the source port, destination port, length and checksum.
 
 \section{SCTP}
-SCTP is a transport layer protocol which was first introduced in 2000~\cite{rfc2960},
+SCTP is a transport-layer protocol which was first introduced in 2000~\cite{rfc2960},
 and it features several innovations over TCP.
 Notably, it was the first protocol to support both multistreaming and multihoming.
 Multistreaming allows multiple independent logical streams to be multiplexed over
@@ -103,7 +103,7 @@ makes it vulnerable to middlebox interference.
 SCTP over UDP~\cite{rfc6951} was developed in an attempt to mitigate these issues, but
 it too has struggled to achieve widespread use.
 
-The second reason for why SCTP has struggled with adoption is that the standard
+The second reason why SCTP has struggled with adoption is that the standard
 socket API has been ossified itself \cite{sctpstruggles}.
 The ubiquity of TCP and UDP means that the socket API
 is tuned to these two transports
@@ -119,7 +119,7 @@ while still preserving multistreaming and multihoming.
 The simplest way of organizing network transfers is to open
 a new TCP connection for each object which needs to be transferred.
 This creates independent streams each responsible for transferring
-a single object and was the basis of early HTTP-standards.
+a single object and was the basis of early HTTP standards.
 
 Utilizing TCP this way has the major drawback that each new
 connection has to go through slow start. This means that
@@ -134,7 +134,7 @@ TCP connections when fetching multiple URLs~\cite[sec.~8.1]{rfc2616}.
 This way allows for a more
 efficient use of bandwidth, but also introduces the issue of
 head-of-line blocking. Head-of-line blocking is a performance bottleneck where a queue of packets
-is held up by an issue with earlier packet. Commonly caused
+is held up by an issue with an earlier packet. This is commonly caused
 either by reordering or packet loss.
 
 Multistreaming is an innovation which solves both of these issues.
@@ -237,13 +237,13 @@ head-of-line blocking caused by reordering.
 \end{scope}
 
 \end{tikzpicture}
-\caption[CWND re-use for multistreaming]
+\caption[CWND reuse for multistreaming]
 {
-An example of CWND re-use with multistreaming. If TCP is organized into logical
+An example of CWND reuse with multistreaming. If TCP is organized into logical
 streams then each subsequent stream will be a separate TCP connection
 and each will have to go through slow start. Multistreaming allows multiple
 streams to be multiplexed over a single connection and they can
-therefore re-use the achieved CWND.
+therefore reuse the achieved CWND.
 }
 \label{fig:connection-clone-gains}
 \end{figure}
@@ -396,11 +396,11 @@ which allow a client to send data during the initial handshake when resuming
 a previous connection to a server~\cite{rfc8446}.
 
 TLS is a mandatory part of QUIC, which inherits both the security
-and the 0-rtt handshakes described above.
+and the 0-RTT handshakes described above.
 
 \section{ALPN}\label{sec:back-alpn}
 Application-layer protocol negotiation (ALPN) is a feature in TLS \cite{rfc7301} where the application layer
-protocol is negotiated between on
+protocol is negotiated between at the
 transport layer. TLS is a mandatory part of QUIC and QUIC mandates that endpoints
 agree on application protocol through a 
 mechanism such as ALPN~\cite[sec. 7]{rfc9000}.
@@ -424,7 +424,7 @@ QUIC is a reliable, connection-oriented protocol and provides several
 features which are not available
 in TCP. TLS is a mandatory part of QUIC 
 and most of the QUIC header is also encrypted, unlike TLS over TCP.
-Encrypting the header hides as much as the wire image as possible
+Encrypting the header hides as much of the wire image as possible
 from middleboxes, combating future network ossification.
 
 While QUIC does present an overarching connection, the
@@ -524,7 +524,7 @@ of retransmissions, making RTT measurements in these cases more accurate~\cite[s
 Transport parameters in QUIC are settings which are transferred to the
 peer during the QUIC handshake.
 These can be used to control settings such as the initial number of streams
-the peer can open or the amount of data it can send
+the peer can open or the amount of data it can send.
 
 \subsection{Frames}
 In QUIC, a frame is defined as \enquote{a unit of structured protocol information}~\cite{rfc9000}.
@@ -574,7 +574,7 @@ connection migration.
 
 \subsection{Multistreaming in QUIC}
 QUIC connections can benefit from
-CWND re-use and avoid head-of-line blocking as described
+CWND reuse and avoid head-of-line blocking as described
 in \cref{sec:background-multistreaming}. This is one of the key
 reasons why QUIC is the transport protocol used in HTTP/3~\cite{rfc9114}.
 
@@ -598,7 +598,7 @@ over a new network path. Non-probing packets are any packets which contain any
 frame that is not \mono{PATH_CHALLENGE}, \mono{PATH_RESPONSE}, \mono{NEW_CONNECTION_ID}, or
 \mono{PADDING}. When an endpoint receives non-probing packets from a new address, it can assume 
 that the peer has migrated to that address. Both peers are required to use a new connection
-IDs when performing migration, in order to ensure that the connection cannot
+ID when performing migration, in order to ensure that the connection cannot
 be used to link packets from the same connection over different network paths
 \cite[sec.~9.5]{rfc9000}.
 
@@ -721,7 +721,7 @@ The QUIC multipath extension builds on the mechanisms of connection migration,
 but introduces a new path ID in order to manage multiple paths.
 
 \subsection{Session Resumption}\label{sec:back-session-resumption}
-Like TLS, QUIC supports session resumption and 0-rtt
+Like TLS, QUIC supports session resumption and 0-RTT
 initial data. This requires that the server and the client
 have already exchanged cryptographic keys, that the
 client remembers critical parameters, such as the selected
@@ -740,7 +740,7 @@ delivery while UDP does not.
 
 If an application requires that the
 transferred data is received as an in-order stream, then
-any transport layer protocol offering this as a service to the application layer
+any transport-layer protocol offering this as a service to the application layer
 could function as a transport protocol. Swapping the
 protocols should in theory be simple. This is of course
 not currently the case due to issues described in \cref{sec:motivation}.
@@ -751,8 +751,8 @@ protocols has been mapped in RFC~8095~\cite{rfc8095} by the Transport Services (
 \section{TAPS}
 The TAPS WG was an IETF working group which aimed to solve the strong
 coupling between application
-level code and the underlying transport protocols through
-focusing on the services provided by each transport layer protocol.
+level code and the underlying transport protocols by
+focusing on the services provided by each transport-layer protocol.
 This is intended to allow faster adaptation of new protocols and to
 abstract away network-layer details from the application layer.
 
@@ -891,7 +891,7 @@ level groups of actions that an application can perform:
     \item Establishment: Prepare a Connection object for data
         transfer.
     \item Data transfer: Sending and receiving Messages
-        over the Connection.
+        over a Connection.
     \item Event handling: Notifications that an application
         can receive from a Connection, and the handling of them.
     \item Termination: How transmission is stopped and
@@ -901,7 +901,7 @@ level groups of actions that an application can perform:
 In addition, the lifetime of a Connection is divided into three distinct
 phases: preestablishment, the established state, and
 termination of a Connection~\cite{rfc9621}.
-Each of these phases are associated
+Each of these phases is associated
 with one or more of the groups of actions that an application can perform,
 as described above. 
 
@@ -916,13 +916,13 @@ A Connection can be established in one of three ways, \mono{initiate()}, \mono{l
 Invoking \mono{initiate()} establishes a Connection to a Remote Endpoint which
 is assumed to be listening for incoming Connections. How this Connection
 is established internally is dependent on the underlying transport
-protocol. The Created Connection object is passed to the application through a callback.
+protocol. The created Connection object is passed to the application through a callback.
 Exactly how the underlying transport protocol is chosen is described in detail
 in \cref{sec:candidate-gathering} and \cref{candidateRacing}.
 
 Invoking \mono{listen()} is used to passively open a Connection. Invoking \mono{listen()}
-creates a Listener object and wait for incoming Connections.
-When a client connects to this Listener, a \term{Received}
+creates a Listener object and waits for incoming Connections.
+When a client connects to this Listener, a \term{ConnectionReceived}
 event occurs. This event contains a Connection object for the 
 established Connection.
 
@@ -937,7 +937,7 @@ and aborting being abnormal termination associated with errors.
 One or more TAPS Connections can be organized into a \term{Connection Group}.
 The Connection Group is not an object exposed through the TAPS API, but
 is maintained internally in a TAPS Implementation.
-A Connection Group is used to group related Connections together, which have been created
+A Connection Group is used to group related Connections together, that have been created
 by cloning. Connections in the same Connection Group can be
 multiplexed together if this is supported by the underlying protocol.
 
@@ -959,7 +959,7 @@ has completed.
 
 The concept of a framing protocol also exists outside of TAPS since most
 application-level protocols are both message-based and run over TCP. Several
-ways of converting TCP's byte-stream into usable messages has been implemented.
+ways of converting TCP's byte-stream into usable messages have been implemented.
 These largely fall into two categories, type-length-value (TLV) structures where
 the length of the following data is described in a header-structure, and
 delimiter-separated formats, where the beginning and end of a piece of
@@ -1364,7 +1364,7 @@ any interaction with the network like a normal CPU-bound task,
 waiting for I/O bound operations to complete before progressing.
 This is a simple, but very inefficient model and the CPU will
 be spending much of its time waiting for I/O. Modern networking
-applications therefore interact with the network asynchronously, this
+applications therefore interact with the network asynchronously. This
 is reflected in the design of TAPS, which is asynchronous and
 event-driven.
 
@@ -1446,7 +1446,7 @@ several different connections at once.
  
 \end{tikzpicture}
 \caption[Event loop with FIFO queue]{
-An simple FIFO event loop driven by epoll. Epoll signals the event loop when
+A simple FIFO event loop driven by epoll. Epoll signals the event loop when
 a monitored socket becomes ready and the corresponding receive callback is
 added to the queue.
 The event loop executes received callbacks in order,
@@ -1483,7 +1483,7 @@ among others.
 \section{Libuv}
 Libuv~\cite{Libuv2025} is a multi-platform event loop library focused on asynchronous I/O.
 It is primarily developed for Node.js, but is used in several other large projects as well.
-Libuv is centered the \mono{uv_loop_t} structure which represents a single event loop.
+Libuv is centered around the \mono{uv_loop_t} structure which represents a single event loop.
 Applications can register work to a loop through the use of handles and requests~\cite{libuv_design}.
 Handles are long-lived objects for certain types of work, while requests are short-lived operations.
 When initial handles and requests have been registered, the application must invoke \mono{uv_run()}
@@ -1522,7 +1522,7 @@ and perform any work necessary by Picoquic.
 
 When this timer fires, the application has to query
 Picoquic for any new packets to send to the peer.
-Picoquic will inform the application of about the
+Picoquic will inform the application about the
 expected source and destination socket addresses,
 which allows it to support connection migration and
 multipath in QUIC.
