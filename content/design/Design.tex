@@ -337,7 +337,7 @@ protocols and allows the Socket Manager to not have to implement protocol
 specific logic, making it far easier to extend support to more protocols in
 the future.
 
-An excerpt of the protocol interface vtable can be seen in
+An excerpt of the protocol interface can be seen in
 \cref{lst:protocol-impl-struct}. The \mono{supports_alpn} flag
 and the Selection Properties are used
 to encode the capabilities of the protocol. The encoded capabilities 
