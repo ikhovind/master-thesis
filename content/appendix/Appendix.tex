@@ -24,7 +24,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 FetchContent_Declare(
         CTaps
         GIT_REPOSITORY https://github.com/ikhovind/ctaps.git
-        GIT_TAG v0.1.0
+        GIT_TAG v0.2.0
 )
 
 FetchContent_MakeAvailable(CTaps)
@@ -58,7 +58,7 @@ configure_file(resources/key.pem resources/key.pem COPYONLY)
 #include <stdio.h>
 #include <string.h>
 
-void respond_and_close_on_message_received(ct_connection_t* connection,
+void respond_and_close_on_message_received(ct_connection_t* connection, 
                               ct_message_t* received_message,
                               ct_message_context_t* message_context) {
     uint16_t port = ct_local_endpoint_get_resolved_port(
@@ -66,7 +66,10 @@ void respond_and_close_on_message_received(ct_connection_t* connection,
     );
 
     printf("Received message: %s on port %d\n", ct_message_get_content(received_message), port);
-    // For TCP this will initiate teardown, but for QUIC this will send a FIN flag
+    // For TCP this will initiate teardown,
+    // for QUIC this will send a FIN flag
+    // and initiate teardown if the remote
+    // has also sent a FIN
     ct_connection_close(connection);
 }
 
@@ -75,23 +78,22 @@ void ping_on_ready(ct_connection_t* connection) {
 
     ct_message_t* message = 0;
     if (num_connections == 1) {
-        printf("Original connection successfully connected to server\n");
+        printf("Original connection successfully connected using: %s\n",
+               ct_connection_get_protocol_name(connection));
         char* msg = "hello from original";
-        message = ct_message_new_with_content(msg, strlen(msg) + 1);
-        // cloning is compatible with both TCP
+        message = ct_message_new_with_content(msg,
+                                              strlen(msg) + 1);
+        // Connection cloning is compatible with both TCP
         // and QUIC, but will utilize multistreaming if
         // QUIC is the underlying protocol and create a new
         // TCP connection if TCP is the underlying protocol.
-        //
-        // This way the application gains advantages from
-        // multistreaming when available, without worrying
-        // about compatibility
         ct_connection_clone(connection);
     }
     else {
         printf("Clone successfully connected to server\n");
         char* msg = "hello from clone";
-        message = ct_message_new_with_content(msg, strlen(msg) + 1);
+        message = ct_message_new_with_content(msg,
+                                              strlen(msg) + 1);
     }
     ct_send_message(connection, message);
     // CTaps takes a deep copy, so the message can be freed immediately
@@ -128,13 +130,13 @@ int main() {
     ct_transport_properties_set_preserve_msg_boundaries(transport_properties, PREFER);
     ct_transport_properties_set_multistreaming(transport_properties, PREFER);
 
-    // Security parameters are required for QUIC,
-    // but are ignored if TCP wins the race.
+    // Security parameters are required for QUIC, ignored for TCP
     ct_security_parameters_t* security_parameters = ct_security_parameters_new();
 
     ct_security_parameters_add_alpn(security_parameters, "example");
     ct_security_parameters_add_client_certificate(security_parameters,
-        "resources/cert.pem", "resources/key.pem");
+                                                  "resources/cert.pem",
+                                                  "resources/key.pem");
 
     ct_preconnection_t* preconnection = ct_preconnection_new(
         &local, 1, &remote_endpoint, 1, transport_properties, security_parameters);
@@ -144,15 +146,14 @@ int main() {
         .closed = free_on_connection_closed
     };
 
-    // This will initiate racing, attempt a QUIC connection
-    // first, but attempt TCP after a stagger delay
+    // Will attempt a QUIC connection, but TCP after a stagger delay
     ct_preconnection_initiate(preconnection, &connection_callbacks);
 
     ct_start_event_loop();
 
     // CTaps takes deep copies of the passed
     // objects internally, so the application retains
-    // ownership of the originals
+    // ownership of the originals 
     ct_local_endpoint_free(local);
     ct_security_parameters_free(security_parameters);
     ct_preconnection_free(preconnection);

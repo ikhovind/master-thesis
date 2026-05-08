@@ -417,8 +417,8 @@ pointers, which are expected to be implemented by applications.
 Since Messages are opaque pointers, applications will have to interact
 with them through dedicated getter and setter functions. The content
 of a Message can be modified, but this requires that an application
-allocates a new buffer and uses \mono{ct_message_set_content()}.
-This will free the previous buffer contained in the Message.
+passes new data to \mono{ct_message_set_content()}, which will
+copy the passed data into the message.
 
 There are currently two major limitations with how Framers are implemented
 in CTaps. Firstly, each Connection object currently only supports a single
@@ -471,6 +471,7 @@ static int length_prepend_encode(ct_connection_t* connection,
     ct_message_set_content(message,
         new_content,
         size + 1);
+    free(new_content); // Data has been copied
     return callback(connection, message, context);
 }
 
@@ -876,7 +877,7 @@ application binary will look for a shared object file at a given location at
 run time. This means that any application depending on CTaps will, by default,
 not include CTaps in its own binary.
 Applications can override this setting when building CTaps by
-using the \mono{BUILD_SHARED_LIBS} setting in CMake.
+using the \mono{CTAPS_BUILD_SHARED} setting in CMake.
 
 The largest downside of dynamically linking against CTaps
 is that it requires its users to have CTaps installed on their
@@ -909,7 +910,7 @@ include(FetchContent)
 FetchContent_Declare(
         CTaps
         GIT_REPOSITORY https://github.com/ikhovind/ctaps.git
-        GIT_TAG v0.1.0
+        GIT_TAG v0.2.0
 )
 
 FetchContent_MakeAvailable(CTaps)

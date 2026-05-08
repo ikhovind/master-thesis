@@ -18,16 +18,18 @@ resolving Preconnections before initiation,
 adding endpoints to an established Connection, partial
 message receives, partial message sends and batching message sends.
 
-All TAPS Transport Properties are present in the CTaps API,
+All TAPS Transport and Message Properties are present in the CTaps API,
 but not all are supported internally.
 Unsupported Connection Properties are ignored and have
-no effect on the underlying Connection. Unsupported Selection
+no effect on the underlying Connection.
+Unsupported Selection
 Properties still affect candidate gathering, but do not
 affect the underlying Connection when selected.
 For example, setting \mono{perMsgReliability} to Require will filter
 out protocols which have this property set to Prohibit, but the application
 will not be able to transfer individual messages as reliable, since this
 is not supported in CTaps. 
+All Message Properties except for \mono{final} are ignored.
 
 CTaps allows applications to set all Security Parameters described in RFC~9622,
 except for session cache options and pre shared keys.
