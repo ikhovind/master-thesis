@@ -24,7 +24,7 @@ in \cref{sec:softwaretools} makes all experiments, except UDP RTT, I/O-bound.
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
-    \caption{Specifications of the test machine used to run experiments.}
+\caption[Test machine specifications]{Specifications of the test machine used to run experiments.}
 \label{tab:machine-specs}
 \small
 \begin{tabular}{ll}
@@ -65,7 +65,7 @@ TCP data was also run, in order to illustrate the TCP connection failing after a
     \begin{minted}[fontsize=\small]{bash}
 iptables -A OUTPUT -s 127.0.0.1 -d 127.0.0.1 -p udp --dport 8080 -j DROP 
 \end{minted}
-\caption[Command to block path using iptables.]{
+\caption[Command to block path using iptables]{
 Command to block UDP data from Local Endpoint to file server on localhost with port 8080 using iptables.
 }
 \label{lst:iptables-command}
@@ -142,7 +142,7 @@ The high cost of this stagger delay is discussed further in~\cref{sec:discussion
 
 \begin{figure}[htbp]
     \input{./resources/racing_handshake.pgf}
-    \caption[Single endpoint handshake experiment]{Measured handshake times for TCP, Picoquic and CTaps clients, ordered by RTT.}
+    \caption[Handshake time experiment]{Measured handshake times for TCP, Picoquic and CTaps clients, ordered by RTT.}
     \label{fig:racing-handshake}
 \end{figure}
 
@@ -157,7 +157,7 @@ and any added time will be due to either libuv or CTaps itself.
 
 \begin{figure}[htbp]
     \input{./resources/udp_overhead.pgf}
-    \caption[CTaps UDP overhead experiment]{Overhead of CTaps when performing pings over UDP on localhost.
+    \caption[UDP RTT experiment]{Overhead of CTaps when performing pings over UDP on localhost.
         Showing that CTaps has a \qty{45}{\percent} increase in median RTT, but a \qty{73}{\percent} increase at p99,
         suggesting a disproportionate tail overhead. ($N = \num{100000}$) }
     \label{fig:udp-overhead}
@@ -278,7 +278,7 @@ described in~\cref{sec:client-complexity}.
     \label{fig:migration-throughput}
 \end{figure}
 
-\subsection{Client complexity}\label{sec:client-complexity}
+\subsection{Client Complexity}\label{sec:client-complexity}
 While the advantages of QUIC are clear, they
 are also available through using a QUIC library directly
 and do not require a TAPS System.
@@ -424,22 +424,6 @@ This naturally limits the number of situations in which the client is actually a
 Adding support for multiple sockets
 within CTaps is discussed further in \cref{sec:future-conn-mig}.
 
-% Discuss performance in general
-\subsection{Performance}\label{sec:disc-perf}
-Overall, the experiments show that for simple, I/O-bound applications, the overhead of CTaps will
-be negligible. In addition, the UDP RTT experiment
-shows that CTaps features a longer tail in worst-case
-performance, but it is not possible to say if this will remain
-relatively constant, or scale up with load.
-
-CTaps has not been written with performance in mind. The duplicate
-memory allocations for every passed parameter are likely a large
-part of the delay seen for the UDP RTT experiment, and
-could be replaced with reference counting if performance was
-essential. This would lead to a more complicated ownership
-model, but it would remove system calls for allocation and memory copying
-for every message passed from the application.
-
 % Discuss CTaps client complexity
 \subsection{Client Complexity}
 The complexity of each client as seen in~\cref{tab:loc_complexity}
@@ -465,3 +449,20 @@ Additionally, CTaps forces applications into an asynchronous, callback-driven mo
 through its built-in event loop.
 Applications must be designed around this model from the start,
 which creates a barrier for adoption in existing codebases.
+
+% Discuss performance in general
+\subsection{Performance}\label{sec:disc-perf}
+Overall, the experiments show that for simple, I/O-bound applications, the overhead of CTaps will
+be negligible. In addition, the UDP RTT experiment
+shows that CTaps features a longer tail in worst-case
+performance, but it is not possible to say if this will remain
+relatively constant, or scale up with load.
+
+CTaps has not been written with performance in mind. The duplicate
+memory allocations for every passed parameter are likely a large
+part of the delay seen for the UDP RTT experiment, and
+could be replaced with reference counting if performance was
+essential. This would lead to a more complicated ownership
+model, but it would remove system calls for allocation and memory copying
+for every message passed from the application.
+

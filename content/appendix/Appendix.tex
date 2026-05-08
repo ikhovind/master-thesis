@@ -41,7 +41,7 @@ target_link_libraries(example_tcp_server PRIVATE CTaps)
 configure_file(resources/cert.pem resources/cert.pem COPYONLY)
 configure_file(resources/key.pem resources/key.pem COPYONLY)
     \end{minted}
-    \caption[CTaps example application CMakeLists.txt]
+    \caption[CTaps application CMakeLists.txt]
     {
         Full example CMakeLists.txt for an application
         fetching CTaps as a dependency through FetchContent.
@@ -165,7 +165,7 @@ int main() {
     return 0;
 }
 \end{minted}
-\captionof{listing}[CTaps example client]
+\captionof{listing}[CTaps client]
 {
 A CTaps client utilizing cloning.
 This client will attempt to establish a QUIC connection first,
@@ -291,7 +291,7 @@ int main() {
     return 0;
 }
 \end{minted}
-\captionof{listing}[CTaps example QUIC server]{A CTaps QUIC server
+\captionof{listing}[CTaps QUIC server]{A CTaps QUIC server
 that pings back any message received.
 Taken from the CTaps example project~\cite{ctaps-example-project}.
 }
@@ -403,7 +403,7 @@ int main() {
     return 0;
 }
 \end{minted}
-\captionof{listing}[CTaps example TCP server]{A CTaps TCP server
+\captionof{listing}[CTaps TCP server]{A CTaps TCP server
 that pings back any message received.
 Taken from the CTaps example project~\cite{ctaps-example-project}.
 }
@@ -523,7 +523,7 @@ const ct_protocol_impl_t quic_protocol_interface =
         .free_connection_group_state = ct_free_quic_connection_group_state
 };
     \end{minted}
-    \caption{QUIC protocol implementation struct.}
+    \caption[QUIC protocol implementation struct]{QUIC protocol implementation struct.}
     \label{lst:quic-impl-struct}
 \end{listing}
 % \lstinputlisting[language=C, caption={udp.c full implementation}]{src/udp.c}
@@ -630,7 +630,7 @@ static int ct_quic_send_packet_with_pktinfo(ct_udp_poll_handle_t* poll_handle,
     return 0;
 }
     \end{minted}
-    \caption[Sending message over UDP for QUIC]
+    \caption[Sending a Message over UDP for QUIC]
     {
 Function used to send QUIC packets over UDP for Picoquic, manually
 building the message header

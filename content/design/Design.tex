@@ -7,16 +7,16 @@ while exploring how to best expose as much QUIC functionality as possible
 through the TAPS API.
 
 \section{Choice of Scope}
-CTaps currently features all major aspects of the TAPS API
-described in RFC~9622 except for Rendezvous.
+CTaps currently features all major aspects of the TAPS API except for Rendezvous.
 Internally it supports  candidate gathering,
 candidate racing, TCP, UDP and QUIC.
 
 The following API functions are not implemented:
 protocol-specific endpoints, hop limits, multicast endpoints,
 resolving Preconnections before initiation,
-adding endpoints to an established Connection, partial
-message receives, partial message sends and batching message sends.
+adding endpoints to an established Connection, 
+Connection limits on Listeners,
+partial message receives, partial message sends and batching message sends.
 
 All TAPS Transport and Message Properties are present in the CTaps API,
 but not all are supported internally.
@@ -29,14 +29,16 @@ For example, setting \mono{perMsgReliability} to Require will filter
 out protocols which have this property set to Prohibit, but the application
 will not be able to transfer individual messages as reliable, since this
 is not supported in CTaps. 
-All Message Properties except for \mono{final} are ignored.
+All Message Properties except for \mono{final} and \mono{safelyReplayable} are ignored.
+CTaps only considers Selection Properties of type Preference when
+performing candidate gathering.
 
 CTaps allows applications to set all Security Parameters described in RFC~9622,
 except for session cache options and pre shared keys.
 In addition, CTaps does not support trust callbacks. Only parameters
 needed for TLS 1.3 and session resumption have any effect.
 
-Development has prioritized the most distinctive internal TAPS features,
+For internal TAPS features, CTaps has priortized the most distinct,
 namely candidate gathering and racing. This allows a single
 client to be able to connect to multiple different endpoints using different
 protocols. CTaps does not implement any internal cache or system policy. Additionally,
@@ -47,19 +49,16 @@ CTaps does not present all optional parameters from RFC~9622,
 lacking support for timeout when initiating Connections,
 minimum incomplete length and maximum length when receiving.
 
-Overall, CTaps serves as a reference
-to show the architectural and design decisions which are necessary when
-implementing the TAPS API, as well as to show which features of QUIC can
-be exposed through TAPS.
+Overall, CTaps has prioritized exposing features in the API even
+when not supported internally. The implemented functionality is
+nonetheless sufficient to demonstrate the key benefits of a TAPS System
 
-\section{Choice of dependencies}
+\section{Choice of Dependencies}
 \subsection{libuv} \label{sec:dependency-libuv}
-Since TAPS is an asynchronous API at its core, CTaps
-reflects this.
-For CTaps, the event loop model was chosen over multithreading
-because utilizing callbacks
-matched the event-driven API of TAPS. This also
-had the benefit of avoiding the need for mutexes.
+To implement asynchrony in CTaps, the event loop model was chosen over multithreading.
+This was done for simplicity's sake, as it could avoid shared state.
+Splitting control flow across callbacks was not a concern for CTaps, as
+these callbacks largely mirrored the event-based API of TAPS.
 
 When selecting a specific event loop library, libuv presented
 several advantages. Among these were built-in protocol handles for TCP
@@ -72,7 +71,7 @@ Internally, libuv provides the asynchronous interface
 which CTaps uses to interact with the network. It additionally powers
 the main event loop which applications run by
 invoking \mono{ct_start_event_loop()}.
-It also provides the timer which CTaps uses to know when to query Picoquic,
+CTaps also uses the timer handle provided by libuv in order to know when to query Picoquic,
 according to the sans-I/O model described in \cref{sec:picoquic}.
 
 \subsection{Picoquic}
@@ -97,13 +96,12 @@ If CTaps were to implement all the data structures internally
 it would create a large surface area liable for bugs.
 
 GLib itself was chosen because it is a large and mature library
-which is featured in several other large well known software libraries,
+which is featured in several other well known software libraries,
 such as GTK.
 
 \subsection{log.c}
-In order to create structured logs which can
-easily be filtered by level,
-CTaps uses log.c~\cite{logc}.
+CTaps uses log.c~\cite{logc} to create structured logs, which
+can be easily filtered by level.
 It was chosen because of its simplicity
 and pure C implementation, making it easy to integrate
 with CTaps.
@@ -111,9 +109,9 @@ with CTaps.
 \section{Architecture of CTaps} \label{sec:ctaps-arch-design}
 Internally in CTaps, the most important architectural concept is the
 protocol interface. This is an interface used
-to interact with underlying transport protocols, which ensures that CTaps is extensible.
+to interact with underlying transport-layer protocols, which ensures that CTaps is extensible.
 Common logic such as state tracking
-is extracted to the higher level concept of the Socket Manager. This is an internal layer 
+is extracted to the higher level concept of the Socket Manager. The Socket Manager is an internal layer 
 responsible for multiplexing, maintaining the lifetime of network sockets and communicating
 between Connections and the transport protocol.
 
@@ -163,7 +161,7 @@ of support in libuv.
 \node [sublayer, below=0.5cm of interface.south west, anchor=north west] (uv) {libuv \mdseries\small (TCP/UDP)};
 \node [sublayer, below=0.5cm of interface.south east, anchor=north east] (pico) {Picoquic \mdseries (QUIC)};
 
-\node [sublayer, below=0.5cm of pico.south east, anchor=north east] (libuvraw) {libuv \mdseries (raw UDP socket)};
+\node [sublayer, below=0.5cm of pico.south east, anchor=north east] (libuvraw) {libuv \mdseries (UDP socket)};
 
 % % 5. OS Layer
 \node [layer, below=1cm of libuvraw.south west, fill=gray!25] (os) {Network Stack};
@@ -178,7 +176,7 @@ of support in libuv.
 \draw[->, thick] (pico) -- (pico |- libuvraw.north);
 \draw[->, thick] (libuvraw) -- (libuvraw |- os.north);
 \end{tikzpicture}
-\caption[CTaps architecture overview]
+\caption[CTaps architecture]
 {
 An overview of the architecture of CTaps, featuring the Socket Manager as a
 mediator between the objects presented to applications and the protocol interface.
@@ -187,21 +185,19 @@ mediator between the objects presented to applications and the protocol interfac
 \end{figure}
 
 \subsection{Socket Manager} \label{sec:socket-manager-design}
-The Socket Manager is an internal structure in CTaps responsible
-for acting as an asynchronous intermediary between the API and the
-specific protocol interfaces,
-as well as managing the lifetimes of the underlying sockets.
+The Socket Manager is an internal structure in CTaps.
+It has three primary responsibilities:
+acting as an asynchronous intermediary between the API and the
+protocol interface, managing the lifetimes of the underlying sockets
+and demultiplexing incoming UDP datagrams.
 
-The Socket Manager is also responsible for demultiplexing incoming
-UDP messages. Since UDP is not connection oriented, the Socket
-Manager maintains an internal hash table to track Connections
-for incoming UDP messages, based on the remote socket address.
-Each Connection is associated with exactly one Socket Manager,
-but a Socket Manager can be used by multiple Connections. 
+Since UDP is connectionless, the Socket
+Manager maintains an internal hash table to map
+incoming UDP datagrams to Connections.
+This is done based on the remote socket address.
 
-In order to make each
-protocol interface stateless,
-all data is stored in the associated Socket Manager. Each Socket
+In order to make each protocol interface stateless,
+all protocol data is stored in the associated Socket Manager. Each Socket
 Manager is associated with a single protocol interface, but
 each protocol interface can be associated with many Socket Managers.
 Any state required by the protocol is allocated on the heap and is
@@ -221,21 +217,22 @@ int tcp_close(ct_connection_t* connection) {
     return 0;
 }
 \end{minted}
-\caption[TCP close snippet]{
+\caption[TCP close implementation]{
 Example of the TCP interface accessing Socket Manager state when closing a Connection.
-This allows the TCP interface to remain stateless internally.}
+}
 \label{lst:stateless-tcp-example}
 \end{listing}
 
 Since several functions within the protocol interfaces
-are asynchronous, their communication with the Socket Manager has to be asynchronous.
-The Socket Manager features a structure with internal callbacks which are invoked by the protocol
+are asynchronous, the communication between the Socket Manager and the protocol interface also has to be asynchronous.
+The Socket Manager features internal
+callbacks which are invoked by the protocol
 interface at appropriate times, for example to notify
 the Socket Manager that a Connection has been closed after teardown
 has completed. This callback structure can be seen in~\cref{lst:socket-manager-callbacks}.
 
 For memory-critical paths, Connections exclusively communicate
-with the underlying protocol through the Socket Manager, in order
+with the underlying protocol interface through the Socket Manager, in order
 to mitigate potential memory leaks.
 
 An example of such a memory-critical internal flow in CTaps can be seen in
@@ -305,7 +302,7 @@ remaining Connections.
     -- node[below, sloped, label, text=red!70!black, align=center] {User cb}
     ([yshift=3pt]Conn1.east);
 \end{tikzpicture}
-\caption[Flow of internal callbacks in CTaps.]{Example model of the asynchronous communication
+\caption[Flow of internal callbacks in CTaps]{Diagram of the asynchronous communication
 between the CTaps Socket Manager and the protocol interface when an application invokes \mono{close()}.}
 \label{fig:async-close-flow}
 \end{figure}
@@ -318,8 +315,8 @@ void (*aborted_connection)(ct_connection_t* connection);
 void (*establishment_error)(ct_connection_t* connection);
 void (*connection_ready)(ct_connection_t* connection);
 void (*message_sent)(ct_connection_t* connection, ct_message_context_t* message_context);
-void (*message_send_error)(ct_connection_t* connection, ct_message_context_t* message_context,
-                           int reason_code);
+void (*message_send_error)(ct_connection_t* connection,
+        ct_message_context_t* message_context, int reason_code);
 void (*socket_closed)(struct ct_socket_manager_s* socket_manager);
 void (*connection_received)(ct_listener_t* listener, ct_connection_t* connection);
 void (*listener_ready)(ct_listener_t* listener);
@@ -332,8 +329,8 @@ the Socket Manager and the protocol interface.}
 \end{listing}
 
 \subsection{Protocol Interface}
-In order to make the CTaps design as modular as possible,
-CTaps uses an internal interface to interact with the underlying protocol.
+In order to make CTaps design as modular as possible,
+it uses a generic interface to interact with the underlying transport-layer protocols.
 This interface abstracts away the implementation details of the individual
 protocols and allows the Socket Manager to not have to implement protocol
 specific logic, making it far easier to extend support to more protocols in
@@ -369,7 +366,7 @@ typedef struct ct_protocol_impl_s {
     // ... Remaining protocol interface function pointers ...
 } ct_protocol_impl_t;
 \end{minted}
-\caption{Excerpt from the protocol interface.}
+\caption[Protocol interface excerpt]{Excerpt from the protocol interface.}
 \label{lst:protocol-impl-struct}
 \end{listing}
 
@@ -392,23 +389,19 @@ int ct_socket_manager_close_connection(ct_connection_t* connection) {
     return 0;
 }
 \end{minted}
-\caption[Generic protocol API usage by Socket Manager]
+\caption[Socket Manager generic protocol API usage]
 {
     Example of the access pattern between the Socket Manager and the protocol
-    interface. The Socket Manager will report any synchronous errors back
-    to the invoking Connection, otherwise it will wait for \mono{closed_connection()} callback
-    to be invoked from the function pointers in \cref{lst:socket-manager-callbacks}.
+    interface. The Connection is not considered to be closed until the
+    \mono{closed_connection()} callback is invoked by the protocol interface.
 }
 \label{lst:example-sock-man-to-protocol}
 \end{listing}
 
 
 \section{API Design}
-The external API of CTaps is designed according to the TAPS API
-described in RFC~9622.
-The TAPS API is object-oriented and asynchronous, which are core
-elements of CTaps as well. In addition, CTaps hides
-internal state from the user and only exposes getters and setters
+The external API of CTaps is object-oriented and asynchronous.
+CTaps hides internal state from applications and only exposes getters and setters
 to specific fields.
 
 Example client and server applications utilizing the CTaps
@@ -456,13 +449,12 @@ void ct_remote_endpoint_free(
 \label{lst:remote-endpoint}
 \end{listing}
 
-CTaps aims to present objects as consistently as possible to the application,
-for both internal and external consistency.
-An example of this is that 
-in CTaps every Connection belongs to a Connection Group,
+CTaps presents objects as consistently as possible
+both internally and externally.
+An example of this is that in CTaps every Connection belongs to a Connection Group,
 even if it has not been used for cloning.
 This means that Connection Group-oriented operations are always valid
-in CTaps, and it also allows CTaps to avoid internal checks for whether a Connection was
+in CTaps. It also allows CTaps to avoid internal checks for whether a Connection was
 part of a Connection Group or not.
 
 In order to hide internal state from applications, the public CTaps API only
@@ -494,14 +486,19 @@ its pointer, a pattern which can be seen in~\cref{lst:using-remote-endpoint}.
     // And finally free it when done
     ct_remote_endpoint_free(remote_endpoint);
 \end{minted} 
-\caption{Remote Endpoint lifetime example.}
+\caption[Remote Endpoint lifetime snippet]
+{
+    A snippet displaying how an application could manage
+    the lifetime of a Remote Endpoint. Allocating on the
+    heap and freeing when no longer needed.
+}
 \label{lst:using-remote-endpoint}
 \end{listing}
 
 This pattern was chosen to make it clear exactly which fields are
 controllable by the application and which fields are only used internally in CTaps.
 This pattern also allows CTaps to differentiate between read-only Connection Properties and writable
-Connection Properties described in the TAPS API~\cite[sec. 8.1.11]{rfc9622}.
+Connection Properties as described in the TAPS API~\cite[sec. 8.1.11]{rfc9622}.
 
 \subsection{Asynchrony} \label{asynchrony}
 Being asynchronous and built around an event loop has
@@ -516,7 +513,7 @@ are registered when the Preconnection is initiated. An example of flow
 and the registration of callbacks can be seen in~\cref{lst:preconnection-init-flow}.
 Not all callbacks have to be registered, although not registering important
 callbacks such as \mono{ready()} or \mono{closed()} can lead 
-to an application missing important events.
+to applications missing important events.
 
 \begin{listing}[htbp]
     \begin{minted}{C}
@@ -536,15 +533,14 @@ ct_connection_callbacks_t connection_callbacks = {
 
 int rc = ct_preconnection_initiate(preconnection, &connection_callbacks);
     \end{minted}
-    \caption[Example Preconnection initiation flow]{Example flow registering callbacks when initiating a Preconnection.}
+    \caption[Preconnection initiation flow]{Example flow registering callbacks when initiating a Preconnection.}
     \label{lst:preconnection-init-flow}
 \end{listing}
 
 Since the results of asynchronous operations in CTaps are available through callbacks,
 applications need a way to connect these results to state from outside the
 callback. This could be achieved through global variables, but CTaps 
-also allows applications to pass a void pointer when registering callbacks,
-allowing applications to avoid global variables. 
+also allows applications to pass a void pointer when registering callbacks.
 
 When initiating a Connection, the void pointer will be stored in the Connection
 structure, and it can be fetched when the Connection is passed
@@ -558,7 +554,7 @@ void on_connection_ready_increment(ct_connection_t* connection) {
     context->num_ready_connections++;
 }
   \end{minted}
-  \caption[Example callback context]
+  \caption[Connection callback context]
 {
     Example of accessing user context in a Connection ready callback.
 }
@@ -577,7 +573,7 @@ same candidate gathering as normal Connection initiation. Candidate
 gathering itself is asynchronous because it may
 involve DNS resolution.
 
-CTaps notifies an application of errors
+CTaps notifies applications of errors
 through either a return code or an error callback.
 Return codes are used for synchronous errors, while callbacks
 are used for asynchronous errors.
@@ -588,19 +584,19 @@ error convention used by libuv~\cite{libuv_errors}.
 
 In theory, error handling could be unified into using callbacks
 for all errors, but CTaps splits it into two categories in order
-to fail as early as possible and to differentiate simple errors
-such as illegal parameters from more advanced asynchronous problems,
+to fail as early as possible and to differentiate simple errors,
+such as illegal parameters, from more advanced asynchronous problems,
 which may be outside an application's control.
 
 As described in \cref{sec:dependency-libuv}, CTaps
 uses a single global event loop internally.
-This event loop has to be initialized before any asynchronous operation can be initiated.
+This event loop must be initialized before any asynchronous operation can be initiated.
 This initialization is done through the setup function \mono{ct_initialize()}, and teardown has to
 be performed through \mono{ct_close()}.
 
 After initializing CTaps, applications must perform any setup
-required and start a Listener or initiate a Connection in order to
-start interacting with the network. After this has been performed the
+required and either start a Listener or initiate a Connection.
+After this has been performed the
 application must start the event loop with \mono{ctaps_start_event_loop()}.
 This event loop will block the invoking thread until there are 
 no more open handles performing work.
@@ -617,7 +613,7 @@ where applications retain ownership of any allocated objects.
 In addition to the objects allocated synchronously, applications
 also gain ownership of Connection and Listener objects which are created asynchronously.
 
-CTaps passes ownership of created objects to applications even in the cases where
+CTaps passes ownership of created objects to applications if
 applications have not registered the
 correct callbacks for receiving the object.
 This will lead to a memory leak if a Connection is initiated without
@@ -641,7 +637,7 @@ and are rarely stored for long term use.
 
 \section{QUIC Under TAPS} \label{sec:quicUnderTaps}
 As the first open source TAPS implementation to feature QUIC as
-an underlying protocol option, finding out exactly which features of
+an underlying protocol option, mapping which features of
 QUIC are available through the default TAPS interface is one of the
 key research questions for this thesis. Since TAPS is an interface to
 a generic transport layer, TAPS concepts, terminology and intended functionality
@@ -655,7 +651,7 @@ connection migration, and the QUIC datagram and multipath extensions.
 
 \subsection{QUIC Connections} \label{sec:quic-arch-mapping}
 While the TAPS RFCs were designed with QUIC in mind,
-RFC~9623 does not feature specific transport protocol considerations for QUIC,
+RFC~9623 does not feature specific transport-layer protocol considerations for QUIC,
 although a draft does exist~\cite{transportServicesMappingForQuic}.
 
 The most important design decision for mapping QUIC 
@@ -680,9 +676,9 @@ as completed to close the stream.
 This means that the only way for a QUIC stream to close gracefully is
 for a FIN flag to be sent in both directions.
 
-As a contrast, TCP connections only consist of a single stream of data, and
+As a contrast, TCP connections only consist of a single stream of data and
 while they can be closed one-way, the typical behavior is that
-when it is closed by one peer, then the other peer closes the connection
+when it is closed by one peer, the other peer closes the connection
 in conjunction.
 
 This means that a choice has to be made for how to close individual
@@ -695,7 +691,7 @@ frame if their stream is in a ready or sending state~\cite[sec.~3.5]{rfc9000}.
 A \mono{RESET_STREAM} frame tears down a QUIC stream in the sending direction,
 and in combination with the sent \mono{FIN} flag, would completely close the stream.
 
-Even though this handling of underlying QUIC streams in TAPS is superficially
+Even though this handling of underlying QUIC streams in TAPS is
 closer to the expected behavior from TCP, \mono{STOP_SENDING} is not a graceful close and
 typically indicates that an application is no longer reading received data \cite[sec.~3.5]{rfc9000}.
 For a graceful teardown of a single
@@ -714,12 +710,12 @@ a connection before all data has been received, the only way of handling it grac
 close the entire QUIC connection. This naturally maps to closing the entire Connection Group. 
 
 If an application takes care and consistently interacts
-with Connection Groups instead of individual Connections it can consistently use and achieve the same
-expected behavior irrespective of the underlying protocol in CTaps.
-This is however an example of internal functionality leaking through to
+with Connection Groups instead of individual Connections it can achieve the same
+behavior irrespective of the underlying protocol in CTaps.
+This is an example of internal functionality leaking through to
 how an application should interact with the TAPS API.
 
-This mapping of QUIC connections to TAPS Connection Groups also affects how
+The mapping of QUIC connections to TAPS Connection Groups also affects how
 CTaps handles the notification of path changes. In TAPS, the \mono{path_change()} 
 event is per-Connection~\cite[sec. 8.3.2]{rfc9622},
 while QUIC migration is per-Connection Group.
@@ -731,8 +727,8 @@ in the current TAPS API.
 
 There are also features related to streams in QUIC which are not available
 through a TAPS Connection.
-One example of this is the one-way abort mentioned
-earlier through \mono{STOP_SENDING}, which requests that the peer abort their
+One example of this is the one-way abort
+available through \mono{STOP_SENDING}, which requests that the peer abort their
 sending, and \mono{RESET_STREAM}
 which aborts the local sending side~\cite[sec. 19.4--19.5]{rfc9000}.
 For aborting Connections, the TAPS API presents only
@@ -749,13 +745,12 @@ but Selection Properties are only set before initiating a Connection.
 This means that TAPS does not currently support
 the directionality of streams when cloning.
 
-Despite not being able to initiate unidirectional sending, a TAPS implementation
-is able to receive a unidirectional stream initiated by the peer as expected by QUIC.
-A TAPS System can infer from the incoming stream ID that a stream is unidirectional~\cite[sec. 2.1]{rfc9000}
+A TAPS System is able to receive a unidirectional stream initiated by the peer as expected by QUIC.
+It can infer from the incoming stream ID that a stream is unidirectional~\cite[sec. 2.1]{rfc9000}
 and mark the resulting Connection as closed for sending before presenting it to the application.
 
 \subsection{Idle Timeout}
-TAPS does not feature a generic timeout value
+TAPS does not feature a timeout value
 which can be passed as QUIC's \mono{max_idle_timeout}~\cite[sec. 10.1]{rfc9000}
 transport parameter.
 TAPS does support timeouts when sending data through
@@ -765,28 +760,13 @@ is being transferred.
 
 \subsection{Flow Control}
 TAPS exposes flow control through enqueueing receive callbacks instead of the
-maximum data parameters used by QUIC. The easiest way to utilize these in a
-TAPS System would be to set some sane default value, and increasing them gradually
-as the application invokes \mono{receive()}.
+maximum data parameters used by QUIC. A TAPS System can set a conservative
+default for these parameters and increase them gradually as the application invokes \mono{receive()}.
 
 \subsection{Using Multiple Paths}
 QUIC path migration is supported in TAPS, and the migration
 policy can be controlled through the
 \mono{multipath} Selection Property.
-It can also be used to set the
-\mono{disable_active_migration} transport parameter~\cite[sec. 18.2]{rfc9000} 
-for QUIC servers.
-
-TAPS does not directly expose an equivalent to the
-\mono{preferred_address} 
-transport parameter~\cite[sec. 18.2]{rfc9000}, but a
-value can be inferred based on the \mono{interface}
-and \mono{advertisesAltaddr} Selection Properties.
-If \mono{advertisesAltaddr} was set to true then
-a TAPS System could infer that the application would like
-incoming connections to migrate to its highest
-preference interface, and
-set \mono{preferred_address} accordingly.
 
 The combination of the \mono{multipath} Selection Property and the \mono{multipathPolicy} 
 Connection Property~\cite[sec. 8.1.7]{rfc9622} allows applications to express multipath preferences,
@@ -803,12 +783,12 @@ on \mono{multipath} and \mono{multipathPolicy} can be seen in
 The \mono{interactive} and \mono{aggregate} \mono{multipath} policies require
 simultaneous use of multiple paths, which is not currently supported in QUIC.
 The multipath extension for QUIC~\cite{ietf-quic-multipath-21} is currently
-under development, and it would enable these policies to be fully utilized.
+being standardized, and it would enable these policies to be fully utilized.
 
 \begin{table}[htbp]
   \centering
   \begin{threeparttable}
-      \caption[Behavior \mono{multipath}/\mono{multipathPolicy} in TAPS]{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations.}
+      \caption[Behavior of \mono{multipath}/\mono{multipathPolicy} in TAPS]{Effective behavior for \mono{multipath}/\mono{multipathPolicy} combinations.}
     \label{tab:multipath-combinations}
     \begin{tabular}{llp{7cm}}
       \toprule
@@ -838,6 +818,17 @@ under development, and it would enable these policies to be fully utilized.
   \end{threeparttable}
 \end{table}
 
+TAPS does not directly expose an equivalent to the
+\mono{preferred_address} 
+transport parameter~\cite[sec. 18.2]{rfc9000}, but a
+value can be inferred based on the \mono{interface}
+and \mono{advertisesAltaddr} Selection Properties.
+If \mono{advertisesAltaddr} was set to true then
+a TAPS System could infer that the application would like
+incoming connections to migrate to its highest
+preference interface, and
+set \mono{preferred_address} accordingly.
+
 \begin{table}[htbp]
 \centering
 \begin{threeparttable}
@@ -851,7 +842,7 @@ under development, and it would enable these policies to be fully utilized.
 \midrule
 \multicolumn{2}{l}{\textit{Available through TAPS API}} \\
 \midrule
-\multicolumn{1}{l||}{0-RTT establishment} & Message Property\\
+\multicolumn{1}{l||}{0-RTT data} & \mono{init_with_send()}\\
 \multicolumn{1}{l||}{ALPN negotiation} & Security Parameter \\
 \multicolumn{1}{l||}{Bidirectional streams} & \mono{clone()}\\
 \multicolumn{1}{l||}{Connection Migration\tnote{1}} & Multiple Local Endpoints \& Selection Property\\
@@ -889,7 +880,7 @@ under development, and it would enable these policies to be fully utilized.
 \end{tabularx}
 \begin{tablenotes}
 \footnotesize
-\item[1] Abstracted from the application by TAPS as long as it is given multiple Local Endpoints and \mono{multipath} is enabled.
+\item[1] Abstracted from the application, but supported through multiple Local Endpoints and \mono{multipath}.
 \item[2] Requires that \mono{recvMsgMaxLen} \cite[sec. 8.1.11.5]{rfc9622} is communicated to the peer.
 \item[3] Through the \mono{keepAliveTimeout} Connection Property.
 \item[4] Inferred from a combination of \mono{advertisesAltAddr} and \mono{interface} Selection Properties.
@@ -907,20 +898,20 @@ under development, and it would enable these policies to be fully utilized.
 Candidate racing maps well to connection-oriented
 protocols, where an endpoint can be confirmed to be reachable
 by the handshake completing. It does however not map
-well onto non-connection oriented protocols such as UDP, where
+well onto connectionless protocols such as UDP, where
 it is not necessarily possible to verify that an endpoint is reachable.
 A design decision therefore had to be made in CTaps on how to perform
 racing when UDP was among the viable protocols.
 
-Since UDP has no handshake to complete, CTaps has chosen to assume that a UDP connection
-is established as soon as a socket has been opened. This means that
-if the Remote Endpoint does not support UDP then racing will be unable to detect
-this and UDP can win candidate racing without being supported by the remote.
+Since UDP has no handshake to complete, CTaps has chosen to assume that a Connection
+using UDP is established as soon as a socket has been opened. This means that
+if the Remote Endpoint does not support UDP, then candidate racing will be unable to detect
+this and UDP can win the race, without being supported by the remote.
 
 A possible mitigation for this would be through \term{transport options}
 as described in RFC~9868~\cite{rfc9868}.
-Transport options are a backwards compatible way of extending UDP functionality,
-and two of these options are the echo request
+Transport options are a backwards compatible way of extending UDP functionality.
+Two of these options are the echo request
 and the echo response~\cite[sec.~11.7]{rfc9868}.
 The echo request sends a 4-byte token requesting that the peer
 respond with the same token.
@@ -929,8 +920,8 @@ For candidate racing in CTaps, echo requests and echo
 responses could be used as a replacement for a UDP handshake. There are however two
 large issues with utilizing transport options like this.
 First of all, there is no way to differentiate between the peer not being reachable
-by UDP and the peer simply not supporting this UDP transport option.
-Secondly, the use of UDP options is the responsibility of the layer
+by UDP and the peer simply not supporting this transport option.
+Secondly, the use of transport options is the responsibility of the layer
 utilizing UDP, not the UDP layer itself~\cite[sec.~11.7]{rfc9868}. This means that if a server
 is reachable over UDP, then CTaps would be reliant on the server application
 itself supporting this transport option, not only the network stack.
@@ -939,7 +930,7 @@ Since the default TAPS Selection Properties rank UDP lower than other supported 
 the risk of UDP being ranked higher than other protocols when
 the endpoint does not support UDP was deemed to be quite low. The simple solution
 of treating a Connection as established as soon as the underlying UDP socket has
-been opened was therefore chosen for CTaps.
+been opened was therefore deemed acceptable.
 
 \section{Security}\label{sec:design-sec}
 While the security of a TAPS System is primarily reliant on the security of the underlying protocols,
@@ -947,12 +938,12 @@ any implementation of TAPS needs to take security into account in its design.
 
 The largest security risk for an application using a TAPS System is that
 the required security would be silently downgraded. This risk is increased
-since insecure protocols have an inherent advantage in candidate racing since they
+because insecure protocols have an inherent advantage in candidate racing since they
 require fewer RTTs to establish.
 TAPS Systems therefore need to mandate security by default and not race
 secure and insecure protocols.
 
-This is addressed in RFC~9622 which specifies that Connections
+This is addressed in RFC~9622, which specifies that Connections
 using TAPS should use security in general, but that applications
 can initialize disabled or opportunistic Security Parameters
 to remain compatible with endpoints that do not support transport
@@ -963,7 +954,7 @@ to establish any transport security, while opportunistic Security Parameters
 allow for the coexistence of secure and insecure transport-layer protocols.
 When racing secure and insecure protocols, TAPS implementations
 should take the increased number of RTTs required to establish a secure protocol
-into account. This could take the form of longer stagger delays for insecure
+into account. This could take the form of a longer stagger delays for insecure
 protocols.
 
 Since TAPS is a generic API,
@@ -972,7 +963,7 @@ places a limitation on the security of an application.
 For example, CTaps does not currently support keeping key
 files in memory and can only refer to them through filenames. This could be
 seen as a CTaps-specific security gap, depending on an application's requirements.
-The TAPS API itself however only specifies that server and client certificates should be settable through the use of
+The TAPS API itself only specifies that server and client certificates should be settable through the use of
 certificate bundles, but does not mandate the form which these bundles should take.
 
 While TAPS aims to provide reasonable security defaults,
@@ -980,21 +971,21 @@ its default configuration trades some security guarantees
 for usability and performance. One example is session isolation.
 The \mono{isolateSession} Security Parameter is false by default,
 which allows a TAPS implementation
-to use internally cached data, such as session tickets and cookies.
+to use internally cached data.
 Using this cache could lead to increased connection linkability. 
 An observer could see
 different connections exhibiting the same behavior
 and infer that they belong to the same client. This is an acceptable risk
 for most applications, but security-sensitive applications
-must explicitly configure parameters rather than rely on the
+must explicitly configure parameters rather than rely on TAPS
 defaults.
 
 Fingerprinting may also be an issue inherent in TAPS itself.
 Using a networking library which standardizes the interaction
-with the network to a certain degree would naturally lead to potential fingerprinting
+with the network could lead to fingerprinting
 of clients. This is an inherent property of software libraries whose behavior is exposed to the internet.
-Without a large and diverse enough user base, fairly accurate assumptions can
+Without a large and diverse user base, fairly accurate assumptions can
 be made about the users behind a connection, if the underlying library being
-used can be ascertained. This becomes a larger risk if the behavior
-of the underlying library is fairly unique, such as the extensive
+used can be ascertained. Fingerprinting becomes a larger concern if the behavior
+of the underlying library is fairly unique, such as with the extensive
 candidate racing in TAPS.
