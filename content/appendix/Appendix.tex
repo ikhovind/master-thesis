@@ -24,7 +24,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 FetchContent_Declare(
         CTaps
         GIT_REPOSITORY https://github.com/ikhovind/ctaps.git
-        GIT_TAG v0.2.0
+        GIT_TAG v0.3.0
 )
 
 FetchContent_MakeAvailable(CTaps)
@@ -127,7 +127,6 @@ int main() {
     ct_transport_properties_t* transport_properties = ct_transport_properties_new();
     ct_transport_properties_set_reliability(transport_properties, REQUIRE);
     // Prefer QUIC, but remain compatible with TCP
-    ct_transport_properties_set_preserve_msg_boundaries(transport_properties, PREFER);
     ct_transport_properties_set_multistreaming(transport_properties, PREFER);
 
     // Security parameters are required for QUIC, ignored for TCP
@@ -363,10 +362,6 @@ int main() {
 
     ct_transport_properties_t* listener_props = ct_transport_properties_new();
     ct_transport_properties_set_reliability(listener_props, REQUIRE);
-    // CTaps is currently only able to listen to a single protocol per
-    // listener and will choose the most preferable protocol, in this
-    // case TCP
-    ct_transport_properties_set_multistreaming(listener_props, PROHIBIT);
 
     // No TLS for plain TCP, pass NULL for security parameters
     ct_preconnection_t* listener_precon = ct_preconnection_new(
@@ -384,6 +379,9 @@ int main() {
     // Since TCP does not support multistreaming, all connections
     // will be received through the listener callbacks
     // See example_quic_server.c
+    //
+    // When All else is equal (no preferences to sort by)
+    // CTaps will choose TCP over QUIC
     ct_preconnection_listen(listener_precon, &listener_callbacks, &connection_callbacks);
 
     // This will run forever, stopping with ctrl + c works, but
@@ -489,7 +487,7 @@ const ct_protocol_impl_t quic_protocol_interface =
             .list =
             {
                 [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
-                [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = REQUIRE}},
+                [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = PROHIBIT}},
                 [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PREFER}},
                 [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
                 [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
@@ -526,6 +524,60 @@ const ct_protocol_impl_t quic_protocol_interface =
     \caption[QUIC protocol implementation struct]{QUIC protocol implementation struct.}
     \label{lst:quic-impl-struct}
 \end{listing}
+
+\begin{listing}[htbp]
+    \begin{minted}{c}
+const ct_protocol_impl_t
+    tcp_protocol_interface =
+{
+    .name = "TCP",
+    .protocol_enum = CT_PROTOCOL_TCP,
+    .supports_alpn = false,
+    .selection_properties =
+    {
+    .list =
+         {
+             [RELIABILITY] = {.value = {.simple_preference = REQUIRE}},
+             [PRESERVE_MSG_BOUNDARIES] = {.value = {.simple_preference = PROHIBIT}},
+             [PER_MSG_RELIABILITY] = {.value = {.simple_preference = PROHIBIT}},
+             [PRESERVE_ORDER] = {.value = {.simple_preference = REQUIRE}},
+             [ZERO_RTT_MSG] = {.value = {.simple_preference = NO_PREFERENCE}},
+             [MULTISTREAMING] = {.value = {.simple_preference = PROHIBIT}},
+             [FULL_CHECKSUM_SEND] = {.value = {.simple_preference = REQUIRE}},
+             [FULL_CHECKSUM_RECV] = {.value = {.simple_preference = REQUIRE}},
+             [CONGESTION_CONTROL] = {.value = {.simple_preference = REQUIRE}},
+             [KEEP_ALIVE] = {.value = {.simple_preference = NO_PREFERENCE}},
+             [INTERFACE] = {.value = {.preference_set_val = {0}}},
+             [PVD] = {.value = {.preference_set_val = {0}}},
+             [USE_TEMPORARY_LOCAL_ADDRESS] = {.value = {.simple_preference =
+                                                            NO_PREFERENCE}},
+             [MULTIPATH] = {.value = {.enum_val = CT_MULTIPATH_DISABLED}},
+             [ADVERTISES_ALT_ADDRESS] = {.value = {.simple_preference = PROHIBIT}},
+             [DIRECTION] = {.value = {.enum_val = CT_DIRECTION_BIDIRECTIONAL}},
+             [SOFT_ERROR_NOTIFY] = {.value = {.simple_preference = NO_PREFERENCE}},
+             [ACTIVE_READ_BEFORE_SEND] = {.value = {.simple_preference =
+                                                        NO_PREFERENCE}},
+         }
+        },
+    .init = tcp_init,
+    .init_with_send = tcp_init_with_send,
+    .send = tcp_send,
+    .listen = tcp_listen,
+    .close_listener = tcp_close_listener,
+    .close_connection = tcp_close,
+    .close_socket = tcp_close_socket,
+    .abort = tcp_abort,
+    .clone_connection = tcp_clone_connection,
+    .free_connection_state = tcp_free_state,
+    .free_socket_state = tcp_free_socket_state,
+    .close_connection_group = tcp_close_connection_group,
+    .free_connection_group_state = tcp_free_connection_group_state,
+};
+    \end{minted}
+    \caption[TCP protocol implementation struct]{TCP protocol implementation struct.}
+    \label{lst:tcp-impl-struct}
+\end{listing}
+
 % \lstinputlisting[language=C, caption={udp.c full implementation}]{src/udp.c}
 
 \begin{listing}[htbp]
