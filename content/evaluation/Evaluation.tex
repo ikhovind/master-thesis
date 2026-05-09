@@ -99,7 +99,7 @@ to also treat \mono{EPERM} as implying that the remote is unreachable. Picoquic 
 and \mono{EPERM} was added to the list of socket errors which imply that
 the remote is
 unreachable~\cite{PicobrigtImpliesUnreachable}. The forked version of Picoquic was only used
-for the Picoquic experiment client.
+for the Picoquic experiment client. CTaps itself depends on the original version.
 
 \subsection{Measurement Approach}
 The UDP RTT experiment was performed through a bash script, while the remaining
@@ -110,14 +110,15 @@ were stored in dedicated per-experiment shell
 scripts for reproducibility.\footnote{The associated shell scripts
 can be found in the \mono{benchmark/scripts/} folder of the main CTaps repository,
 together with a README on how to reproduce the experiments.}
+
 The experiments were run sequentially while the test
 machine was otherwise idle.
-
 For I/O-dominated experiments without jitter, the
 variation in performance was found to be so small
 that increased sampling would not be visible in the results.
 The handshake time, small file transfer and connection
-migration experiments are therefore based on a single run.
+migration experiments are therefore based on a single run
+and serve as functional demonstrations rather than statistical performance characterizations.
 
 \section{Experiments}
 \subsection{Handshake Time Experiment}\label{sec:single-endpoint-handshake}
@@ -345,8 +346,7 @@ Annotated source files used for counting are available at \mono{benchmark/annota
 \subsection{Handshake Time Experiment}\label{sec:single-endpoint-handshake-discussion}
 The results in~\cref{fig:racing-handshake} 
 demonstrate how a single CTaps client can successfully connect to multiple
-servers utilizing different protocols and achieve performance parity
-in an I/O-bound experiment.
+servers utilizing different protocols with negligible overhead in an I/O-bound experiment.
 
 The experiment also shows that candidate racing
 is not implemented optimally in CTaps.
@@ -410,8 +410,9 @@ excessively large, so that candidate racing in CTaps can overcome the high cost 
 
 \subsection{Small File Transfer Experiment}
 The small file experiment shows that CTaps can utilize Connection
-Cloning to make use of QUIC multistreaming and achieve performance
-parity with a Picoquic client. While this shows clear benefit in
+Cloning to make use of QUIC multistreaming, with transfer times
+dominated by network conditions rather than CTaps overhead.
+While this shows clear benefit in
 this specific scenario, downloading large files as required for
 this experiment is uncommon. In 2025, Cloudflare
 measured that the median number of packets sent to clients of their service
@@ -453,6 +454,8 @@ CTaps achieves this not only when accessing advanced features of QUIC such as co
 selection and the error handling itself.
 This results in simpler application code and easier migration to future protocols.
 
+Lines of code is a coarse proxy for complexity, but it provides a
+concrete comparison across these implementations.
 While CTaps is the most complex
 individual client by lines of code, it provides TCP and QUIC support, connection racing,
 and several QUIC benefits at less than the combined complexity of the QUIC
@@ -473,8 +476,9 @@ which creates a barrier for adoption in existing codebases.
 
 % Discuss performance in general
 \subsection{Performance}\label{sec:disc-perf}
-Overall, the experiments show that for simple, I/O-bound applications, the overhead of CTaps will
-be negligible. In addition, the UDP RTT experiment
+Overall, the experiments show that for simple, I/O-bound applications,
+the overhead of CTaps is negligible.
+In addition, the UDP RTT experiment
 shows that CTaps features a longer tail in worst-case
 performance, but it is not possible to say if this will remain
 relatively constant, or scale up with load.
@@ -491,10 +495,11 @@ software profiler should be utilized to determine exactly which
 parts are the source of the overhead.
 
 \subsection{Summary}
-To summarize, the experiments collectively show that CTaps achieves performance
-parity with native implementations in I/O-bound scenarios, but more testing
-is required to establish CTaps' behavior under load.
-CTaps successfully exposes QUIC-specific features such as connection migration and multistreaming,
+To summarize, the experiments show that while CTaps does have a measurable overhead,
+it is negligible when compared to a realistic level of network latency.
+More testing is required to establish CTaps' behavior under load.
+
+Beyond performance, CTaps successfully exposes QUIC-specific features such as connection migration and multistreaming,
 as well as TAPS features such as candidate racing, through a single generic client.
 However, the current static stagger delay implementation imposes a significant cost
 on connection establishment time. The client complexity comparison in~\cref{sec:client-complexity}
