@@ -214,7 +214,7 @@ void ct_socket_manager_aborted_connection_cb(ct_connection_t* connection) {
   \end{minted}
   \caption[Connection aborted callback in Socket Manager]
   {
-    Excerpt from Socket Manager callback invoked by protocol implementation on Connection abort. 
+    Excerpt from Socket Manager callback invoked by a protocol interface on Connection abort. 
     Which callback is invoked is based on the previous state of the
     aborted Connection.
   }
@@ -511,7 +511,7 @@ static ct_framer_impl_t length_prepend_framer = {
 \label{lst:framingTestImpl}
 \end{listing}
 
-\section{Protocol Implementations}
+\section{Transport-Layer Protocols}
 CTaps natively supports three transport-layer protocols: UDP, TCP and QUIC.
 
 \subsection{UDP} \label{sec:udpImpl}
@@ -712,8 +712,8 @@ const ct_protocol_impl_t quic_protocol_interface =
         // ... Other function implementations
 };
   \end{minted}
-  \caption[QUIC protocol implementation excerpt]{
-Excerpt of the QUIC implementation struct. The full implementation can
+  \caption[QUIC protocol interface excerpt]{
+Excerpt of the QUIC interface struct. The full implementation can
 be seen in \cref{lst:quic-impl-struct} in~\cref{app:internal-code-examples}.
 }
   \label{lst:quic-impl-struct-excerpt}
@@ -788,7 +788,7 @@ object, in addition to the properties fulfilled by each protocol, as defined by 
 \end{table}
 
 \subsection{Protocol Complexity} \label{sec:protocolComplexity}
-The protocol implementations in CTaps differ
+The protocol interfaces in CTaps differ
 greatly in complexity. This can be seen in the number of lines
 of code required to implement each protocol interface.
 This overview can be seen in~\cref{tab:protocolLoc}.

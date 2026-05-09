@@ -1,12 +1,11 @@
 \chapter{Conclusion}\label{chap:conc}
 In this thesis we have described CTaps, an implementation of IETF Transport Services
 with support for QUIC, TCP and UDP.
-We have described the architectural considerations of interest to future TAPS implementations
-and how the features of QUIC are best exposed through a TAPS API. 
+We have described the architectural considerations of interest to future implementations of TAPS
+and how the features of QUIC are best exposed through the TAPS API. 
 
-In this chapter we will provide answers to the stated research questions.
-In addition, we will discuss the scope and limitations of the thesis as a whole
-and future work if CTaps is to be further developed into a production-ready library.
+This chapter will provide answers to the stated research questions,
+discuss scope, limitations and outline future work for developing CTaps.
 
 \section{Research Questions}
 At the onset of this thesis two primary research questions were defined
@@ -26,16 +25,15 @@ implicit architectural requirements are posed by the TAPS standard, but are not
 stated explicitly in the RFCs.
 
 One of the largest requirements from the TAPS API is that of flexibility.
-All TAPS implementations
+All implementations of TAPS
 should use a generic protocol interface internally, in order to be as maintainable as possible.
 Without a generic interface, the internal implementation code
 risks becoming very tightly bound to specific protocols, making it
-far more difficult to adapt the TAPS implementation to support new protocols.
+far more difficult to adapt the implementation to support new protocols.
+
 RFC~9623 also recommends that a Listener should
 be able to receive from multiple transport protocols at once over a single
-socket \cite[sec. 4.7]{rfc9623}. TAPS implementations should therefore
-implement internal logic to listen for incoming data from multiple different protocols
-when opening a Listener. If an implementation wants to support this fully and
+socket \cite[sec. 4.7]{rfc9623}. Implementations that want to support this fully and
 support simultaneous listening for protocols which use the same protocol number
 in the IP header, and therefore the same socket type, then this would have
 major architectural implications. This is discussed further in \cref{sec:future-work}.
@@ -46,9 +44,9 @@ a non-trivial lifetime management constraint: the underlying socket must
 remain open until the last associated Connection has closed, meaning
 that socket lifetime cannot be tied directly to individual Connections.
 
-TAPS explicitly supports connection migration and multipath,
-and the underlying architecture must be adapted to make sure that the 
-socket and Local Endpoints used for a given Connection are flexible.
+TAPS supports connection migration and multipath and when implementing
+TAPS, the internal architecture must be adapted accordingly.
+The sockets and Local Endpoints used for a given Connection are flexible.
 This means that a Connection should be able to send
 and receive over more than one socket concurrently and can
 therefore not be bound one-to-one with sockets.
@@ -62,9 +60,6 @@ initiates a bidirectional close.
 Future TAPS implementations therefore have to choose between
 presenting either the expected behavior of QUIC streams,
 or a consistent semantic of closing Connections.
-The CTaps decision of preserving
-behavior expected by QUIC is discussed further in
-\cref{sec:quic-streams-under-taps}.
 
 In summary, the key implicit architectural constraints of a TAPS System are:
 a flexible many-to-many binding between Connections and sockets to support
@@ -88,7 +83,7 @@ it allows for granular control of the expected behavior, as seen in
 A similar pattern applies to flow control, where QUIC exposes \mono{initial_max_data}
 and other associated transport parameters. These are not available through TAPS directly, but TAPS allows for flow 
 control by enqueueing receive callbacks instead. The underlying TAPS System
-can then pass a sane default parameter to the peer initially,
+can pass an initial default parameter to the peer,
 increasing the window as the application enqueues \mono{receive()}-callbacks.
 
 Certain QUIC features are supported, but only through coarse options or with a conceptual mismatch in the TAPS API.
@@ -128,9 +123,7 @@ on sending or receiving data and closing the connection when it expires.
 
 Of the 28 QUIC features surveyed in \cref{tab:quic-taps-mapping},
 19 are available, 5 are partially available, and 4 are
-unavailable. Given that 24 of 28 features are fully or partially available,
-TAPS exposes the large majority of the queried QUIC features.
-Genuine gaps are of two kinds: conceptual mismatches,
+unavailable. Genuine gaps are of two kinds: conceptual mismatches,
 where TAPS provides related but insufficiently precise functionality
 (directionality when cloning, idle timeout), and intentional abstractions,
 where TAPS deliberately omits application-facing control over
@@ -156,7 +149,6 @@ does not support adding endpoints during the lifetime of a connection.
 Not being able to add endpoints to an active Connection places a real limitation on
 an application's ability to control connection migration, since all Local and Remote
 endpoints must be passed to a Preconnection before initiation.
-CTaps does not support listening on multiple protocols or Local Endpoints for a single Listener.
 
 \section{Future Work}\label{sec:future-work}
 There are several features in CTaps which should be developed
@@ -169,7 +161,7 @@ For example, the \mono{soft_error()} callback is never invoked and
 there are several error paths where previously allocated memory is not freed.
 This has not been an issue with the experiments since these have been run over
 a simulated network on a single computer and therefore have not faced any unexpected network
-errors, but they would be encountered in a production setting.
+errors, but these errors would be encountered in a production setting.
 
 While there are too many possible failure branches to mention a full list,
 further development of CTaps should add testing for
@@ -183,8 +175,7 @@ When it comes to performance, the most important step for CTaps would be to
 improve the connection establishment time. This would consist of two major
 factors: candidate interleaving and minimizing DNS blocking.
 
-Since protocols are ranked in order of application preference and
-TAPS implementations will likely want to give preference to IPv6 links,
+Since protocols are ranked in order of application preference,
 care must be taken when deciding exactly how to interleave candidates.
 Happy Eyeballs V3 is currently being developed, with suggestions on
 how to exactly extend normal IP-family racing to transport-layer
@@ -196,6 +187,9 @@ should be modified to start racing as soon as a resolved endpoint arrives with a
 as recommended in Happy Eyeballs~\cite[sec.~3]{rfc8305}.
 This would give preferred addresses a chance to return before initiating an
 attempt with a less desirable endpoint.
+
+For the performance of CTaps itself, analysis should be performed
+in order to pinpoint which parts of the library could be optimied.
 
 \subsection{Connection Migration}\label{sec:future-conn-mig}
 While connection migration is currently supported in CTaps, an important piece
@@ -248,7 +242,7 @@ without having to risk memory leaks.
 RFC~9622 states that Framers can be used to interact
 with the setup and teardown of Connections~\cite[sec.~9.1.2]{rfc9622},
 but this is not currently supported in CTaps. The abstract Framer
-interface presented through the CTaps API could
+interface could
 be expanded with two function pointers, one for
 interacting with a setup and one for interacting with
 teardown. CTaps' internal logic would then have to
@@ -277,15 +271,15 @@ with a different transport-layer protocol.
 
 This becomes far more complicated if CTaps should
 receive on QUIC and UDP, which use the same underlying
-socket type, on the same Local Endpoint at the same time.
-This could be done by bypassing
-the kernel networking stack through AF\_XDP or by
+socket type.
+It could be done by bypassing
+the kernel networking stack and
 handling all demultiplexing internally,
 both of which would greatly increase internal complexity. The
 pragmatic design decision would be to assume that
 applications needing to receive both QUIC and UDP data on the
 same Local Endpoint are rare, and that the added complexity
-does not bring much value for this specific case.
+does not bring much value.
 
 \subsection{TLS}\label{sec:future-work-tls}
 The most important protocol which is currently not supported
@@ -309,7 +303,7 @@ that CTaps does not silently downgrade security.
 \section{Broader Significance}
 While CTaps could be developed to become a real production-ready library
 through the steps described in~\cref{sec:future-work}, the broader
-significance is more tightly coupled to it being the first
+significance is bound to it being the first
 publicly announced open-source implementation of TAPS to support QUIC.
 This has led to insight on not only how to map
 QUIC features through a TAPS API, but also on exactly how to build a TAPS

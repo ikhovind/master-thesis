@@ -119,7 +119,8 @@ connection has to go through slow start. This means that
 when transferring small objects, the full bandwidth of the
 connection cannot be utilized.
 This issue can be mitigated by re-using the same
-TCP connection for several transfers. An example
+TCP connection for several transfers, allowing
+each transfer to reuse the previously achieved congestion window (CWND). An example
 here is HTTP/1.1,
 which introduced the concept of persistent
 TCP connections when fetching multiple URLs~\cite[sec.~8.1]{rfc2616}.
@@ -349,9 +350,9 @@ therefore reuse the achieved CWND.
 \caption[Avoiding head-of-line blocking with multistreaming]
 {
 An example of head-of-line blocking caused by reordering. If packets were sent in order from 1 to 6,
-then TCP cannot hand the data in packet 5 to the client until packets 1--4 have
+then TCP cannot hand the data in packet 5 to the application until packets 1--4 have
 arrived. For multistreaming, order is not enforced between streams and
-packet~5 can be handed to the client immediately.
+packet~5 can be handed to the application immediately.
 }
 \label{fig:background-multi-streaming}
 \end{figure}
@@ -522,24 +523,6 @@ Different types of frames are used to carry different types of information
 and data. Examples are \mono{STREAM} frames which are used to carry
 data over a stream or \mono{NEW_CONNECTION_ID} which are used
 to share new valid connection IDs with the peer.
-
-The format of a QUIC \mono{STREAM} frame as described in RFC~9000 can
-be seen in~\cref{lst:stream-frame-format}.
-
-\begin{listing}[htbp]
-    \centering
-    \begin{BVerbatim}
-STREAM Frame {
-  Type (i) = 0x08..0x0f,
-  Stream ID (i),
-  [Offset (i)],
-  [Length (i)],
-  Stream Data (..),
-}
-\end{BVerbatim}
-\caption[Format of QUIC stream frame]{Format of a QUIC stream frame~\cite{rfc9000}.}
-    \label{lst:stream-frame-format}
-\end{listing}
 
 \subsection{Connection ID}\label{sec:quic-conn-id}
 In order to uniquely identify a connection QUIC uses connection IDs
