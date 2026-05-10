@@ -29,14 +29,15 @@ All implementations of TAPS
 should use a generic protocol interface internally, in order to be as maintainable as possible.
 Without a generic interface, the internal implementation code
 risks becoming very tightly bound to specific protocols, making it
-far more difficult to adapt the implementation to support new protocols.
+far more difficult to add support for new protocols.
 
 RFC~9623 also recommends that a Listener should
 be able to receive from multiple transport protocols at once over a single
-socket \cite[sec. 4.7]{rfc9623}. Implementations that want to support this fully and
-support simultaneous listening for protocols which use the same protocol number
-in the IP header, and therefore the same socket type, then this would have
-major architectural implications. This is discussed further in \cref{sec:future-work}.
+socket \cite[sec. 4.7]{rfc9623}.
+This has major implications for implementations which want to support
+this fully, as they would have to be able to demultiplex incoming data
+for protocols using the same socket type. 
+This is discussed further in \cref{sec:protocol-ag-listener}.
 
 Since TAPS requires implementations to support connectionless protocols,
 multiple Connections must be able to share a single socket. This imposes
@@ -44,22 +45,19 @@ a non-trivial lifetime management constraint: the underlying socket must
 remain open until the last associated Connection has closed, meaning
 that socket lifetime cannot be tied directly to individual Connections.
 
-TAPS supports connection migration and multipath and when implementing
-TAPS, the internal architecture must be adapted accordingly.
-The sockets and Local Endpoints used for a given Connection are flexible.
-This means that a Connection should be able to send
-and receive over more than one socket concurrently and can
-therefore not be bound one-to-one with sockets.
+The internal architecture of a TAPS System must be adapted to support 
+connection migration and multipath. The sockets and Local Endpoints used
+for a given Connection must be flexible, allowing for a single Connection
+to be able to send and receive over more than one socket concurrently.
+Connections can therefore not be bound one-to-one with sockets.
 
 Supporting multistreaming requires that QUIC connections are treated
 as Connection Groups, in order to make streams available to applications.
-This leads to a decision having to be made when it comes to
-closing QUIC streams. QUIC expects streams to be closed by
+This means that a decision has to be made on how to close QUIC streams.
+QUIC expects streams to be closed by
 each side sending a FIN flag, while TAPS implies that \mono{close()}
-initiates a bidirectional close.
-Future TAPS implementations therefore have to choose between
-presenting either the expected behavior of QUIC streams,
-or a consistent semantic of closing Connections.
+initiates a bidirectional close. This will be implementation-specific,
+and should be documented clearly for future implementations of TAPS.
 
 In summary, the key implicit architectural constraints of a TAPS System are:
 a flexible many-to-many binding between Connections and sockets to support
@@ -87,7 +85,7 @@ can pass an initial default parameter to the peer,
 increasing the window as the application enqueues \mono{receive()}-callbacks.
 
 Certain QUIC features are supported, but only through coarse options or with a conceptual mismatch in the TAPS API.
-For example, the QUIC settings related to ACKs, \mono{ack_delay_exponent} and \mono{max_ack_delay},
+For example, the QUIC settings related to ACKs: \mono{ack_delay_exponent} and \mono{max_ack_delay},
 can be set by TAPS by inferring a desired value based on the \mono{connCapacityProfile}
 Connection Property, but direct numerical values cannot be set.
 Another example of a coarse mapping is that TAPS only allows for sending of
@@ -110,14 +108,14 @@ for example unidirectional streams and idle timeout.
 For unidirectional streams, TAPS only supports unidirectional Connections through the
 \mono{direction} Selection Property, but this must be set before a Preconnection
 is initiated and cannot be used to influence
-the directionality of Connections which are a result of \mono{clone()}.
+the directionality of Connections which are a result of cloning.
 In other words, a Connection Group of N Connections will either be unidirectional
 or bidirectional, but the API does not allow an application to make an
 individual choice for a Connection within the Connection Group.
 
-For QUIC's idle timeout, the TAPS API exposes \mono{connTimeout}, but
-the two are not semantically equivalent. In TAPS, \mono{connTimeout}
-is set when trying to reliably deliver data to a Remote Endpoint,
+TAPS does not feature an equivalent to QUIC's idle timeout. The closest
+option in the TAPS API is \mono{connTimeout}, but it is not semantically
+equivalent. In TAPS, \mono{connTimeout} is set when trying to reliably deliver data to a Remote Endpoint,
 while in QUIC, idle timeout is purely an inactivity timer, resetting
 on sending or receiving data and closing the connection when it expires.
 
@@ -166,9 +164,9 @@ errors, but these errors would be encountered in a production setting.
 While there are too many possible failure branches to mention a full list,
 further development of CTaps should add testing for
 all failure paths ensuring that the errors are handled correctly and recovered
-from when possible. In addition, memory checks should be added to these tests,
-ensuring that CTaps does not leak allocated memory when encountering such
-an error path.
+from when possible. In addition, memory checks should be added to these tests
+to ensure that CTaps does not leak allocated memory when encountering
+error paths.
 
 \subsection{Faster Connection Establishment}
 When it comes to performance, the most important step for CTaps would be to
@@ -194,9 +192,9 @@ in order to pinpoint which parts of the library could be optimied.
 \subsection{Connection Migration}\label{sec:future-conn-mig}
 While connection migration is currently supported in CTaps, an important piece
 of future work would be to make it available without the workaround
-described in~\cref{sec:connection-migration-impl}. This means that the application
+described in~\cref{sec:connection-migration-impl}. This means that applications
 would be able to select specific Local Endpoints and migrate between them, instead
-of being forced to select a wildcard Local Endpoint to bind to.
+of being forced to use a wildcard Local Endpoint like currently.
 
 The simplest implementation would be to expand the internal protocol interfaces 
 to support multiple sockets where applicable. Currently,
@@ -228,16 +226,14 @@ whenever a Connection receives or sends data.
 
 In addition, CTaps should add support for Framers to combine
 and split Messages.
-Framers in CTaps are already asynchronous and so this would require relatively little modification.
+Framers in CTaps are already asynchronous, so this would require relatively little modification.
 Applications are expected to implement
 their own Framers and could be expected to maintain their own buffers
 for working on multiple Messages.
 A user context parameter should be added to the Framing functions,
 allowing applications to pass external state into the framing callbacks.
-Care would have to be taken that the ownership model of the Messages
-created inside Framer functions is clear, so that applications
-can implement functions to combine and split Messages
-without having to risk memory leaks.
+The ownership model of the Messages created inside Framer functions would have
+to be clear, in order to mitigate potential memory leaks.
 
 RFC~9622 states that Framers can be used to interact
 with the setup and teardown of Connections~\cite[sec.~9.1.2]{rfc9622},
@@ -269,13 +265,13 @@ and the kernel would be able to demultiplex incoming data to the
 correct socket, since each socket would be associated
 with a different transport-layer protocol.
 
-This becomes far more complicated if CTaps should
-receive on QUIC and UDP, which use the same underlying
+It would be far more complicated to receive data for
+QUIC and UDP simultaneously, as they use the same underlying
 socket type.
-It could be done by bypassing
+This could be achieved by bypassing
 the kernel networking stack and
 handling all demultiplexing internally,
-both of which would greatly increase internal complexity. The
+but this would add a great deal of internal complexity to CTaps. The
 pragmatic design decision would be to assume that
 applications needing to receive both QUIC and UDP data on the
 same Local Endpoint are rare, and that the added complexity
@@ -310,7 +306,7 @@ QUIC features through a TAPS API, but also on exactly how to build a TAPS
 implementation and which internal architectural considerations need to
 be made early, in order to support the flexibility mandated by TAPS.
 
-For the broader significance of TAPS, the key finding
+For the broader significance of TAPS in general, the key finding
 is the complexity of the clients used for experimenting as
 described in~\cref{sec:client-complexity}. These show that
 TAPS clients feature a much richer feature set by default, with

@@ -117,7 +117,7 @@ For I/O-dominated experiments without jitter, the
 variation in performance was found to be so small
 that increased sampling would not be visible in the results.
 The handshake time, small file transfer and connection
-migration experiments are therefore based on a single run
+migration experiments are based on a single run
 and serve as functional demonstrations rather than statistical performance characterizations.
 
 \section{Experiments}
@@ -188,8 +188,8 @@ and CTaps client were configured to use the slow endpoint as an initial candidat
 The CTaps client was also given the fast endpoint as an alternative candidate to
 perform candidate racing. This reflects a realistic post-DNS-resolution
 scenario, where multiple endpoints are available, but their ordering
-does not reflect actual performance. Simple sequential clients will always
-use the first candidate, regardless of its performance.
+does not reflect actual performance. Simple sequential clients will in these
+cases always use the first candidate, regardless of its performance.
 
 In order to gather a distribution of handshake times, the test was run 200~times with a
 jitter of \qty{7}{\milli\second} and a latency correlation of \qty{25}{\percent}.
@@ -242,7 +242,7 @@ be transferred during the minimum 4~RTTs.
 This is well below the \qty{4.6}{\mega\byte} file used in the experiment.
 
 To verify that the BDP is large enough to carry the entire small file,
-we can calculate the minimum BDP for 70~packets of \qty{1500}{\Bytes}, which is:
+we can calculate the minimum BDP to carry 70~packets of \qty{1500}{\Bytes}, which is:
 $70 \cdot 1500 \cdot 8 = \qty{840}{\kilo\bit}$.
 
 In our experiment, the smallest delay is \qty{25}{\milli\second},
@@ -399,7 +399,7 @@ concurrently.
 The long tail is of interest, especially if it scales poorly under
 load, although this cannot be inferred from the data. If CTaps were to
 be utilized in a latency-sensitive environment, more testing should be
-performed in order to establish the behavior under load.
+performed in order to determine behavior under load.
 
 \subsection{Candidate Racing Experiment}
 The high cost of the stagger delay is present not only in the handshake experiment,
@@ -481,7 +481,7 @@ the overhead of CTaps is negligible.
 In addition, the UDP RTT experiment
 shows that CTaps features a longer tail in worst-case
 performance, but it is not possible to say if this will remain
-relatively constant, or scale up with load.
+relatively constant, or scale with load.
 
 CTaps has not been written with performance in mind and
 there are several potential causes of the overhead seen.
@@ -492,11 +492,11 @@ essential.
 
 Before any steps are taken to optimize CTaps, a
 software profiler should be utilized to determine exactly which
-parts are the source of the overhead.
+sections are sources of overhead.
 
 \subsection{Summary}
 To summarize, the experiments show that while CTaps does have a measurable overhead,
-it is negligible when compared to a realistic level of network latency.
+it is negligible when compared to a realistic level of network latency for a simple client.
 More testing is required to establish CTaps' behavior under load.
 
 Beyond performance, CTaps successfully exposes QUIC-specific features such as connection migration and multistreaming,

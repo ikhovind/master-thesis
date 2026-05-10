@@ -244,15 +244,15 @@ are extracted into an array of candidates, which can be used for candidate racin
 As mentioned in \cref{sec:design-scope}, Listeners in CTaps only support
 listening on a Local Endpoint for a single protocol. The exact combination
 of Local Endpoint and protocol is decided through candidate gathering.
-This raises an issue with creating
-Listeners for TCP, since the Selection Properties featured in the QUIC and
-TCP implementations (seen in \cref{lst:quic-impl-struct} and \cref{lst:tcp-impl-struct})
-do not allow for preferring TCP above QUIC.
+This becomes an issue since there is no way for an application to express a preference for TCP over
+QUIC, as QUIC fulfills the same Selection Properties as TCP
+(the interfaces can be seen in \cref{lst:quic-impl-struct} and \cref{lst:tcp-impl-struct}).
 The only way to create a Listener
-which accepts TCP is therefore to rely on the implicit ordering of the
-supported protocol array internally in CTaps. This is possible
-since the sorting of candidates is stable.
-This array can be seen in \cref{lst:supp-prot-arr}.
+which accepts TCP is therefore to rely on the ordering of the
+supported protocol array in CTaps. When an application
+has no preference for a specific protocol, CTaps will fall
+back to the internal ordering of protocol candidates as seen
+in \cref{lst:supp-prot-arr}.
 
 \begin{listing}[htbp]
   \begin{minted}{C}
@@ -266,9 +266,11 @@ const ct_protocol_impl_t* const ct_supported_protocols[] = {
   \label{lst:supp-prot-arr}
 \end{listing}
 
-This is an implementation specific artifact of CTaps, but would be solved
-with creating more flexible Listeners able to listen on multiple protocols.
-This is discussed further as future work in~\cref{sec:protocol-ag-listener}.
+This is an implementation detail of CTaps and relies on CTaps
+using a stable sorting algorithm when gathering candidates.
+Applications would not have to rely on this internal detail if
+Listeners in CTaps were able to listen on more than one protocol.
+This is discussed further as a piece of future work in~\cref{sec:protocol-ag-listener}.
 
 \subsection{Candidate Racing} \label{sec:candidateRacing}
 The goal of candidate racing is to successfully negotiate a protocol stack, a Local
@@ -296,7 +298,8 @@ An example displaying the two branches when
 applications enqueue a \mono{receive()}-callback can be seen in \cref{lst:recv-msg}.
 
 Sent Messages are not cached in CTaps, but are
-immediately passed to either the libuv protocol handle or to Picoquic. 
+immediately passed to either the libuv protocol handle or to Picoquic,
+depending on the protocol interface used.
 
 \begin{listing}[htbp]
   \begin{minted}{C}
@@ -325,7 +328,7 @@ int ct_receive_message(ct_connection_t* connection, const ct_receive_callbacks_t
   \end{minted}
   \caption[CTaps receive Message implementation]
   {
-    Excerpt of \mono{ct_receive_message()},
+    Code for enqueueing receive callbacks in CTaps,
     showing how CTaps either invokes the callback immediately if a
     Message is already queued, or caches the callback until a Message arrives
   }
@@ -393,9 +396,9 @@ as a workaround is required for CTaps to be able to perform connection
 migration properly. Because the Linux kernel only delivers incoming packets
 which match the exact IP of the bound socket, CTaps must
 bind to a wildcard address in order to be able to use multiple local
-addresses. As long as a Connection can be established from the first Local
-Endpoint in the list of gathered candidates, this is the address that CTaps will bind to
-when performing candidate racing.
+addresses. If a Connection can be established from the first Local Endpoint in the
+list of gathered candidates, this is likely the address that the winning
+Connection in candidate racing will be bound to.
 CTaps therefore requires that an application passes a wildcard address as
 the first Local Endpoint, to successfully utilize connection migration.
 
@@ -507,7 +510,7 @@ static ct_framer_impl_t length_prepend_framer = {
 };
 
   \end{minted}
-\caption[Framer implementation]{Example Framer implementation structure from the CTaps framing tests.}
+\caption[Framer implementation]{Example Framer implementation from the CTaps framing tests.}
 \label{lst:framingTestImpl}
 \end{listing}
 
@@ -542,7 +545,7 @@ single message and is passed to the application.
 While the application can use a Framer to wrap or unwrap received messages, this is currently
 a proof of concept in CTaps.
 Utilizing internal Framer buffers to join or split multiple Messages has not
-been tested and the support for this is unclear. This piece of future work is discussed further
+been tested and the support for this is unclear. This discussed as further work
 in \cref{sec:future-framer}.
 
 Since TCP is also connection-based, listening and creating new sockets
@@ -553,7 +556,7 @@ bound to a single socket, which is never shared. This means that
 the associated socket can always be closed when closing a Connection.
 
 \subsection{QUIC} \label{sec:quicImpl}
-Within CTaps, QUIC is by far the most complex supported protocol.
+QUIC is by far the most complex supported protocol in CTaps.
 This can be seen through the required number of lines of code in 
 \cref{tab:protocolLoc}.
 
@@ -579,7 +582,7 @@ in addition to the actual packet data.
 Libuv does not currently
 support setting the source address on a regular \mono{uv_udp_t} handle,
 as \mono{uv_udp_send()} does not feature a source address as a parameter~\cite{libuv_udp_send}.
-Packets sent over a \mono{uv_udp_t} handle will use the
+Packets sent over a \mono{uv_udp_t} handle therefore use the
 IP address the socket is bound to as a source address.
 If the socket is bound to a wildcard address, then the kernel will
 select the source address itself.
@@ -591,11 +594,9 @@ CTaps cannot control the source address of the outgoing packet,
 which may therefore not match what Picoquic expects.
 This prevents Picoquic from reasoning about available paths and performing connection migration.
 
-In order to set the source IP address for outgoing QUIC packets,
-CTaps creates its own UDP socket through the \mono{socket()} system call instead
-of relying on the \mono{uv_udp_t} handle for QUIC.
-The resulting file descriptor is
-monitored using a generic
+Instead of using the \mono{uv_udp_t} handle for QUIC, CTaps creates
+its own UDP socket through the \mono{socket()} system call.
+The resulting file descriptor is monitored using a generic
 \mono{uv_poll_t} libuv handle. This does not create much extra
 complexity, though it does require manually building the message header
 as seen in~\cref{lst:pktinfo-send-packet} in~\cref{app:internal-code-examples}.
@@ -729,7 +730,7 @@ when deciding the order of racing and when deciding certain protocol behavior fo
 an active Connection.
 An example can be seen in \cref{lst:quic-impl-struct-excerpt}. Here,
 QUIC (as it is implemented in CTaps) mandates reliability,
-but utilizing multistreaming is optional.
+but utilizing 0-RTT data is optional.
 
 When an application initiates a Selection Property object, it
 will be instantiated with default values.
@@ -851,7 +852,7 @@ using the \mono{CTAPS_BUILD_SHARED} setting in CMake.
 
 The largest downside of dynamically linking against CTaps
 is that it requires its users to have CTaps installed on their
-systems, in order for the application binary to find the correct symbols at run time.
+systems for the application binary to find the correct symbols at run time.
 
 The largest upside of a dynamically
 linked application is that it is far easier to update its dependencies.
@@ -964,9 +965,10 @@ A description of the difference between statically linked and dynamically linked
 dependencies can be found in~\cref{sec:build-system}. CTaps statically links against
 Picoquic and log.c, while it uses dynamic linking for GLib and libuv.
 
-Care has been taken to keep dependencies away from the external API. This means
-that when compiling CTaps, development libraries are required to be present on the compiling
-system, while downstream applications only require the runtime libraries to be present.
+Care has been taken to keep dependencies away from the external API.
+This means that applications linking against CTaps do not need to additionally
+link against CTaps's dependencies. CTaps will still need to be able to find
+its dynamically linked dependencies at runtime.
 
 \subsection{GLib}
 As mentioned in~\cref{sec:glib-design-reason}, CTaps uses GLib 

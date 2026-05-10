@@ -46,10 +46,8 @@ Another limitation of NEATPy is that it was developed before the finalization of
 the TAPS RFCs. NEATPy is based mostly on
 version 4 and 5 of the TAPS interface draft~\cite[p.~109]{gundersenNEATPyStandardsConformantProtocolIndependent2020},
 but several changes have been made to TAPS since then.
-An example of a new feature in the TAPS API is the support for passing more than one local and remote
+An example of a new feature in the TAPS API is passing more than one local and remote
 endpoint when creating a Preconnection.
-This is used to indicate that several endpoints are eligible for the Connection,
-and it is needed to support connection migration.
 NEATPy has not had active development since 2020.
 
 \section{Network Framework}
@@ -92,9 +90,7 @@ PyTAPS' documentation~\cite{pytaps_docs} claims support for TLS,
 which was present in earlier versions of the code.
 However, TLS support was removed during a refactoring
 commit~\cite{pytaps_tls_refactor} without corresponding updates
-to the documentation, leaving the current codebase without
-functional TLS support.
-} It has not had active
+to the documentation} It has not had active
 development since 2020.
 
 \section{Dynamic TAPS}

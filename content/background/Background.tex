@@ -49,9 +49,8 @@ if a new protocol is better suited to the application's requirements.
 
 Another challenge with the adoption of new transport-layer protocols
 is network middleboxes. Network middleboxes have been
-optimized to support TCP and UDP and may sometimes
-drop packets if the protocol field in the IP header
-does not match TCP or UDP.
+design to support TCP and UDP and may
+drop packets if they contain unknown protocol field in the IP header.
 
 In an attempt to combat this aspect of network ossification, transport-layer protocols are often built
 using UDP as a substrate, allowing them to use the same IP
@@ -406,8 +405,7 @@ protocols that the client supports, then it responds with an
 error notifying the client of this.
 
 In addition to mandating TLS, QUIC also mandates negotiation
-of an application-layer protocol, which happens through ALPN in
-TLS~\cite[sec. 7]{rfc9000}.
+of an application-layer protocol, which happens through ALPN~\cite[sec. 7]{rfc9000}.
 
 \section{QUIC}\label{sec:quic}
 QUIC is a transport-layer protocol originally developed by Google, later formalized
@@ -562,7 +560,7 @@ migrate by using the \mono{preferred_address} transport parameter,
 but only be during the initial TLS handshake~\cite[sec.~9.6.1]{rfc9000}.
 
 If the server does not support migration, such as when it is behind a simple load balancer which multiplexes
-by source IP instead of the QUIC connection ID, then the server can mandate
+by source IP, then the server can mandate
 that the client does not change local address by setting the \mono{disable_active_migration}
 transport parameter~\cite[sec.~5.2.3]{rfc9000}.
 
